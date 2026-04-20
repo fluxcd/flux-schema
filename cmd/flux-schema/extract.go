@@ -9,8 +9,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
+
+	"github.com/fluxcd/pkg/tar"
 
 	"github.com/fluxcd/flux-schema/internal/extractor"
 	"github.com/fluxcd/flux-schema/internal/tmpl"
@@ -29,14 +32,19 @@ var extractCmd = &cobra.Command{
   # Extract in the current dir with one directory per API group
   kubectl get crds -o yaml > crds.yaml
   flux-schema extract crds.yaml \
-    --output-format '{{ .Group }}/{{ .Kind }}_{{ .Version }}.json'`,
+    --output-format '{{ .Group }}/{{ .Kind }}_{{ .Version }}.json'
+
+  # Extract all schemas and store them in a tar.gz archive
+  kustomize build config/crd | flux-schema extract /dev/stdin \
+    --output-archive dist/crd-schemas.tar.gz`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: extractCmdRun,
 }
 
 type extractFlags struct {
-	outputDir    string
-	outputFormat string
+	outputDir     string
+	outputFormat  string
+	outputArchive string
 }
 
 var extractArgs = extractFlags{
@@ -50,16 +58,40 @@ func init() {
 	extractCmd.Flags().StringVarP(&extractArgs.outputFormat, "output-format", "f", defaultExtractFormat,
 		"Go template for the output file path, relative to --output-dir; "+
 			"variables: .Group, .GroupPrefix, .Kind, .Version")
+	extractCmd.Flags().StringVarP(&extractArgs.outputArchive, "output-archive", "a", "",
+		"path to a tar.gz file to write all schemas into; mutually exclusive with --output-dir")
 	_ = extractCmd.MarkFlagDirname("output-dir")
+	_ = extractCmd.MarkFlagFilename("output-archive", "tar.gz", "tgz")
+	extractCmd.MarkFlagsMutuallyExclusive("output-dir", "output-archive")
 	rootCmd.AddCommand(extractCmd)
 }
 
 func extractCmdRun(cmd *cobra.Command, args []string) error {
-	if err := os.MkdirAll(extractArgs.outputDir, 0o755); err != nil {
-		return fmt.Errorf("create output dir: %w", err)
+	archive := extractArgs.outputArchive
+	destDir := extractArgs.outputDir
+	if archive != "" {
+		if !hasArchiveExt(archive) {
+			return fmt.Errorf("output archive %q must end in .tar.gz or .tgz", archive)
+		}
+		if err := os.MkdirAll(filepath.Dir(archive), 0o755); err != nil {
+			return fmt.Errorf("create archive parent dir: %w", err)
+		}
+		staging, err := os.MkdirTemp("", "flux-schema-extract-*")
+		if err != nil {
+			return fmt.Errorf("create staging dir: %w", err)
+		}
+		defer os.RemoveAll(staging)
+		destDir = staging
+	} else {
+		if err := os.MkdirAll(destDir, 0o755); err != nil {
+			return fmt.Errorf("create output dir: %w", err)
+		}
 	}
 
-	var failures []error
+	var (
+		failures []error
+		written  int
+	)
 	for _, path := range args {
 		data, err := os.ReadFile(path)
 		if err != nil {
@@ -71,45 +103,77 @@ func extractCmdRun(cmd *cobra.Command, args []string) error {
 			failures = append(failures, fmt.Errorf("%s: %w", path, e))
 		}
 		for _, crd := range crds {
-			if err := writeCRD(cmd, path, crd); err != nil {
+			relPath, err := writeCRD(path, crd, destDir)
+			if err != nil {
 				failures = append(failures, err)
+				continue
 			}
+			displayPath := filepath.Join(destDir, relPath)
+			if archive != "" {
+				displayPath = relPath
+			}
+			cmd.Printf("OK   %s -> %s\n", path, displayPath)
+			written++
+		}
+	}
+
+	if archive != "" {
+		if err := writeArchive(archive, destDir); err != nil {
+			failures = append(failures, err)
+		} else {
+			cmd.Printf("wrote %s (%d schema(s))\n", archive, written)
 		}
 	}
 
 	if len(failures) > 0 {
 		for _, e := range failures {
-			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "FAIL %v\n", e)
+			cmd.PrintErrf("FAIL %v\n", e)
 		}
 		return fmt.Errorf("%d error(s) during extraction", len(failures))
 	}
 	return nil
 }
 
-func writeCRD(cmd *cobra.Command, srcPath string, crd extractor.CRD) error {
+func writeCRD(srcPath string, crd extractor.CRD, destDir string) (string, error) {
 	rendered, err := tmpl.Render(extractArgs.outputFormat, tmpl.SchemaVars{
 		Group:   crd.Group,
 		Kind:    crd.Kind,
 		Version: crd.Version,
 	})
 	if err != nil {
-		return fmt.Errorf("%s (%s/%s %s): %w", srcPath, crd.Group, crd.Kind, crd.Version, err)
+		return "", fmt.Errorf("%s (%s/%s %s): %w", srcPath, crd.Group, crd.Kind, crd.Version, err)
 	}
 
-	outPath := filepath.Join(extractArgs.outputDir, filepath.FromSlash(rendered))
+	relPath := filepath.FromSlash(rendered)
+	outPath := filepath.Join(destDir, relPath)
 	if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
-		return fmt.Errorf("create %s: %w", filepath.Dir(outPath), err)
+		return "", fmt.Errorf("create %s: %w", filepath.Dir(outPath), err)
 	}
 
 	payload, err := marshalSchema(crd.Schema)
 	if err != nil {
-		return fmt.Errorf("%s %s %s: %w", srcPath, crd.Kind, crd.Version, err)
+		return "", fmt.Errorf("%s %s %s: %w", srcPath, crd.Kind, crd.Version, err)
 	}
 	if err := os.WriteFile(outPath, payload, 0o644); err != nil {
-		return fmt.Errorf("write %s: %w", outPath, err)
+		return "", fmt.Errorf("write %s: %w", outPath, err)
 	}
+	return relPath, nil
+}
 
-	_, _ = fmt.Fprintf(cmd.OutOrStdout(), "OK   %s -> %s\n", srcPath, outPath)
+func hasArchiveExt(p string) bool {
+	lower := strings.ToLower(p)
+	return strings.HasSuffix(lower, ".tar.gz") || strings.HasSuffix(lower, ".tgz")
+}
+
+func writeArchive(archivePath, srcDir string) error {
+	f, err := os.Create(archivePath)
+	if err != nil {
+		return fmt.Errorf("create archive %s: %w", archivePath, err)
+	}
+	defer f.Close()
+	if _, err := tar.Tar(srcDir, f); err != nil {
+		return fmt.Errorf("write archive %s: %w", archivePath, err)
+	}
 	return nil
 }
 

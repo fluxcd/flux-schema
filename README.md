@@ -15,7 +15,12 @@ Flux CLI plugin for Kubernetes schema extraction and manifests validation.
 
 ## Available Commands
 
-### `flux-schema extract`
+- `flux-schema extract [crds.yaml]`: Extract JSON Schema from Kubernetes CRD YAMLs
+  - `-d, --output-dir`: Directory to write JSON Schema files to (mutually exclusive with `--output-archive`)
+  - `-a, --output-archive`: Path to write a gzipped tar archive of JSON Schema files to
+  - `-f, --output-format`: Go template for output file paths (default: `{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json`)
+
+### JSON Schema Extraction
 
 The extract command reads Kubernetes CustomResourceDefinition YAML and writes one JSON Schema file per CRD version.
 The input can be a bare CRD, a `List` of CRDs, or a multi-document YAML stream.
@@ -27,26 +32,30 @@ kubectl get crds -o yaml > crds.yaml
 flux-schema extract crds.yaml -d ./schemas
 ```
 
-By default, files are named `{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json`. The output is compatible with
-`kubeconform` and `kubeval`, making this command a drop-in replacement for kubeconform's
-[openapi2jsonschema.py](https://github.com/yannh/kubeconform/blob/master/scripts/openapi2jsonschema.py) script.
+> The output is compatible with `kubeconform` and `kubeval`, making this command a drop-in replacement for kubeconform's
+> [openapi2jsonschema.py](https://github.com/yannh/kubeconform/blob/master/scripts/openapi2jsonschema.py) script.
 
-Note that the generated schemas apply the following OpenAPI → JSON Schema transformations:
-
-- Objects with `properties` are closed with `additionalProperties: false`, except under nodes
-  marked with `x-kubernetes-preserve-unknown-fields: true`, which stay open so free-form maps validate correctly.
-- Integer-or-string fields are rewritten to `oneOf: [{type: string}, {type: integer}]`. Both the
-  legacy `format: int-or-string` and the structural `x-kubernetes-int-or-string: true` forms are recognized.
-
-You can supply `--output-format` with a Go template to change the layout, e.g. the
+You can supply `-f, --output-format` with a Go template to change the layout, e.g. the
 [CRDs-catalog](https://github.com/datreeio/CRDs-catalog) per-group-directory layout:
 
 ```shell
-flux-schema extract crds.yaml \
-  --output-format '{{ .Group }}/{{ .Kind }}_{{ .Version }}.json'
+flux-schema extract crds.yaml -f '{{ .Group }}/{{ .Kind }}_{{ .Version }}.json'
 ```
 
-Template variables (all lowercased at render time):
+Nested directories referenced by `-f, --output-format` are created automatically.
+
+To bundle the schemas into a gzipped tar archive instead of writing to a directory,
+use `-a, --output-archive`:
+
+```shell
+kustomize build config/crd | flux-schema extract /dev/stdin -a dist/crd-schemas.tar.gz
+```
+
+The archive path must end in `.tar.gz` or `.tgz`, and its parent directory is created if missing.
+`-f, --output-format` still controls the entry paths inside the archive, so a nested template produces
+subdirectories within the tarball.
+
+Supported template variables (all lowercased at render time):
 
 | Variable       | Example                    |
 |----------------|----------------------------|
@@ -55,4 +64,9 @@ Template variables (all lowercased at render time):
 | `.Kind`        | `gitrepository`            |
 | `.Version`     | `v1`                       |
 
-Nested directories referenced by `--output-format` are created automatically.
+Note that the generated schemas apply the following OpenAPI → JSON Schema transformations:
+
+- Objects with `properties` are closed with `additionalProperties: false`, except under nodes
+  marked with `x-kubernetes-preserve-unknown-fields: true`, which stay open so free-form maps validate correctly.
+- Integer-or-string fields are rewritten to `oneOf: [{type: string}, {type: integer}]`. Both the
+  legacy `format: int-or-string` and the structural `x-kubernetes-int-or-string: true` forms are recognized.
