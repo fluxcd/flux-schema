@@ -32,5 +32,6 @@ go.work.sum
 # .vscode/
 
 # Temporary files and binaries
+dist/
 plans/
 bin/

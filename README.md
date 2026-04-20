@@ -1,7 +1,9 @@
 # flux-schema
 
+[![release](https://img.shields.io/github/release/fluxcd/flux-schema/all.svg)](https://github.com/fluxcd/flux-schema/releases)
 [![test](https://github.com/fluxcd/flux-schema/actions/workflows/test.yaml/badge.svg)](https://github.com/fluxcd/flux-schema/actions/workflows/test.yaml)
 [![license](https://img.shields.io/github/license/fluxcd/flux-schema.svg)](https://github.com/fluxcd/flux-schema/blob/main/LICENSE)
+[![slsa](https://slsa.dev/images/gh-badge-level2.svg)](https://github.com/fluxcd/flux-schema/attestations)
 
 Flux CLI plugin for Kubernetes schema extraction and manifests validation.
 
