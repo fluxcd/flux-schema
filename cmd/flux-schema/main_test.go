@@ -8,6 +8,9 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 var (
@@ -42,4 +45,18 @@ func resetCmdArgs() {
 	rootArgs.timeout = timeout
 
 	versionArgs = versionFlags{output: "text"}
+	extractArgs = extractFlags{outputDir: ".", outputFormat: defaultExtractFormat}
+
+	// pflag.Flag.Changed persists across Execute calls on the shared rootCmd,
+	// which breaks MarkFlagRequired validation in subsequent tests. Clear it
+	// for every flag in the command tree.
+	resetFlagChanged(rootCmd)
+}
+
+func resetFlagChanged(cmd *cobra.Command) {
+	cmd.Flags().VisitAll(func(f *pflag.Flag) { f.Changed = false })
+	cmd.PersistentFlags().VisitAll(func(f *pflag.Flag) { f.Changed = false })
+	for _, sub := range cmd.Commands() {
+		resetFlagChanged(sub)
+	}
 }
