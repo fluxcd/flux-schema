@@ -9,6 +9,8 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
+
+	"github.com/fluxcd/pkg/tar"
 )
 
 func TestExtractCmd_DefaultFormat(t *testing.T) {
@@ -77,6 +79,68 @@ func TestExtractCmd_NonexistentInput(t *testing.T) {
 	_, err := executeCommand([]string{"extract", filepath.Join(outDir, "missing.yaml"), "--output-dir", outDir})
 	g.Expect(err).To(HaveOccurred())
 	g.Expect(err.Error()).To(ContainSubstring("error(s) during extraction"))
+}
+
+func TestExtractCmd_WritesArchive(t *testing.T) {
+	g := NewWithT(t)
+
+	archivePath := filepath.Join(t.TempDir(), "out.tar.gz")
+	input := writeCRDFixture(t)
+
+	out, err := executeCommand([]string{"extract", input, "--output-archive", archivePath})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("OK   " + input + " -> widget-example-v1.json"))
+	g.Expect(out).To(ContainSubstring("wrote " + archivePath + " (1 schema(s))"))
+
+	f, err := os.Open(archivePath)
+	g.Expect(err).ToNot(HaveOccurred())
+	defer f.Close()
+
+	extracted := t.TempDir()
+	g.Expect(tar.Untar(f, extracted)).To(Succeed())
+
+	got, err := os.ReadFile(filepath.Join(extracted, "widget-example-v1.json"))
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(string(got)).To(Equal(minimalCRDGolden))
+}
+
+func TestExtractCmd_ArchiveCreatesParentDir(t *testing.T) {
+	g := NewWithT(t)
+
+	archivePath := filepath.Join(t.TempDir(), "does", "not", "exist", "out.tar.gz")
+	input := writeCRDFixture(t)
+
+	_, err := executeCommand([]string{"extract", input, "--output-archive", archivePath})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	info, err := os.Stat(archivePath)
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(info.Size()).To(BeNumerically(">", 0))
+}
+
+func TestExtractCmd_ArchiveRejectsBadExtension(t *testing.T) {
+	g := NewWithT(t)
+
+	input := writeCRDFixture(t)
+	_, err := executeCommand([]string{
+		"extract", input,
+		"--output-archive", filepath.Join(t.TempDir(), "out.zip"),
+	})
+	g.Expect(err).To(HaveOccurred())
+	g.Expect(err.Error()).To(ContainSubstring("must end in .tar.gz or .tgz"))
+}
+
+func TestExtractCmd_ArchiveAndDirMutuallyExclusive(t *testing.T) {
+	g := NewWithT(t)
+
+	input := writeCRDFixture(t)
+	_, err := executeCommand([]string{
+		"extract", input,
+		"--output-dir", t.TempDir(),
+		"--output-archive", filepath.Join(t.TempDir(), "out.tar.gz"),
+	})
+	g.Expect(err).To(HaveOccurred())
+	g.Expect(err.Error()).To(ContainSubstring("none of the others can be"))
 }
 
 func TestExtractCmd_UnknownTemplateVar(t *testing.T) {
