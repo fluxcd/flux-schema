@@ -16,7 +16,7 @@ Update the Flux JSON schemas:
 
 ```sh
 kubectl get crds -l app.kubernetes.io/part-of=flux -o yaml | \
-./bin/flux-schema extract /dev/stdin \
+./bin/flux-schema extract crd /dev/stdin \
 -d ./cmd/flux-schema/testdata/validate/schemas \
 -f '{{ .Group }}/{{ .Kind }}_{{ .Version }}.json'
 ```

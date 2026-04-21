@@ -15,7 +15,7 @@ Flux CLI plugin for Kubernetes schema extraction and manifests validation.
 
 ## Available Commands
 
-- `flux-schema extract [crds.yaml]`: Extract JSON Schema from Kubernetes CRD YAMLs
+- `flux-schema extract crd [files...]`: Extract JSON Schema from Kubernetes CRD YAMLs
   - `-d, --output-dir`: Directory to write JSON Schema files to (mutually exclusive with `--output-archive`)
   - `-a, --output-archive`: Path to write a gzipped tar archive of JSON Schema files to
   - `-f, --output-format`: Go template for output file paths (default: `{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json`)
@@ -26,14 +26,14 @@ Flux CLI plugin for Kubernetes schema extraction and manifests validation.
 
 ### JSON Schema Extraction
 
-The extract command reads Kubernetes CustomResourceDefinition YAML and writes one JSON Schema file per CRD version.
+The `extract crd` command reads Kubernetes CustomResourceDefinition YAML and writes one JSON Schema file per CRD version.
 The input can be a bare CRD, a `List` of CRDs, or a multi-document YAML stream.
 
 Generate schemas for every CRD installed in a cluster:
 
 ```shell
 kubectl get crds -o yaml > crds.yaml
-flux-schema extract crds.yaml -d ./schemas
+flux-schema extract crd crds.yaml -d ./schemas
 ```
 
 > The output is compatible with `kubeconform` and `kubeval`, making this command a drop-in replacement for kubeconform's
@@ -43,7 +43,7 @@ You can supply `-f, --output-format` with a Go template to change the layout, e.
 [CRDs-catalog](https://github.com/datreeio/CRDs-catalog) per-group-directory layout:
 
 ```shell
-flux-schema extract crds.yaml -f '{{ .Group }}/{{ .Kind }}_{{ .Version }}.json'
+flux-schema extract crd crds.yaml -f '{{ .Group }}/{{ .Kind }}_{{ .Version }}.json'
 ```
 
 Nested directories referenced by `-f, --output-format` are created automatically.
@@ -52,7 +52,7 @@ To bundle the schemas into a gzipped tar archive instead of writing to a directo
 use `-a, --output-archive`:
 
 ```shell
-kustomize build config/crd | flux-schema extract /dev/stdin -a dist/crd-schemas.tar.gz
+kustomize build config/crd | flux-schema extract crd /dev/stdin -a dist/crd-schemas.tar.gz
 ```
 
 The archive path must end in `.tar.gz` or `.tgz`, and its parent directory is created if missing.
@@ -106,7 +106,7 @@ Validation is strict by default:
 - YAML documents with duplicate keys are rejected.
 - Documents missing both `metadata.name` and `metadata.generateName` are flagged as invalid
   matching Kubernetes API behavior.
-- Schemas produced by `flux-schema extract` close objects with `additionalProperties: false`,
+- Schemas produced by `flux-schema extract crd` close objects with `additionalProperties: false`,
   so undocumented fields under `spec` fail validation.
 - String formats `duration`, `date`, `datetime`/`date-time`, and `time` are validated
   matching Kubernetes API conventions.

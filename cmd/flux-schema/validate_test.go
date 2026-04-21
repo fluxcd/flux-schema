@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-// extractWidgetSchema runs the extract command on minimalCRDYAML and returns
+// extractWidgetSchema runs the extract crd command on minimalCRDYAML and returns
 // the schema directory. Dogfoods extract → validate round-trip so tests
 // exercise the real artifact users will point validate at.
 func extractWidgetSchema(t *testing.T) string {
@@ -23,7 +23,7 @@ func extractWidgetSchema(t *testing.T) string {
 	g.Expect(os.WriteFile(crdPath, []byte(minimalCRDYAML), 0o644)).To(Succeed())
 
 	schemaDir := t.TempDir()
-	_, err := executeCommand([]string{"extract", crdPath, "--output-dir", schemaDir})
+	_, err := executeCommand([]string{"extract", "crd", crdPath, "--output-dir", schemaDir})
 	g.Expect(err).ToNot(HaveOccurred())
 	return schemaDir
 }
