@@ -19,20 +19,19 @@ import (
 	"github.com/fluxcd/flux-schema/internal/tmpl"
 )
 
-const defaultExtractCRDFormat = "{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json"
+const defaultExtractCRDFormat = "{{ .Group }}/{{ .Kind }}_{{ .Version }}.json"
 
 var extractCRDCmd = &cobra.Command{
 	Use:   "crd [files...]",
 	Short: "Extract JSON Schemas from Kubernetes CRD YAML files",
-	Example: `  # Extract schemas using the kubeval / kubeconform layout
+	Example: `  # Extract schemas using the datreeio CRDs-catalog layout (default)
   kubectl get crd ocirepositories.source.toolkit.fluxcd.io -o yaml > oci-crd.yaml
-  flux-schema extract crd oci-crd.yaml -d ./schemas \
-    --output-format '{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json'
+  flux-schema extract crd oci-crd.yaml -d ./schemas
 
-  # Extract in the current dir with one directory per API group
+  # Extract using the kubeval / kubeconform flat layout
   kubectl get crds -o yaml > crds.yaml
   flux-schema extract crd crds.yaml \
-    --output-format '{{ .Group }}/{{ .Kind }}_{{ .Version }}.json'
+    --output-format '{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json'
 
   # Extract all schemas and store them in a tar.gz archive
   kustomize build config/crd | flux-schema extract crd /dev/stdin \

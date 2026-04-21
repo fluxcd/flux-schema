@@ -13,8 +13,9 @@ import (
 )
 
 // SchemaVars carries the variables exposed to output-path templates.
-// All fields are lowercased by Render before rendering, and GroupPrefix
-// is derived from Group when empty.
+// All fields are lowercased by Render before rendering, empty Group
+// normalizes to "core" (matching the Kubernetes core API convention),
+// and GroupPrefix is derived from Group when empty.
 type SchemaVars struct {
 	Group       string
 	GroupPrefix string
@@ -36,15 +37,18 @@ func Parse(format string) (*template.Template, error) {
 	return tpl, nil
 }
 
-// Execute renders a pre-compiled template with vars. Inputs are lowercased
-// and GroupPrefix is derived from Group (first dot-delimited segment) when
-// unset.
+// Execute renders a pre-compiled template with vars. Inputs are lowercased,
+// empty Group normalizes to "core" (Kubernetes core API convention), and
+// GroupPrefix is derived from Group (first dot-delimited segment) when unset.
 func Execute(tpl *template.Template, vars SchemaVars) (string, error) {
 	normalised := SchemaVars{
 		Group:       strings.ToLower(vars.Group),
 		GroupPrefix: strings.ToLower(vars.GroupPrefix),
 		Kind:        strings.ToLower(vars.Kind),
 		Version:     strings.ToLower(vars.Version),
+	}
+	if normalised.Group == "" {
+		normalised.Group = "core"
 	}
 	if normalised.GroupPrefix == "" {
 		prefix, _, _ := strings.Cut(normalised.Group, ".")
