@@ -1,0 +1,33 @@
+# This file contains invalid Flux manifests for testing the validation logic.
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: duplicate-labels
+  namespace: default
+  labels:
+    app: test1
+    app: test1
+spec:
+  interval: 5m0s
+  url: oci://ghcr.io/stefanprodan/manifests/podinfo
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: duplicate-fields
+  namespace: default
+spec:
+  interval: 1m
+  url: oci://ghcr.io/stefanprodan/manifests/podinfo
+  ref:
+    tag: latest
+    tag: stable
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  namespace: default
+spec:
+  interval: 1m
+  url: oci://ghcr.io/stefanprodan/manifests/podinfo

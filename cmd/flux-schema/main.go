@@ -4,6 +4,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"time"
 
@@ -41,9 +42,17 @@ func init() {
 	rootCmd.SetOut(os.Stdout)
 }
 
+// errSilent signals a non-zero exit without printing the usual "✗ ..." line.
+// Used by commands that have already emitted a self-describing summary
+// (e.g. `validate` prints its own "Summary: ... Invalid: N" line); restating
+// the failure on a second line is noise.
+var errSilent = errors.New("")
+
 func main() {
 	if err := rootCmd.Execute(); err != nil {
-		rootCmd.PrintErrf("✗ %v\n", err)
+		if err.Error() != "" {
+			rootCmd.PrintErrf("✗ %v\n", err)
+		}
 		os.Exit(1)
 	}
 }

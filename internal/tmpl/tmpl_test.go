@@ -70,3 +70,29 @@ func TestRender_InvalidTemplateErrors(t *testing.T) {
 	g.Expect(err).To(HaveOccurred())
 	g.Expect(err.Error()).To(ContainSubstring("parse template"))
 }
+
+func TestParseExecute_ReusesCompiledTemplate(t *testing.T) {
+	g := NewWithT(t)
+	tpl, err := Parse("{{ .Kind }}-{{ .Version }}")
+	g.Expect(err).ToNot(HaveOccurred())
+
+	first, err := Execute(tpl, SchemaVars{Kind: "Widget", Version: "V1"})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(first).To(Equal("widget-v1"))
+
+	second, err := Execute(tpl, SchemaVars{Kind: "Gadget", Version: "v1alpha1"})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(second).To(Equal("gadget-v1alpha1"))
+}
+
+func TestParse_EmptyErrors(t *testing.T) {
+	g := NewWithT(t)
+	_, err := Parse("  ")
+	g.Expect(err).To(HaveOccurred())
+}
+
+func TestParse_InvalidSyntaxErrors(t *testing.T) {
+	g := NewWithT(t)
+	_, err := Parse("{{ .Kind")
+	g.Expect(err).To(HaveOccurred())
+}

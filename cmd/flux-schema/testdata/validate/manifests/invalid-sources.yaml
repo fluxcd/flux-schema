@@ -1,0 +1,77 @@
+# This file contains invalid Flux manifests for testing the validation logic.
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: Bucket
+metadata:
+  name: minio-bucket
+  namespace: default
+spec:
+  interval: 50000
+  force: true
+  endpoint: minio.example.com
+  secretRef:
+    name:
+      ref: minio-bucket-secret
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: example
+  namespace: default
+spec:
+  interval: 5m0s
+  insecure: enabled
+  url: https://example.com
+  secretRef:
+    name: example-user
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmChart
+metadata:
+  name: podinfo
+  namespace: default
+spec:
+  interval: 5m0s
+  chart: podinfo
+  reconcileStrategy: ChartVersion
+  sourceRef:
+    kind: HelmRepository
+    name: podinfo
+  version: '5.*'
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: podinfo
+  namespace: default
+spec:
+  interval: 5m0s
+  url: https://github.com/stefanprodan/podinfo
+  ref:
+    digest: master
+  certSecretRef:
+    name: podinfo-oci-cert
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: podinfo
+  namespace: default
+spec:
+  interval: 5m0s2d
+---
+apiVersion: source.extensions.fluxcd.io/v1alpha1
+kind: ArtifactGenerator
+metadata:
+  name: podinfo-composite
+  namespace: apps
+spec:
+  sources:
+    - alias: backend
+      kind: GitRepository
+      name: my-backend
+  artifacts:
+    - name: my-app-composite
+      copy:
+        - from: "@backend/deploy/**"
+          to: "@artifact/my-app/backend/"

@@ -46,6 +46,7 @@ func resetCmdArgs() {
 
 	versionArgs = versionFlags{output: "text"}
 	extractArgs = extractFlags{outputDir: ".", outputFormat: defaultExtractFormat}
+	validateArgs = validateFlags{}
 
 	// pflag.Flag.Changed persists across Execute calls on the shared rootCmd,
 	// which breaks MarkFlagRequired validation in subsequent tests. Clear it
