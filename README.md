@@ -19,6 +19,10 @@ Flux CLI plugin for Kubernetes schema extraction and manifests validation.
   - `-d, --output-dir`: Directory to write JSON Schema files to (mutually exclusive with `--output-archive`)
   - `-a, --output-archive`: Path to write a gzipped tar archive of JSON Schema files to
   - `-f, --output-format`: Go template for output file paths (default: `{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json`)
+- `flux-schema validate [paths...]`: Validate Kubernetes manifests against JSON Schemas
+  - `--schema-location`: Template URL or file path for schemas (repeatable, tried in order)
+  - `--skip-missing-schemas`: Skip documents for which no schema can be found
+  - `-v, --verbose`: Print a line for every document, including valid and skipped
 
 ### JSON Schema Extraction
 
@@ -70,3 +74,58 @@ Note that the generated schemas apply the following OpenAPI → JSON Schema tran
   marked with `x-kubernetes-preserve-unknown-fields: true`, which stay open so free-form maps validate correctly.
 - Integer-or-string fields are rewritten to `oneOf: [{type: string}, {type: integer}]`. Both the
   legacy `format: int-or-string` and the structural `x-kubernetes-int-or-string: true` forms are recognized.
+
+### Kubernetes Manifests Validation
+
+The validate command reads Kubernetes YAML manifests from one or more files or directories
+and validates each document against a JSON Schema resolved from its `apiVersion` and `kind`.
+Schemas are loaded from `--schema-location` templates, which are tried in order; the first
+match wins.
+
+```shell
+flux-schema validate ./manifests \
+  --schema-location './schemas/{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json'
+```
+
+Output example with validation errors:
+
+```
+manifests/sources.yaml - Bucket/apps/minio is invalid: schema validation failed
+  - /spec: missing property 'bucketName'
+  - /spec/interval: got number, want string
+  - /spec/secretRef/name: got object, want string
+  - /spec: additional properties 'force' not allowed
+manifests/sources.yaml - OCIRepository/apps/podinfo is invalid: YAML parse failed
+  - line 18: key "app.kubernetes.io/name" already set in map
+manifests/sources.yaml - HelmChart/apps/redis is valid
+Summary: 3 resources found in 1 file - Valid: 1, Invalid: 2, Skipped: 0
+```
+
+Validation is strict by default:
+
+- YAML documents with duplicate keys are rejected.
+- Documents missing both `metadata.name` and `metadata.generateName` are flagged as invalid
+  matching Kubernetes API behavior.
+- Schemas produced by `flux-schema extract` close objects with `additionalProperties: false`,
+  so undocumented fields under `spec` fail validation.
+- String formats `duration`, `date`, `datetime`/`date-time`, and `time` are validated
+  matching Kubernetes API conventions.
+
+Multiple schema locations are tried in order, so you can combine a remote CRD catalog with
+local overrides:
+
+```shell
+flux-schema validate k8s-*.yaml \
+  --skip-missing-schemas \
+  --schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.Kind}}_{{.Version}}.json' \
+  --schema-location './schemas/{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json'
+```
+
+Manifests can also be piped via `/dev/stdin`:
+
+```shell
+kustomize build . | flux-schema validate /dev/stdin \
+  --schema-location './schemas/{{.Group}}/{{.Kind}}_{{.Version}}.json'
+```
+
+A non-zero exit code is returned when any document is invalid or errored.

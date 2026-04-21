@@ -1,0 +1,192 @@
+# This file contains valid Flux manifests for testing the validation logic.
+# These examples are taken from the fluxcd.io API reference documentation.
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: webapp
+  namespace: apps
+spec:
+  interval: 1m0s
+  url: https://github.com/org/webapp
+  secretRef:
+    name: webapp-git-token
+  ref:
+    branch: main
+  ignore: |
+    # exclude all
+    /*
+    # include deploy dir
+    !/deploy
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: webapp
+  namespace: apps
+spec:
+  interval: 1h
+  wait: true
+  timeout: 3m0s
+  retryInterval: 2m0s
+  prune: true
+  force: false
+  targetNamespace: apps
+  sourceRef:
+    kind: GitRepository
+    name: webapp
+    namespace: apps
+  path: "./deploy/production"
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: webapp-chart
+  namespace: apps
+spec:
+  interval: 5m15s
+  url: oci://ghcr.io/org/charts/webapp
+  certSecretRef:
+    name: registry-ca # TLS certificate for registry authentication
+  proxySecretRef:
+    name: registry-proxy # Proxy credentials for registry access
+  secretRef:
+    name: registry-auth # Image pull secret with read-only access
+  layerSelector: # select the Helm chart layer
+    mediaType: "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
+    operation: copy
+  ref:
+    semver: "*" # track the latest stable version
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: webapp
+  namespace: apps
+spec:
+  releaseName: webapp
+  chartRef:
+    kind: OCIRepository
+    name: webapp-chart
+  interval: 30m
+  driftDetection:
+    mode: enabled
+  install:
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  upgrade:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  valuesFrom:
+    - kind: ConfigMap
+      name: webapp-values
+    - kind: Secret
+      name: webapp-secret-values
+  values:
+    replicaCount: 3
+---
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Provider
+metadata:
+  name: slack-bot
+  namespace: flux-system
+spec:
+  type: slack
+  channel: general
+  address: https://slack.com/api/chat.postMessage
+  secretRef:
+    name: slack-bot-token
+---
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Alert
+metadata:
+  name: slack
+  namespace: flux-system
+spec:
+  providerRef:
+    name: slack-bot
+  eventMetadata:
+    summary: Cluster addons impacted
+    env: prod
+    cluster: my-cluster
+    region: us-east-2
+  eventSeverity: error
+  eventSources:
+    - kind: GitRepository
+      name: '*'
+    - kind: Kustomization
+      name: '*'
+---
+apiVersion: notification.toolkit.fluxcd.io/v1
+kind: Receiver
+metadata:
+  name: github-receiver
+  namespace: flux-system
+spec:
+  type: github
+  events:
+    - "ping"
+    - "push"
+  secretRef:
+    name: receiver-token
+  resources:
+    - apiVersion: source.toolkit.fluxcd.io/v1
+      kind: GitRepository
+      name: flux-system
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: podinfo
+  namespace: default
+spec:
+  interval: 5m0s
+  url: https://github.com/fluxcd/example
+  ref:
+    branch: main
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageRepository
+metadata:
+  name: podinfo
+  namespace: default
+spec:
+  image: ghcr.io/stefanprodan/podinfo
+  interval: 5h
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImagePolicy
+metadata:
+  name: podinfo-policy
+  namespace: default
+spec:
+  imageRepositoryRef:
+    name: podinfo
+  policy:
+    semver:
+      range: 5.0.x
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageUpdateAutomation
+metadata:
+  name: podinfo-update
+  namespace: default
+spec:
+  interval: 30m
+  sourceRef:
+    kind: GitRepository
+    name: podinfo
+  git:
+    commit:
+      author:
+        email: fluxcdbot@users.noreply.github.com
+        name: fluxcdbot
+    push:
+      branch: main
+  update:
+    strategy: Setters
+    path: ./
+---

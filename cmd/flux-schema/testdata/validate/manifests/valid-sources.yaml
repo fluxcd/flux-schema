@@ -1,0 +1,125 @@
+# This file contains valid Flux manifests for testing the validation logic.
+# These examples are taken from the fluxcd.io API reference documentation.
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: Bucket
+metadata:
+  name: minio-bucket
+  namespace: default
+spec:
+  interval: 5m0s
+  endpoint: minio.example.com
+  insecure: true
+  secretRef:
+    name: minio-bucket-secret
+  bucketName: example
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: minio-bucket-secret
+  namespace: default
+type: Opaque
+stringData:
+  accesskey: "access-key"
+  secretkey: "secret-key"
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: example
+  namespace: default
+spec:
+  interval: 5m0s
+  url: https://example.com
+  secretRef:
+    name: example-user
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmChart
+metadata:
+  name: podinfo
+  namespace: default
+spec:
+  interval: 5m0s
+  chart: podinfo
+  reconcileStrategy: ChartVersion
+  sourceRef:
+    kind: HelmRepository
+    name: podinfo
+  version: '5.*'
+---
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: podinfo
+  namespace: default
+spec:
+  interval: 5m0s
+  url: https://github.com/stefanprodan/podinfo
+  ref:
+    branch: master
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: podinfo
+  namespace: default
+spec:
+  interval: 5m0s
+  url: oci://ghcr.io/stefanprodan/manifests/podinfo
+  ref:
+    tag: latest
+---
+apiVersion: source.extensions.fluxcd.io/v1beta1
+kind: ArtifactGenerator
+metadata:
+  name: podinfo-composite
+  namespace: apps
+spec:
+  sources:
+    - alias: backend
+      kind: GitRepository
+      name: my-backend
+    - alias: frontend
+      kind: OCIRepository
+      name: my-frontend
+    - alias: config
+      kind: Bucket
+      name: my-configs
+  artifacts:
+    - name: my-app-composite
+      copy:
+        - from: "@backend/deploy/**"
+          to: "@artifact/my-app/backend/"
+        - from: "@frontend/deploy/*.yaml"
+          to: "@artifact/my-app/frontend/"
+        - from: "@config/envs/prod/configmap.yaml"
+          to: "@artifact/my-app/env.yaml"
+---
+apiVersion: source.extensions.fluxcd.io/v1beta1
+kind: ArtifactGenerator
+metadata:
+  name: podinfo-chart
+  namespace: apps
+spec:
+  sources:
+    - alias: chart
+      kind: OCIRepository
+      name: podinfo-chart
+      namespace: apps
+    - alias: repo
+      kind: GitRepository
+      name: podinfo-values
+      namespace: apps
+  artifacts:
+    - name: podinfo-chart-composite
+      originRevision: "@chart"
+      copy:
+        - from: "@chart/"
+          to: "@artifact/"
+        - from: "@repo/charts/podinfo/values-prod.yaml"
+          to: "@artifact/podinfo/values.yaml"
+          strategy: Merge # Or `Overwrite` to replace the values.yaml
+

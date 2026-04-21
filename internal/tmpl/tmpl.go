@@ -22,20 +22,24 @@ type SchemaVars struct {
 	Version     string
 }
 
-// Render parses format as a Go text/template and renders it with vars.
-// Unknown template variables produce an error instead of an empty string
-// (missingkey=error). Inputs are lowercased and GroupPrefix is derived
-// from Group (first dot-delimited segment) when unset.
-func Render(format string, vars SchemaVars) (string, error) {
+// Parse compiles format into a reusable *template.Template. Unknown
+// template variables produce an error instead of an empty string
+// (missingkey=error). Use Execute to render the compiled template.
+func Parse(format string) (*template.Template, error) {
 	if strings.TrimSpace(format) == "" {
-		return "", fmt.Errorf("output format template is empty")
+		return nil, fmt.Errorf("output format template is empty")
 	}
-
 	tpl, err := template.New("output").Option("missingkey=error").Parse(format)
 	if err != nil {
-		return "", fmt.Errorf("parse template: %w", err)
+		return nil, fmt.Errorf("parse template: %w", err)
 	}
+	return tpl, nil
+}
 
+// Execute renders a pre-compiled template with vars. Inputs are lowercased
+// and GroupPrefix is derived from Group (first dot-delimited segment) when
+// unset.
+func Execute(tpl *template.Template, vars SchemaVars) (string, error) {
 	normalised := SchemaVars{
 		Group:       strings.ToLower(vars.Group),
 		GroupPrefix: strings.ToLower(vars.GroupPrefix),
@@ -52,4 +56,14 @@ func Render(format string, vars SchemaVars) (string, error) {
 		return "", fmt.Errorf("render template: %w", err)
 	}
 	return buf.String(), nil
+}
+
+// Render is a convenience that parses format and executes it in one call.
+// Callers with a hot loop should use Parse once and Execute per call.
+func Render(format string, vars SchemaVars) (string, error) {
+	tpl, err := Parse(format)
+	if err != nil {
+		return "", err
+	}
+	return Execute(tpl, vars)
 }

@@ -12,6 +12,8 @@ import (
 	"fmt"
 
 	"sigs.k8s.io/yaml"
+
+	"github.com/fluxcd/flux-schema/internal/yamldoc"
 )
 
 // CRD is a single CRD version with its transformed openAPIV3Schema.
@@ -31,7 +33,7 @@ func Extract(data []byte) ([]CRD, []error) {
 	var out []CRD
 	var errs []error
 	docIndex := 0
-	for _, raw := range splitYAMLDocs(data) {
+	for _, raw := range yamldoc.Split(data) {
 		raw = bytes.TrimSpace(raw)
 		if len(raw) == 0 {
 			continue
@@ -51,13 +53,6 @@ func Extract(data []byte) ([]CRD, []error) {
 		}
 	}
 	return out, errs
-}
-
-// splitYAMLDocs splits a YAML payload on "\n---" separators,
-// also recognizing a leading "---" at the start of the buffer.
-func splitYAMLDocs(data []byte) [][]byte {
-	data = bytes.TrimPrefix(data, []byte("---\n"))
-	return bytes.Split(data, []byte("\n---"))
 }
 
 // parseDocument decodes a single YAML document and returns the CRDs it contains.
