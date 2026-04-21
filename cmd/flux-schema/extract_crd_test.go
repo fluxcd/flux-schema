@@ -13,13 +13,13 @@ import (
 	"github.com/fluxcd/pkg/tar"
 )
 
-func TestExtractCmd_DefaultFormat(t *testing.T) {
+func TestExtractCRDCmd_DefaultFormat(t *testing.T) {
 	g := NewWithT(t)
 
 	outDir := t.TempDir()
 	input := writeCRDFixture(t)
 
-	_, err := executeCommand([]string{"extract", input, "--output-dir", outDir})
+	_, err := executeCommand([]string{"extract", "crd", input, "--output-dir", outDir})
 	g.Expect(err).ToNot(HaveOccurred())
 
 	got, err := os.ReadFile(filepath.Join(outDir, "widget-example-v1.json"))
@@ -27,14 +27,14 @@ func TestExtractCmd_DefaultFormat(t *testing.T) {
 	g.Expect(string(got)).To(Equal(minimalCRDGolden))
 }
 
-func TestExtractCmd_NestedFormatCreatesSubdirs(t *testing.T) {
+func TestExtractCRDCmd_NestedFormatCreatesSubdirs(t *testing.T) {
 	g := NewWithT(t)
 
 	outDir := t.TempDir()
 	input := writeCRDFixture(t)
 
 	_, err := executeCommand([]string{
-		"extract", input,
+		"extract", "crd", input,
 		"--output-dir", outDir,
 		"--output-format", "{{ .Group }}/{{ .Kind }}_{{ .Version }}.json",
 	})
@@ -45,49 +45,49 @@ func TestExtractCmd_NestedFormatCreatesSubdirs(t *testing.T) {
 	g.Expect(string(got)).To(Equal(minimalCRDGolden))
 }
 
-func TestExtractCmd_AutoCreatesOutputDir(t *testing.T) {
+func TestExtractCRDCmd_AutoCreatesOutputDir(t *testing.T) {
 	g := NewWithT(t)
 
 	parent := t.TempDir()
 	outDir := filepath.Join(parent, "does", "not", "exist")
 	input := writeCRDFixture(t)
 
-	_, err := executeCommand([]string{"extract", input, "--output-dir", outDir})
+	_, err := executeCommand([]string{"extract", "crd", input, "--output-dir", outDir})
 	g.Expect(err).ToNot(HaveOccurred())
 
 	_, err = os.Stat(filepath.Join(outDir, "widget-example-v1.json"))
 	g.Expect(err).ToNot(HaveOccurred())
 }
 
-func TestExtractCmd_DefaultsOutputDirToCwd(t *testing.T) {
+func TestExtractCRDCmd_DefaultsOutputDirToCwd(t *testing.T) {
 	g := NewWithT(t)
 
 	t.Chdir(t.TempDir())
 	input := writeCRDFixture(t)
 
-	_, err := executeCommand([]string{"extract", input})
+	_, err := executeCommand([]string{"extract", "crd", input})
 	g.Expect(err).ToNot(HaveOccurred())
 
 	_, err = os.Stat("widget-example-v1.json")
 	g.Expect(err).ToNot(HaveOccurred())
 }
 
-func TestExtractCmd_NonexistentInput(t *testing.T) {
+func TestExtractCRDCmd_NonexistentInput(t *testing.T) {
 	g := NewWithT(t)
 
 	outDir := t.TempDir()
-	_, err := executeCommand([]string{"extract", filepath.Join(outDir, "missing.yaml"), "--output-dir", outDir})
+	_, err := executeCommand([]string{"extract", "crd", filepath.Join(outDir, "missing.yaml"), "--output-dir", outDir})
 	g.Expect(err).To(HaveOccurred())
 	g.Expect(err.Error()).To(ContainSubstring("error(s) during extraction"))
 }
 
-func TestExtractCmd_WritesArchive(t *testing.T) {
+func TestExtractCRDCmd_WritesArchive(t *testing.T) {
 	g := NewWithT(t)
 
 	archivePath := filepath.Join(t.TempDir(), "out.tar.gz")
 	input := writeCRDFixture(t)
 
-	out, err := executeCommand([]string{"extract", input, "--output-archive", archivePath})
+	out, err := executeCommand([]string{"extract", "crd", input, "--output-archive", archivePath})
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(out).To(ContainSubstring("OK   " + input + " -> widget-example-v1.json"))
 	g.Expect(out).To(ContainSubstring("wrote " + archivePath + " (1 schema(s))"))
@@ -104,13 +104,13 @@ func TestExtractCmd_WritesArchive(t *testing.T) {
 	g.Expect(string(got)).To(Equal(minimalCRDGolden))
 }
 
-func TestExtractCmd_ArchiveCreatesParentDir(t *testing.T) {
+func TestExtractCRDCmd_ArchiveCreatesParentDir(t *testing.T) {
 	g := NewWithT(t)
 
 	archivePath := filepath.Join(t.TempDir(), "does", "not", "exist", "out.tar.gz")
 	input := writeCRDFixture(t)
 
-	_, err := executeCommand([]string{"extract", input, "--output-archive", archivePath})
+	_, err := executeCommand([]string{"extract", "crd", input, "--output-archive", archivePath})
 	g.Expect(err).ToNot(HaveOccurred())
 
 	info, err := os.Stat(archivePath)
@@ -118,24 +118,24 @@ func TestExtractCmd_ArchiveCreatesParentDir(t *testing.T) {
 	g.Expect(info.Size()).To(BeNumerically(">", 0))
 }
 
-func TestExtractCmd_ArchiveRejectsBadExtension(t *testing.T) {
+func TestExtractCRDCmd_ArchiveRejectsBadExtension(t *testing.T) {
 	g := NewWithT(t)
 
 	input := writeCRDFixture(t)
 	_, err := executeCommand([]string{
-		"extract", input,
+		"extract", "crd", input,
 		"--output-archive", filepath.Join(t.TempDir(), "out.zip"),
 	})
 	g.Expect(err).To(HaveOccurred())
 	g.Expect(err.Error()).To(ContainSubstring("must end in .tar.gz or .tgz"))
 }
 
-func TestExtractCmd_ArchiveAndDirMutuallyExclusive(t *testing.T) {
+func TestExtractCRDCmd_ArchiveAndDirMutuallyExclusive(t *testing.T) {
 	g := NewWithT(t)
 
 	input := writeCRDFixture(t)
 	_, err := executeCommand([]string{
-		"extract", input,
+		"extract", "crd", input,
 		"--output-dir", t.TempDir(),
 		"--output-archive", filepath.Join(t.TempDir(), "out.tar.gz"),
 	})
@@ -143,14 +143,14 @@ func TestExtractCmd_ArchiveAndDirMutuallyExclusive(t *testing.T) {
 	g.Expect(err.Error()).To(ContainSubstring("none of the others can be"))
 }
 
-func TestExtractCmd_UnknownTemplateVar(t *testing.T) {
+func TestExtractCRDCmd_UnknownTemplateVar(t *testing.T) {
 	g := NewWithT(t)
 
 	outDir := t.TempDir()
 	input := writeCRDFixture(t)
 
 	_, err := executeCommand([]string{
-		"extract", input,
+		"extract", "crd", input,
 		"--output-dir", outDir,
 		"--output-format", "{{ .Unknown }}.json",
 	})
@@ -162,17 +162,17 @@ func TestExtractCmd_UnknownTemplateVar(t *testing.T) {
 //
 //	kubectl get crd helmreleases.helm.toolkit.fluxcd.io -o yaml \
 //	  > cmd/flux-schema/testdata/extract/helmrelease-helm-v2.yaml
-//	make run GO_RUN_ARGS="extract \
+//	make run GO_RUN_ARGS="extract crd \
 //	  cmd/flux-schema/testdata/extract/helmrelease-helm-v2.yaml \
 //	  --output-dir cmd/flux-schema/testdata/extract"
-func TestExtractCmd_HelmReleaseGolden(t *testing.T) {
+func TestExtractCRDCmd_HelmReleaseGolden(t *testing.T) {
 	g := NewWithT(t)
 
 	inputPath := filepath.Join("testdata", "extract", "helmrelease-helm-v2.yaml")
 	goldenPath := filepath.Join("testdata", "extract", "helmrelease-helm-v2.json")
 
 	outDir := t.TempDir()
-	_, err := executeCommand([]string{"extract", inputPath, "--output-dir", outDir})
+	_, err := executeCommand([]string{"extract", "crd", inputPath, "--output-dir", outDir})
 	g.Expect(err).ToNot(HaveOccurred())
 
 	got, err := os.ReadFile(filepath.Join(outDir, "helmrelease-helm-v2.json"))
