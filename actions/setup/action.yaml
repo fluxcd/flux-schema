@@ -1,0 +1,112 @@
+name: Setup Flux Schema CLI
+description: A GitHub Action for installing the Flux Schema CLI
+author: Stefan Prodan
+branding:
+  color: blue
+  icon: command
+inputs:
+  version:
+    description: Flux Schema version e.g. v0.1.0 (defaults to latest stable release)
+    default: "latest"
+    required: false
+  bindir:
+    description: Alternative location for the CLI binary, defaults to path relative to $RUNNER_TOOL_CACHE.
+    required: false
+outputs:
+  version:
+    description: Flux Schema version
+    value: ${{ steps.cli.outputs.version }}
+runs:
+  using: composite
+  steps:
+    - name: Download the Flux Schema CLI binary to the runner's cache dir
+      id: cli
+      shell: bash
+      env:
+        FLUX_SCHEMA_VERSION: ${{ inputs.version }}
+        FLUX_SCHEMA_URL: "https://github.com/fluxcd/flux-schema/releases/latest"
+        BIN_DIR: ${{ inputs.bindir }}
+      run: |
+        if [[ -z "$FLUX_SCHEMA_VERSION" ]] || [[ "$FLUX_SCHEMA_VERSION" = "latest" ]]; then
+          FLUX_SCHEMA_VERSION=$(curl -fsSL -I -w '%{url_effective}' -o /dev/null ${FLUX_SCHEMA_URL} | grep -o 'v[0-9].*')
+        fi
+        if [[ -z "$FLUX_SCHEMA_VERSION" ]]; then
+          echo "Unable to determine the latest Flux Schema version"
+          exit 1
+        fi
+        if [[ $FLUX_SCHEMA_VERSION = v* ]]; then
+          FLUX_SCHEMA_VERSION="${FLUX_SCHEMA_VERSION:1}"
+        fi
+
+        OS=$(echo "${RUNNER_OS}" | tr '[:upper:]' '[:lower:]')
+        if [[ "$OS" == "macos" ]]; then
+          OS="darwin"
+        fi
+
+        ARCH=$(echo "${RUNNER_ARCH}" | tr '[:upper:]' '[:lower:]')
+        if [[ "$ARCH" == "x64" ]]; then
+          ARCH="amd64"
+        elif [[ "$ARCH" == "x86" ]]; then
+          ARCH="386"
+        fi
+
+        FLUX_SCHEMA_EXEC_FILE="flux-schema"
+        if [[ "$OS" == "windows" ]]; then
+            FLUX_SCHEMA_EXEC_FILE="${FLUX_SCHEMA_EXEC_FILE}.exe"
+        fi
+
+        FLUX_SCHEMA_TOOL_DIR=$BIN_DIR
+        if [[ -z "$FLUX_SCHEMA_TOOL_DIR" ]]; then
+          FLUX_SCHEMA_TOOL_DIR="${RUNNER_TOOL_CACHE}/flux-schema/${FLUX_SCHEMA_VERSION}/${OS}/${ARCH}"
+        fi
+        if [[ ! -x "$FLUX_SCHEMA_TOOL_DIR/$FLUX_SCHEMA_EXEC_FILE" ]]; then
+          DL_DIR="$(mktemp -dt flux-schema-XXXXXX)"
+          trap 'rm -rf $DL_DIR' EXIT
+
+          echo "Downloading flux-schema ${FLUX_SCHEMA_VERSION} for ${OS}/${ARCH}"
+          FLUX_SCHEMA_TARGET_FILE="flux-schema_${FLUX_SCHEMA_VERSION}_${OS}_${ARCH}.tar.gz"
+          if [[ "$OS" == "windows" ]]; then
+            FLUX_SCHEMA_TARGET_FILE="flux-schema_${FLUX_SCHEMA_VERSION}_${OS}_${ARCH}.zip"
+          fi
+
+          SCHEMA_CHECKSUMS_FILE="flux-schema_${FLUX_SCHEMA_VERSION}_checksums.txt"
+
+          SCHEMA_DOWNLOAD_URL="https://github.com/fluxcd/flux-schema/releases/download/v${FLUX_SCHEMA_VERSION}/"
+
+          curl -fsSL -o "$DL_DIR/$FLUX_SCHEMA_TARGET_FILE" "$SCHEMA_DOWNLOAD_URL/$FLUX_SCHEMA_TARGET_FILE"
+          curl -fsSL -o "$DL_DIR/$SCHEMA_CHECKSUMS_FILE" "$SCHEMA_DOWNLOAD_URL/$SCHEMA_CHECKSUMS_FILE"
+
+          echo "Verifying checksum"
+          sum=""
+          if command -v openssl > /dev/null; then
+            sum=$(openssl sha256 "$DL_DIR/$FLUX_SCHEMA_TARGET_FILE" | awk '{print $2}')
+          elif command -v sha256sum > /dev/null; then
+            sum=$(sha256sum "$DL_DIR/$FLUX_SCHEMA_TARGET_FILE" | awk '{print $1}')
+          fi
+
+          if [[ -z "$sum" ]]; then
+            echo "Neither openssl nor sha256sum found. Cannot calculate checksum."
+            exit 1
+          fi
+
+          expected_sum=$(grep " $FLUX_SCHEMA_TARGET_FILE\$" "$DL_DIR/$SCHEMA_CHECKSUMS_FILE" | awk '{print $1}')
+          if [ "$sum" != "$expected_sum" ]; then
+            echo "SHA sum of ${FLUX_SCHEMA_TARGET_FILE} does not match. Aborting."
+            exit 1
+          fi
+
+          echo "Installing flux-schema to ${FLUX_SCHEMA_TOOL_DIR}"
+          mkdir -p "$FLUX_SCHEMA_TOOL_DIR"
+
+          if [[ "$OS" == "windows" ]]; then
+            unzip "$DL_DIR/$FLUX_SCHEMA_TARGET_FILE" "$FLUX_SCHEMA_EXEC_FILE" -d "$FLUX_SCHEMA_TOOL_DIR"
+          else
+            tar xzf "$DL_DIR/$FLUX_SCHEMA_TARGET_FILE" -C "$FLUX_SCHEMA_TOOL_DIR" $FLUX_SCHEMA_EXEC_FILE
+          fi
+
+          chmod +x "$FLUX_SCHEMA_TOOL_DIR/$FLUX_SCHEMA_EXEC_FILE"
+        fi
+
+        echo "Adding flux-schema to path"
+        echo "$FLUX_SCHEMA_TOOL_DIR" >> "$GITHUB_PATH"
+        echo "version=v${FLUX_SCHEMA_VERSION}" >> "$GITHUB_OUTPUT"
