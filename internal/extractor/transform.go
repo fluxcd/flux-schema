@@ -39,16 +39,27 @@ func addAdditionalPropertiesFalse(node any, skipRoot bool) {
 // Two representations are recognised:
 //   - legacy OpenAPI form: {"format": "int-or-string"};
 //   - structural schema form: {"x-kubernetes-int-or-string": true}.
+//
+// Metadata siblings (description, default, …) are preserved on the rewritten
+// node; structural siblings that would contradict the oneOf (properties, items,
+// enum, …) are dropped defensively in case the input has been hand-edited.
 func replaceIntOrString(node any) any {
 	switch n := node.(type) {
 	case map[string]any:
 		if isIntOrString(n) {
-			return map[string]any{
+			out := map[string]any{
 				"oneOf": []any{
 					map[string]any{"type": "string"},
 					map[string]any{"type": "integer"},
 				},
 			}
+			for k, v := range n {
+				if k == "x-kubernetes-int-or-string" || isStructuralKey(k) {
+					continue
+				}
+				out[k] = v
+			}
+			return out
 		}
 		for k, v := range n {
 			n[k] = replaceIntOrString(v)

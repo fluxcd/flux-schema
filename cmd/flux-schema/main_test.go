@@ -46,6 +46,7 @@ func resetCmdArgs() {
 
 	versionArgs = versionFlags{output: "text"}
 	extractCRDArgs = extractCRDFlags{outputDir: ".", outputFormat: defaultExtractCRDFormat}
+	extractK8sArgs = extractK8sFlags{outputDir: ".", outputFormat: defaultExtractK8sFormat}
 	validateArgs = validateFlags{}
 
 	// pflag.Flag.Changed persists across Execute calls on the shared rootCmd,
