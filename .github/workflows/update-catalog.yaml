@@ -1,0 +1,50 @@
+name: update-catalog
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 7 * * 1" # every Monday at 7 AM (UTC)
+
+permissions:
+  contents: read
+
+jobs:
+  update-latest:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Setup flux-schema
+        uses: ./actions/setup
+      - name: Setup flux-operator
+        uses: controlplaneio-fluxcd/flux-operator/actions/setup@8fc996ab460c0aee9e02397fefaad1ff78f4e7bb # v0.48.0
+      - name: Update Kubernetes schemas
+        run: ./scripts/gen-k8s-schemas.sh -d ./catalog/latest
+      - name: Update Flux schemas
+        run: ./scripts/gen-flux-schemas.sh -d ./catalog/latest
+      - name: Update Flux Operator schemas
+        run: ./scripts/gen-crd-schemas.sh -r controlplaneio-fluxcd/flux-operator -d ./catalog/latest
+      - name: Update README versions
+        run: ./scripts/update-catalog-readme.sh -f ./catalog/README.md
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          branch: update-catalog-latest
+          title: "chore: update catalog/latest"
+          commit-message: "chore: update catalog/latest"
+          author: fluxcdbot <fluxcdbot@users.noreply.github.com>
+          signoff: true
+          body: |
+            Automated update of `catalog/latest/`:
+
+            - Kubernetes: ${{ env.K8S_VERSION }}
+            - Flux: ${{ env.FLUX_VERSION }}
+            - Flux Operator: ${{ env.FLUX_OPERATOR_VERSION }}
+          labels: |
+            area/catalog
+          add-paths: |
+            catalog/latest
+            catalog/README.md

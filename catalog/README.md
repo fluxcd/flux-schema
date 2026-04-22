@@ -1,10 +1,15 @@
-# JSON Schema Catalog
+# Flux Schema Catalog
 
-The `catalog/latest/` directory contains JSON schemas extracted from the latest
-stable releases of Kubernetes and Flux. The directory is kept up to date by a
-GitHub Actions workflow.
+This is the catalog of JSON Schemas for Kubernetes APIs and Flux CRDs,
+used by the `flux schema validation` tool.
 
-Schemas are laid out as `<group>/<kind>_<version>.json`.
+<!-- versions:start -->
+| Source | Version |
+| --- | --- |
+| [kubernetes/kubernetes](https://github.com/kubernetes/kubernetes) | v1.35.4 |
+| [fluxcd/flux2](https://github.com/fluxcd/flux2) | v2.8.6 |
+| [controlplaneio-fluxcd/flux-operator](https://github.com/controlplaneio-fluxcd/flux-operator) | v0.48.0 |
+<!-- versions:end -->
 
 ## Kubernetes APIs
 
