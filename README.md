@@ -15,6 +15,10 @@ Flux CLI plugin for Kubernetes schema extraction and manifests validation.
 
 ## Available Commands
 
+- `flux-schema validate [paths...]`: Validate Kubernetes manifests against JSON Schemas
+    - `--schema-location`: Template URL or file path for schemas (repeatable, tried in order); use `default` for the Flux catalog
+    - `--skip-missing-schemas`: Skip documents for which no schema can be found
+    - `-v, --verbose`: Print a line for every document, including valid and skipped
 - `flux-schema extract crd [files...]`: Extract JSON Schema from Kubernetes CRD YAMLs
   - `-d, --output-dir`: Directory to write JSON Schema files to (mutually exclusive with `--output-archive`)
   - `-a, --output-archive`: Path to write a gzipped tar archive of JSON Schema files to
@@ -22,14 +26,75 @@ Flux CLI plugin for Kubernetes schema extraction and manifests validation.
 - `flux-schema extract k8s [swagger-file]`: Extract JSON Schema from a Kubernetes OpenAPI v2 swagger document
   - `--version X.Y.Z`: Fetch the swagger from `kubernetes/kubernetes` for the given release tag (mutually exclusive with a swagger file)
   - `-d, --output-dir`, `-f, --output-format`: same as `extract crd`
-- `flux-schema validate [paths...]`: Validate Kubernetes manifests against JSON Schemas
-  - `--schema-location`: Template URL or file path for schemas (repeatable, tried in order)
-  - `--skip-missing-schemas`: Skip documents for which no schema can be found
-  - `-v, --verbose`: Print a line for every document, including valid and skipped
 
-### JSON Schema Extraction
+### Kubernetes Manifests Validation
 
-The `extract crd` command reads Kubernetes CustomResourceDefinition YAML and writes one JSON Schema file per CRD version.
+The validate command reads Kubernetes YAML manifests from one or more files or directories
+and validates each document against a JSON Schema resolved from its `apiVersion` and `kind`.
+
+When no `--schema-location` is given, validate uses the [flux-schema catalog](catalog/README.md),
+which covers the latest stable Kubernetes APIs and the Flux ecosystem CRDs (Flux toolkit
+controllers and the Flux Operator):
+
+```shell
+flux-schema validate ./manifests
+```
+
+To validate against your own schemas, pass `--schema-location` with a Go template:
+
+```shell
+flux-schema validate ./manifests \
+  --schema-location './schemas/{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json'
+```
+
+Template variables are `.Group`, `.GroupPrefix`, `.Kind`, and `.Version`.
+
+The flag is repeatable and locations are tried in order — the first match wins. Pass the
+literal value `default` to include the flux-schema catalog alongside your own schemas:
+
+```shell
+flux-schema validate ./manifests \
+  --schema-location default \
+  --schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.Kind}}_{{.Version}}.json' \
+  --schema-location './schemas/{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json'
+```
+
+Manifests can also be piped via `/dev/stdin`:
+
+```shell
+kustomize build . | flux-schema validate /dev/stdin
+```
+
+Output example with validation errors:
+
+```
+manifests/sources.yaml - Bucket/apps/s3-data is invalid: schema validation failed
+  - /spec: missing property 'bucketName'
+  - /spec/interval: got number, want string
+  - /spec/secretRef/name: got object, want string
+  - /spec: additional properties 'force' not allowed
+manifests/sources.yaml - OCIRepository/apps/podinfo is invalid: YAML parse failed
+  - line 18: key "app.kubernetes.io/name" already set in map
+manifests/sources.yaml - HelmChart/apps/redis is valid
+Summary: 3 resources found in 1 file - Valid: 1, Invalid: 2, Skipped: 0
+```
+
+A non-zero exit code is returned when any document is invalid or errored.
+
+Validation is strict by default:
+
+- YAML documents with duplicate keys are rejected.
+- Documents missing both `metadata.name` and `metadata.generateName` are flagged as invalid
+  matching Kubernetes API behavior.
+- Schemas produced by `flux-schema extract crd` close objects with `additionalProperties: false`,
+  so undocumented fields under `spec` fail validation.
+- String formats `duration`, `date`, `datetime`/`date-time`, and `time` are validated
+  matching Kubernetes API conventions.
+
+### Kubernetes CRD Extraction
+
+The `extract crd` command reads Kubernetes CustomResourceDefinition YAML
+and writes one JSON Schema file per CRD version.
 The input can be a bare CRD, a `List` of CRDs, or a multi-document YAML stream.
 
 Generate schemas for every CRD installed in a cluster, using the
@@ -113,58 +178,3 @@ The emitted schemas are the standalone-strict variant:
 - Optional fields are marked nullable (`type: [<t>, "null"]`), matching the
   Kubernetes API server's behavior of accepting `null` for unset optional values.
 - `apiVersion` and `kind` are injected into every kind's properties and required list.
-
-### Kubernetes Manifests Validation
-
-The validate command reads Kubernetes YAML manifests from one or more files or directories
-and validates each document against a JSON Schema resolved from its `apiVersion` and `kind`.
-Schemas are loaded from `--schema-location` templates, which are tried in order; the first
-match wins.
-
-```shell
-flux-schema validate ./manifests \
-  --schema-location './schemas/{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json'
-```
-
-Output example with validation errors:
-
-```
-manifests/sources.yaml - Bucket/apps/minio is invalid: schema validation failed
-  - /spec: missing property 'bucketName'
-  - /spec/interval: got number, want string
-  - /spec/secretRef/name: got object, want string
-  - /spec: additional properties 'force' not allowed
-manifests/sources.yaml - OCIRepository/apps/podinfo is invalid: YAML parse failed
-  - line 18: key "app.kubernetes.io/name" already set in map
-manifests/sources.yaml - HelmChart/apps/redis is valid
-Summary: 3 resources found in 1 file - Valid: 1, Invalid: 2, Skipped: 0
-```
-
-Validation is strict by default:
-
-- YAML documents with duplicate keys are rejected.
-- Documents missing both `metadata.name` and `metadata.generateName` are flagged as invalid
-  matching Kubernetes API behavior.
-- Schemas produced by `flux-schema extract crd` close objects with `additionalProperties: false`,
-  so undocumented fields under `spec` fail validation.
-- String formats `duration`, `date`, `datetime`/`date-time`, and `time` are validated
-  matching Kubernetes API conventions.
-
-Multiple schema locations are tried in order, so you can combine a remote CRD catalog with
-local overrides:
-
-```shell
-flux-schema validate k8s-*.yaml \
-  --skip-missing-schemas \
-  --schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.Kind}}_{{.Version}}.json' \
-  --schema-location './schemas/{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json'
-```
-
-Manifests can also be piped via `/dev/stdin`:
-
-```shell
-kustomize build . | flux-schema validate /dev/stdin \
-  --schema-location './schemas/{{.Group}}/{{.Kind}}_{{.Version}}.json'
-```
-
-A non-zero exit code is returned when any document is invalid or errored.

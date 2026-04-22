@@ -60,6 +60,12 @@ func (s Status) String() string {
 }
 
 // Result is the outcome of validating a single YAML document.
+//
+// When Final is true the result is a synthetic source-complete sentinel
+// emitted by ValidateSources after every document for Source has been
+// processed. Sentinels carry only Source; consumers should ignore them
+// for counting and printing and use them solely to advance per-source
+// streaming state.
 type Result struct {
 	Source     string
 	DocIndex   int
@@ -70,6 +76,7 @@ type Result struct {
 	Status     Status
 	Message    string
 	Errors     []ValidationError
+	Final      bool
 }
 
 // ValidationError is one per-field JSON Schema violation.
@@ -146,19 +153,35 @@ type job struct {
 	// pool reports one Result per failed source instead of silently
 	// dropping it.
 	loadErr error
+	// sourceWG counts in-flight jobs for source. Workers Done it when the
+	// job is processed; the per-source waiter goroutine waits on it then
+	// emits a Final sentinel so the consumer can advance its streaming
+	// pointer past this source.
+	sourceWG *sync.WaitGroup
 }
 
 // ValidateSources streams validation results for every document found in
 // paths. Files are walked sequentially by a single producer goroutine;
-// documents are validated by a pool of opts.Workers goroutines. The
-// returned channel is closed once all documents have been processed.
+// documents are validated by a pool of opts.Workers goroutines.
+//
+// After every document for a source has been validated and its Result
+// pushed to the channel, a synthetic Result with Final=true is emitted for
+// that source. Consumers can use these sentinels to advance per-source
+// streaming state (e.g. to start flushing source N+1 as soon as source N
+// is fully drained, instead of buffering until end-of-stream). Sentinels
+// always arrive after every real Result for the same source because the
+// waiter only fires once the per-source WaitGroup hits zero, which only
+// happens after every worker has both pushed its Result and called Done.
+//
+// The returned channel is closed once all documents have been processed
+// and all sentinels have been delivered.
 func (v *Validator) ValidateSources(ctx context.Context, paths []string) <-chan Result {
 	results := make(chan Result, v.opts.Workers*2)
 	jobs := make(chan job, v.opts.Workers*2)
 
-	var wg sync.WaitGroup
+	var workerWG sync.WaitGroup
 	for i := 0; i < v.opts.Workers; i++ {
-		wg.Go(func() {
+		workerWG.Go(func() {
 			for {
 				select {
 				case <-ctx.Done():
@@ -167,50 +190,73 @@ func (v *Validator) ValidateSources(ctx context.Context, paths []string) <-chan 
 					if !ok {
 						return
 					}
-					var r Result
-					if j.loadErr != nil {
-						r = Result{
-							Source:   j.source,
-							DocIndex: j.docIndex,
-							Status:   StatusInvalid,
-							Message:  j.loadErr.Error(),
-						}
-					} else {
-						result, emit := v.validateDoc(ctx, j.source, j.docIndex, j.raw)
-						if !emit {
-							continue
-						}
-						r = result
-					}
-					select {
-					case results <- r:
-					case <-ctx.Done():
-						return
-					}
+					v.runJob(ctx, j, results)
 				}
 			}
 		})
 	}
 
 	go func() {
-		defer close(jobs)
-		for _, path := range paths {
-			if err := v.produceFromPath(ctx, path, jobs); err != nil {
+		var waiterWG sync.WaitGroup
+		spawnWaiter := func(src string, wg *sync.WaitGroup) {
+			waiterWG.Go(func() {
+				wg.Wait()
 				select {
-				case jobs <- job{source: path, loadErr: err}:
+				case results <- Result{Source: src, Final: true}:
 				case <-ctx.Done():
-					return
+				}
+			})
+		}
+
+		for _, path := range paths {
+			if err := v.produceFromPath(ctx, path, jobs, spawnWaiter); err != nil {
+				wg := &sync.WaitGroup{}
+				wg.Add(1)
+				select {
+				case jobs <- job{source: path, loadErr: err, sourceWG: wg}:
+					spawnWaiter(path, wg)
+				case <-ctx.Done():
+					wg.Done()
 				}
 			}
+			if ctx.Err() != nil {
+				break
+			}
 		}
-	}()
 
-	go func() {
-		wg.Wait()
+		close(jobs)
+		workerWG.Wait()
+		waiterWG.Wait()
 		close(results)
 	}()
 
 	return results
+}
+
+// runJob processes one job and always Done's its sourceWG so the per-source
+// waiter can fire even when validation is short-circuited (content-free doc,
+// ctx cancellation).
+func (v *Validator) runJob(ctx context.Context, j job, results chan<- Result) {
+	defer j.sourceWG.Done()
+	var r Result
+	emit := true
+	if j.loadErr != nil {
+		r = Result{
+			Source:   j.source,
+			DocIndex: j.docIndex,
+			Status:   StatusInvalid,
+			Message:  j.loadErr.Error(),
+		}
+	} else {
+		r, emit = v.validateDoc(ctx, j.source, j.docIndex, j.raw)
+	}
+	if !emit {
+		return
+	}
+	select {
+	case results <- r:
+	case <-ctx.Done():
+	}
 }
 
 // ValidateBytes validates an in-memory YAML payload sequentially. Primarily
@@ -235,10 +281,14 @@ func (v *Validator) ValidateBytes(ctx context.Context, source string, data []byt
 }
 
 // produceFromPath opens path (or walks it, if a directory) and streams each
-// YAML document into jobs. Returns a source-level error only for paths that
-// cannot be stat'd or opened; per-document failures are reported via
-// validateDoc inside the worker pool.
-func (v *Validator) produceFromPath(ctx context.Context, path string, jobs chan<- job) error {
+// YAML document into jobs. spawnWaiter is invoked once per discovered file
+// with a per-file WaitGroup the worker pool decrements; the validator then
+// emits a Final sentinel once that file is fully drained.
+//
+// Returns a source-level error only for paths that cannot be stat'd or
+// opened; per-document failures are reported via validateDoc inside the
+// worker pool.
+func (v *Validator) produceFromPath(ctx context.Context, path string, jobs chan<- job, spawnWaiter func(string, *sync.WaitGroup)) error {
 	info, err := os.Stat(path)
 	if err != nil {
 		return err
@@ -258,13 +308,19 @@ func (v *Validator) produceFromPath(ctx context.Context, path string, jobs chan<
 			if ext != extYAML && ext != extYML {
 				return nil
 			}
-			return v.streamFile(ctx, p, jobs)
+			wg := &sync.WaitGroup{}
+			err := v.streamFile(ctx, p, jobs, wg)
+			spawnWaiter(p, wg)
+			return err
 		})
 	}
-	return v.streamFile(ctx, path, jobs)
+	wg := &sync.WaitGroup{}
+	err = v.streamFile(ctx, path, jobs, wg)
+	spawnWaiter(path, wg)
+	return err
 }
 
-func (v *Validator) streamFile(ctx context.Context, path string, jobs chan<- job) error {
+func (v *Validator) streamFile(ctx context.Context, path string, jobs chan<- job, sourceWG *sync.WaitGroup) error {
 	f, err := os.Open(path)
 	if err != nil {
 		return err
@@ -281,10 +337,12 @@ func (v *Validator) streamFile(ctx context.Context, path string, jobs chan<- job
 		idx++
 		buf := make([]byte, len(raw))
 		copy(buf, raw)
+		sourceWG.Add(1)
 		select {
 		case <-ctx.Done():
+			sourceWG.Done()
 			return ctx.Err()
-		case jobs <- job{source: path, docIndex: idx, raw: buf}:
+		case jobs <- job{source: path, docIndex: idx, raw: buf, sourceWG: sourceWG}:
 		}
 	}
 	if err := scanner.Err(); err != nil {
