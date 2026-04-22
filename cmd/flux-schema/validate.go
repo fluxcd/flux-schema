@@ -5,7 +5,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -15,19 +17,25 @@ import (
 var validateCmd = &cobra.Command{
 	Use:   "validate [paths...]",
 	Short: "Validate Kubernetes manifests against JSON Schemas",
-	Example: `  # Validate every YAML file under ./manifests against local schemas
+	Example: `  # Validate YAMLs under ./manifests against the default catalog
+  # The default catalog covers the latest stable Kubernetes and Flux APIs
+  # https://github.com/fluxcd/flux-schema/tree/main/catalog
+  flux-schema validate ./manifests --verbose
+
+  # Validate against local schemas only
   flux-schema validate ./manifests \
     --schema-location './schemas/{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json' \
     --skip-missing-schemas
 
-  # Validate files matching glob pattern against a remote CRD catalog with a local fallback
-  flux-schema validate hr-*.yaml \
-    --schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.Kind}}_{{.Version}}.json' \
+  # Combine the default catalog with local CRD schemas (use 'default' as an alias)
+  flux-schema validate ./manifests \
+    --schema-location default \
     --schema-location './schemas/{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json'
 
   # Read manifests from a pipe
   kustomize build . | flux-schema validate /dev/stdin \
-    --schema-location './schemas/{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json'`,
+    --schema-location default \
+    --schema-location './schemas/{{.Group}}/{{.Kind}}_{{.Version}}.json'`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: validateCmdRun,
 }
@@ -38,25 +46,40 @@ type validateFlags struct {
 	verbose            bool
 }
 
+// defaultValidateSchemaLocation points at the flux-schema catalog,
+// covering the latest stable Kubernetes and Flux APIs.
+// It is used when no --schema-location is provided, and is what
+// the literal value "default" expands to in --schema-location.
+const defaultValidateSchemaLocation = "https://raw.githubusercontent.com/fluxcd/flux-schema/main/catalog/latest/{{.Group}}/{{.Kind}}_{{.Version}}.json"
+
 var validateArgs = validateFlags{}
 
 const stdinPath = "/dev/stdin"
 
 func init() {
 	validateCmd.Flags().StringArrayVar(&validateArgs.schemaLocations, "schema-location", nil,
-		"template URL or file path for schemas (repeatable, tried in order); "+
-			"variables: .Group, .GroupPrefix, .Kind, .Version")
+		"template URL or file path for schemas (repeatable); use 'default' for the built-in catalog")
 	validateCmd.Flags().BoolVar(&validateArgs.skipMissingSchemas, "skip-missing-schemas", false,
 		"skip documents for which no schema can be found instead of failing")
 	validateCmd.Flags().BoolVarP(&validateArgs.verbose, "verbose", "v", false,
 		"print a line for every document, including valid and skipped")
-	_ = validateCmd.MarkFlagRequired("schema-location")
 	rootCmd.AddCommand(validateCmd)
 }
 
 func validateCmdRun(cmd *cobra.Command, args []string) error {
+	locations := validateArgs.schemaLocations
+	if len(locations) == 0 {
+		locations = []string{defaultValidateSchemaLocation}
+	} else {
+		expanded, err := expandSchemaLocations(locations)
+		if err != nil {
+			return err
+		}
+		locations = expanded
+	}
+
 	v, err := validator.New(validator.Options{
-		SchemaLocations:    validateArgs.schemaLocations,
+		SchemaLocations:    locations,
 		SkipMissingSchemas: validateArgs.skipMissingSchemas,
 		HTTPTimeout:        rootArgs.timeout,
 	})
@@ -108,6 +131,25 @@ func validateCmdRun(cmd *cobra.Command, args []string) error {
 		return errSilent
 	}
 	return nil
+}
+
+// expandSchemaLocations replaces every case-insensitive "default" with
+// defaultValidateSchemaLocation, preserving order so the user controls
+// fallback priority (e.g. --schema-location default --schema-location ./local
+// keeps the catalog first).
+func expandSchemaLocations(locations []string) ([]string, error) {
+	out := make([]string, len(locations))
+	for i, loc := range locations {
+		if loc == "" {
+			return nil, fmt.Errorf("--schema-location must not be empty")
+		}
+		if strings.EqualFold(loc, "default") {
+			out[i] = defaultValidateSchemaLocation
+		} else {
+			out[i] = loc
+		}
+	}
+	return out, nil
 }
 
 // shouldPrint returns true when this result should be written to stdout.

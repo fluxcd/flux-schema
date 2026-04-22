@@ -286,9 +286,33 @@ func TestValidateCmd_InvalidMetadataFixtures(t *testing.T) {
 	g.Expect(out).To(ContainSubstring("Summary: 3 resources found in 1 file - Valid: 0, Invalid: 3, Skipped: 0"))
 }
 
-func TestValidateCmd_RequiresSchemaLocation(t *testing.T) {
+func TestExpandSchemaLocations(t *testing.T) {
 	g := NewWithT(t)
-	_, err := executeCommand([]string{"validate", t.TempDir()})
-	g.Expect(err).To(HaveOccurred())
-	g.Expect(err.Error()).To(ContainSubstring(`"schema-location" not set`))
+
+	expand := func(in []string) []string {
+		out, err := expandSchemaLocations(in)
+		g.Expect(err).ToNot(HaveOccurred())
+		return out
+	}
+
+	g.Expect(expand([]string{"default"})).
+		To(Equal([]string{defaultValidateSchemaLocation}))
+
+	g.Expect(expand([]string{"default", "./local/{{.Kind}}.json"})).
+		To(Equal([]string{defaultValidateSchemaLocation, "./local/{{.Kind}}.json"}))
+
+	g.Expect(expand([]string{"./local/{{.Kind}}.json", "default"})).
+		To(Equal([]string{"./local/{{.Kind}}.json", defaultValidateSchemaLocation}))
+
+	g.Expect(expand([]string{"./local/{{.Kind}}.json"})).
+		To(Equal([]string{"./local/{{.Kind}}.json"}))
+
+	g.Expect(expand([]string{"DEFAULT", "Default"})).
+		To(Equal([]string{defaultValidateSchemaLocation, defaultValidateSchemaLocation}))
+
+	_, err := expandSchemaLocations([]string{""})
+	g.Expect(err).To(MatchError(ContainSubstring("--schema-location must not be empty")))
+
+	_, err = expandSchemaLocations([]string{"default", ""})
+	g.Expect(err).To(MatchError(ContainSubstring("--schema-location must not be empty")))
 }
