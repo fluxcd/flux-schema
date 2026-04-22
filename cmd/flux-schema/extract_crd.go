@@ -97,12 +97,12 @@ func extractCRDCmdRun(cmd *cobra.Command, args []string) error {
 			failures = append(failures, fmt.Errorf("%s: %w", path, err))
 			continue
 		}
-		crds, errs := extractor.Extract(data)
+		crds, errs := extractor.ExtractCRDs(data)
 		for _, e := range errs {
 			failures = append(failures, fmt.Errorf("%s: %w", path, e))
 		}
 		for _, crd := range crds {
-			relPath, err := writeCRD(path, crd, destDir)
+			relPath, err := writeCRDSchema(path, crd, destDir)
 			if err != nil {
 				failures = append(failures, err)
 				continue
@@ -133,7 +133,7 @@ func extractCRDCmdRun(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func writeCRD(srcPath string, crd extractor.CRD, destDir string) (string, error) {
+func writeCRDSchema(srcPath string, crd extractor.Schema, destDir string) (string, error) {
 	rendered, err := tmpl.Render(extractCRDArgs.outputFormat, tmpl.SchemaVars{
 		Group:   crd.Group,
 		Kind:    crd.Kind,
@@ -149,7 +149,7 @@ func writeCRD(srcPath string, crd extractor.CRD, destDir string) (string, error)
 		return "", fmt.Errorf("create %s: %w", filepath.Dir(outPath), err)
 	}
 
-	payload, err := marshalSchema(crd.Schema)
+	payload, err := marshalSchema(crd.JSON)
 	if err != nil {
 		return "", fmt.Errorf("%s %s %s: %w", srcPath, crd.Kind, crd.Version, err)
 	}

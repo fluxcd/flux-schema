@@ -1,9 +1,6 @@
 // Copyright 2026 The Flux Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package extractor converts Kubernetes CustomResourceDefinition YAML into
-// per-version JSON Schema documents. It accepts bare CRDs, List-wrapped CRDs,
-// and multi-document YAML (e.g. the output of `kubectl get crds -o yaml`).
 package extractor
 
 import (
@@ -16,21 +13,11 @@ import (
 	"github.com/fluxcd/flux-schema/internal/yamldoc"
 )
 
-// CRD is a single CRD version with its transformed openAPIV3Schema.
-// Schema is owned by the CRD instance; the transforms mutate it in place,
-// so callers should treat it as single-use.
-type CRD struct {
-	Group   string
-	Kind    string
-	Version string
-	Schema  map[string]any
-}
-
-// Extract reads a YAML payload and returns one CRD per CRD version found.
-// Errors are aggregated: a failure on one document or version does not stop
-// extraction of the rest.
-func Extract(data []byte) ([]CRD, []error) {
-	var out []CRD
+// ExtractCRDs reads a YAML payload and returns one Schema per CRD version
+// found. Errors are aggregated: a failure on one document or version does
+// not stop extraction of the rest.
+func ExtractCRDs(data []byte) ([]Schema, []error) {
+	var out []Schema
 	var errs []error
 	docIndex := 0
 	for _, raw := range yamldoc.Split(data) {
@@ -76,12 +63,12 @@ func parseDocument(raw []byte) ([]map[string]any, error) {
 		return nil, fmt.Errorf("document is not a YAML mapping")
 	}
 
-	return extractCRDs(m), nil
+	return collectCRDs(m), nil
 }
 
-// extractCRDs walks a parsed document and returns every CustomResourceDefinition
+// collectCRDs walks a parsed document and returns every CustomResourceDefinition
 // found, descending into List-style containers via the "items" field.
-func extractCRDs(m map[string]any) []map[string]any {
+func collectCRDs(m map[string]any) []map[string]any {
 	var out []map[string]any
 	if kind, _ := m["kind"].(string); kind == "CustomResourceDefinition" {
 		out = append(out, m)
@@ -89,7 +76,7 @@ func extractCRDs(m map[string]any) []map[string]any {
 	if items, ok := m["items"].([]any); ok {
 		for _, it := range items {
 			if child, ok := it.(map[string]any); ok {
-				out = append(out, extractCRDs(child)...)
+				out = append(out, collectCRDs(child)...)
 			}
 		}
 	}
@@ -98,7 +85,7 @@ func extractCRDs(m map[string]any) []map[string]any {
 
 // versionsFromCRD extracts each version's openAPIV3Schema and applies the
 // OpenAPI→JSON Schema transformations.
-func versionsFromCRD(crd map[string]any) ([]CRD, []error) {
+func versionsFromCRD(crd map[string]any) ([]Schema, []error) {
 	spec, ok := crd["spec"].(map[string]any)
 	if !ok {
 		return nil, []error{fmt.Errorf("CRD missing 'spec'")}
@@ -115,7 +102,7 @@ func versionsFromCRD(crd map[string]any) ([]CRD, []error) {
 		return nil, []error{fmt.Errorf("CRD %s has no spec.versions", kind)}
 	}
 
-	var out []CRD
+	var out []Schema
 	var errs []error
 	for i, v := range versions {
 		vm, ok := v.(map[string]any)
@@ -130,14 +117,14 @@ func versionsFromCRD(crd map[string]any) ([]CRD, []error) {
 			continue
 		}
 
-		addAdditionalPropertiesFalse(schema, true)
+		closeAdditionalPropertiesChildren(schema)
 		transformed, _ := replaceIntOrString(schema).(map[string]any)
 
-		out = append(out, CRD{
+		out = append(out, Schema{
 			Group:   group,
-			Kind:    kind,
 			Version: versionName,
-			Schema:  transformed,
+			Kind:    kind,
+			JSON:    transformed,
 		})
 	}
 	return out, errs

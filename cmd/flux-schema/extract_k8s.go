@@ -152,7 +152,7 @@ func writeK8sSchema(schema extractor.Schema, destDir string) (string, error) {
 		return "", fmt.Errorf("create %s: %w", filepath.Dir(outPath), err)
 	}
 
-	payload, err := marshalSchema(schema.Schema)
+	payload, err := marshalSchema(schema.JSON)
 	if err != nil {
 		return "", fmt.Errorf("%s %s: %w", schema.Kind, schema.Version, err)
 	}
