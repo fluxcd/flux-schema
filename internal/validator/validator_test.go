@@ -4,6 +4,7 @@
 package validator
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -546,6 +547,9 @@ spec: {}
 	ch := v.ValidateSources(context.Background(), []string{path})
 	var count int
 	for r := range ch {
+		if r.Final {
+			continue
+		}
 		g.Expect(r.Status).To(Equal(StatusValid), "unexpected status for doc %d: %s %s", r.DocIndex, r.Status, r.Message)
 		count++
 	}
@@ -579,11 +583,64 @@ spec:
 	v := newLocalValidator(t, dir, false)
 	ch := v.ValidateSources(context.Background(), []string{manifestsDir})
 	var count int
+	finals := map[string]bool{}
 	for r := range ch {
+		if r.Final {
+			finals[r.Source] = true
+			continue
+		}
 		g.Expect(r.Status).To(Equal(StatusValid))
 		count++
 	}
 	g.Expect(count).To(Equal(2))
+	// One Final sentinel per discovered file.
+	g.Expect(finals).To(HaveLen(2))
+}
+
+// TestValidateSources_FinalSentinelOrdering pins the streaming protocol:
+// every real Result for a source arrives strictly before that source's
+// Final sentinel. Consumers rely on this to advance per-source streaming
+// state without buffering the entire stream.
+func TestValidateSources_FinalSentinelOrdering(t *testing.T) {
+	g := NewWithT(t)
+	dir := t.TempDir()
+	writeWidgetSchema(t, dir)
+
+	manifestsDir := t.TempDir()
+	const docsPerFile = 20
+	for _, name := range []string{"a.yaml", "b.yaml", "c.yaml"} {
+		var buf bytes.Buffer
+		for i := range docsPerFile {
+			if i > 0 {
+				buf.WriteString("---\n")
+			}
+			fmt.Fprintf(&buf, "apiVersion: example.com/v1\nkind: Widget\nmetadata:\n  name: %s-%d\nspec:\n  name: ok\n", name, i)
+		}
+		g.Expect(os.WriteFile(filepath.Join(manifestsDir, name), buf.Bytes(), 0o644)).To(Succeed())
+	}
+
+	v := newLocalValidator(t, dir, false)
+	ch := v.ValidateSources(context.Background(), []string{manifestsDir})
+
+	seen := map[string]int{}
+	for r := range ch {
+		if r.Final {
+			// At sentinel arrival every real Result for r.Source must already
+			// have been delivered.
+			g.Expect(seen[r.Source]).To(Equal(docsPerFile),
+				"final sentinel for %s arrived before all docs", r.Source)
+			seen[r.Source] = -1 // mark as finalized
+			continue
+		}
+		g.Expect(seen[r.Source]).To(BeNumerically(">=", 0),
+			"real result for %s arrived after its final sentinel", r.Source)
+		seen[r.Source]++
+	}
+
+	g.Expect(seen).To(HaveLen(3))
+	for src, count := range seen {
+		g.Expect(count).To(Equal(-1), "no final sentinel for %s", src)
+	}
 }
 
 func TestSplitYAMLError(t *testing.T) {
