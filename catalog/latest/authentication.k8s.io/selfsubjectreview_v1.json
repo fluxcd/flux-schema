@@ -13,7 +13,7 @@
     },
     "metadata": {
       "additionalProperties": false,
-      "description": "Standard object's metadata. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata",
+      "description": "metadata is standard object's metadata. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata",
       "properties": {
         "annotations": {
           "additionalProperties": {
@@ -241,11 +241,11 @@
     },
     "status": {
       "additionalProperties": false,
-      "description": "Status is filled in by the server with the user attributes.",
+      "description": "status is filled in by the server with the user attributes.",
       "properties": {
         "userInfo": {
           "additionalProperties": false,
-          "description": "User attributes of the user making this request.",
+          "description": "userInfo is a set of attributes belonging to the user making this request.",
           "properties": {
             "extra": {
               "additionalProperties": {
@@ -254,14 +254,14 @@
                 },
                 "type": "array"
               },
-              "description": "Any additional information provided by the authenticator.",
+              "description": "extra is any additional information provided by the authenticator.",
               "type": [
                 "object",
                 "null"
               ]
             },
             "groups": {
-              "description": "The names of groups this user is a part of.",
+              "description": "groups is the names of groups this user is a part of.",
               "items": {
                 "type": "string"
               },
@@ -271,14 +271,14 @@
               ]
             },
             "uid": {
-              "description": "A unique value that identifies this user across time. If this user is deleted and another user by the same name is added, they will have different UIDs.",
+              "description": "uid is a unique value that identifies this user across time. If this user is deleted and another user by the same name is added, they will have different UIDs.",
               "type": [
                 "string",
                 "null"
               ]
             },
             "username": {
-              "description": "The name that uniquely identifies this user among all active users.",
+              "description": "username is the name that uniquely identifies this user among all active users.",
               "type": [
                 "string",
                 "null"

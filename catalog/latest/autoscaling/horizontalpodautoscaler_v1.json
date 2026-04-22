@@ -295,10 +295,7 @@
         "scaleTargetRef",
         "maxReplicas"
       ],
-      "type": [
-        "object",
-        "null"
-      ]
+      "type": "object"
     },
     "status": {
       "additionalProperties": false,
@@ -350,6 +347,7 @@
     }
   },
   "required": [
+    "spec",
     "apiVersion",
     "kind"
   ],

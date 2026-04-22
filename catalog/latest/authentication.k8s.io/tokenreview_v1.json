@@ -13,7 +13,7 @@
     },
     "metadata": {
       "additionalProperties": false,
-      "description": "Standard object's metadata. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata",
+      "description": "metadata is the standard object's metadata. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata",
       "properties": {
         "annotations": {
           "additionalProperties": {
@@ -241,10 +241,10 @@
     },
     "spec": {
       "additionalProperties": false,
-      "description": "Spec holds information about the request being evaluated",
+      "description": "spec holds information about the request being evaluated",
       "properties": {
         "audiences": {
-          "description": "Audiences is a list of the identifiers that the resource server presented with the token identifies as. Audience-aware token authenticators will verify that the token was intended for at least one of the audiences in this list. If no audiences are provided, the audience will default to the audience of the Kubernetes apiserver.",
+          "description": "audiences is a list of the identifiers that the resource server presented with the token identifies as. Audience-aware token authenticators will verify that the token was intended for at least one of the audiences in this list. If no audiences are provided, the audience will default to the audience of the Kubernetes apiserver.",
           "items": {
             "type": "string"
           },
@@ -254,21 +254,21 @@
           ]
         },
         "token": {
-          "description": "Token is the opaque bearer token.",
-          "type": [
-            "string",
-            "null"
-          ]
+          "description": "token is the opaque bearer token.",
+          "type": "string"
         }
       },
+      "required": [
+        "token"
+      ],
       "type": "object"
     },
     "status": {
       "additionalProperties": false,
-      "description": "Status is filled in by the server and indicates whether the request can be authenticated.",
+      "description": "status is filled in by the server and indicates whether the request can be authenticated.",
       "properties": {
         "audiences": {
-          "description": "Audiences are audience identifiers chosen by the authenticator that are compatible with both the TokenReview and token. An identifier is any identifier in the intersection of the TokenReviewSpec audiences and the token's audiences. A client of the TokenReview API that sets the spec.audiences field should validate that a compatible audience identifier is returned in the status.audiences field to ensure that the TokenReview server is audience aware. If a TokenReview returns an empty status.audience field where status.authenticated is \"true\", the token is valid against the audience of the Kubernetes API server.",
+          "description": "audiences are audience identifiers chosen by the authenticator that are compatible with both the TokenReview and token. An identifier is any identifier in the intersection of the TokenReviewSpec audiences and the token's audiences. A client of the TokenReview API that sets the spec.audiences field should validate that a compatible audience identifier is returned in the status.audiences field to ensure that the TokenReview server is audience aware. If a TokenReview returns an empty status.audience field where status.authenticated is \"true\", the token is valid against the audience of the Kubernetes API server.",
           "items": {
             "type": "string"
           },
@@ -278,14 +278,14 @@
           ]
         },
         "authenticated": {
-          "description": "Authenticated indicates that the token was associated with a known user.",
+          "description": "authenticated indicates that the token was associated with a known user.",
           "type": [
             "boolean",
             "null"
           ]
         },
         "error": {
-          "description": "Error indicates that the token couldn't be checked",
+          "description": "error indicates that the token couldn't be checked",
           "type": [
             "string",
             "null"
@@ -293,7 +293,7 @@
         },
         "user": {
           "additionalProperties": false,
-          "description": "User is the UserInfo associated with the provided token.",
+          "description": "user is the UserInfo associated with the provided token.",
           "properties": {
             "extra": {
               "additionalProperties": {
@@ -302,14 +302,14 @@
                 },
                 "type": "array"
               },
-              "description": "Any additional information provided by the authenticator.",
+              "description": "extra is any additional information provided by the authenticator.",
               "type": [
                 "object",
                 "null"
               ]
             },
             "groups": {
-              "description": "The names of groups this user is a part of.",
+              "description": "groups is the names of groups this user is a part of.",
               "items": {
                 "type": "string"
               },
@@ -319,14 +319,14 @@
               ]
             },
             "uid": {
-              "description": "A unique value that identifies this user across time. If this user is deleted and another user by the same name is added, they will have different UIDs.",
+              "description": "uid is a unique value that identifies this user across time. If this user is deleted and another user by the same name is added, they will have different UIDs.",
               "type": [
                 "string",
                 "null"
               ]
             },
             "username": {
-              "description": "The name that uniquely identifies this user among all active users.",
+              "description": "username is the name that uniquely identifies this user among all active users.",
               "type": [
                 "string",
                 "null"

@@ -6,7 +6,7 @@ used by the `flux schema validation` tool.
 <!-- versions:start -->
 | Source | Version |
 | --- | --- |
-| [kubernetes/kubernetes](https://github.com/kubernetes/kubernetes) | v1.35.4 |
+| [kubernetes/kubernetes](https://github.com/kubernetes/kubernetes) | v1.36.0 |
 | [fluxcd/flux2](https://github.com/fluxcd/flux2) | v2.8.6 |
 | [controlplaneio-fluxcd/flux-operator](https://github.com/controlplaneio-fluxcd/flux-operator) | v0.48.0 |
 <!-- versions:end -->
