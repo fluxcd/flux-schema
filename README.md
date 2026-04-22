@@ -18,7 +18,10 @@ Flux CLI plugin for Kubernetes schema extraction and manifests validation.
 - `flux-schema extract crd [files...]`: Extract JSON Schema from Kubernetes CRD YAMLs
   - `-d, --output-dir`: Directory to write JSON Schema files to (mutually exclusive with `--output-archive`)
   - `-a, --output-archive`: Path to write a gzipped tar archive of JSON Schema files to
-  - `-f, --output-format`: Go template for output file paths (default: `{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json`)
+  - `-f, --output-format`: Go template for output file paths (default: `{{ .Group }}/{{ .Kind }}_{{ .Version }}.json`)
+- `flux-schema extract k8s [swagger-file]`: Extract JSON Schema from a Kubernetes OpenAPI v2 swagger document
+  - `--version X.Y.Z`: Fetch the swagger from `kubernetes/kubernetes` for the given release tag (mutually exclusive with a swagger file)
+  - `-d, --output-dir`, `-f, --output-format`: same as `extract crd`
 - `flux-schema validate [paths...]`: Validate Kubernetes manifests against JSON Schemas
   - `--schema-location`: Template URL or file path for schemas (repeatable, tried in order)
   - `--skip-missing-schemas`: Skip documents for which no schema can be found
@@ -29,24 +32,22 @@ Flux CLI plugin for Kubernetes schema extraction and manifests validation.
 The `extract crd` command reads Kubernetes CustomResourceDefinition YAML and writes one JSON Schema file per CRD version.
 The input can be a bare CRD, a `List` of CRDs, or a multi-document YAML stream.
 
-Generate schemas for every CRD installed in a cluster:
+Generate schemas for every CRD installed in a cluster, using the
+per-group-directory layout:
 
 ```shell
-kubectl get crds -o yaml > crds.yaml
-flux-schema extract crd crds.yaml -d ./schemas
+kubectl get crds -o yaml | flux-schema extract crd /dev/stdin -d ./schemas
+```
+
+You can supply `-f, --output-format` with a Go template to change the layout, e.g. the
+`kubeconform`/`kubeval` flat layout:
+
+```shell
+flux-schema extract crd crds.yaml -f '{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json'
 ```
 
 > The output is compatible with `kubeconform` and `kubeval`, making this command a drop-in replacement for kubeconform's
 > [openapi2jsonschema.py](https://github.com/yannh/kubeconform/blob/master/scripts/openapi2jsonschema.py) script.
-
-You can supply `-f, --output-format` with a Go template to change the layout, e.g. the
-[CRDs-catalog](https://github.com/datreeio/CRDs-catalog) per-group-directory layout:
-
-```shell
-flux-schema extract crd crds.yaml -f '{{ .Group }}/{{ .Kind }}_{{ .Version }}.json'
-```
-
-Nested directories referenced by `-f, --output-format` are created automatically.
 
 To bundle the schemas into a gzipped tar archive instead of writing to a directory,
 use `-a, --output-archive`:
@@ -68,12 +69,50 @@ Supported template variables (all lowercased at render time):
 | `.Kind`        | `gitrepository`            |
 | `.Version`     | `v1`                       |
 
+An empty `.Group` (Kubernetes core API, e.g. `apiVersion: v1`) is normalized to `core`, and `.GroupPrefix`
+is derived from `.Group` when unset. So a core `Pod` renders as `core/pod_v1.json` with the default template
+and resolves to the same path when `validate` looks up its schema.
+
 Note that the generated schemas apply the following OpenAPI → JSON Schema transformations:
 
 - Objects with `properties` are closed with `additionalProperties: false`, except under nodes
   marked with `x-kubernetes-preserve-unknown-fields: true`, which stay open so free-form maps validate correctly.
 - Integer-or-string fields are rewritten to `oneOf: [{type: string}, {type: integer}]`. Both the
   legacy `format: int-or-string` and the structural `x-kubernetes-int-or-string: true` forms are recognized.
+
+### Kubernetes OpenAPI Extraction
+
+The `extract k8s` command reads a Kubernetes OpenAPI v2 swagger document and writes
+one JSON Schema file per kind listed under `x-kubernetes-group-version-kind`. Helper
+types (e.g. `PodSpec`, `ObjectMeta`) are not emitted as standalone files — they are
+inlined into the kinds that reference them.
+
+Fetch the upstream swagger for a Kubernetes release and generate schemas:
+
+```shell
+flux-schema extract k8s --version 1.35.0 -d ./schemas
+```
+
+Supply the swagger file from the cluster:
+
+```shell
+kubectl get --raw /openapi/v2 | flux-schema extract k8s /dev/stdin -d ./schemas
+```
+
+The same `-f, --output-format` template used by `extract crd` works here, so the
+generated files remain resolvable by `validate` with a single `--schema-location`
+for both built-ins and CRDs. Core API kinds (`apiVersion: v1`) render under the
+`core/` group directory.
+
+The emitted schemas are the standalone-strict variant:
+
+- Every `$ref` is inlined so schemas have no cross-file dependencies.
+- Objects with `properties` are closed with `additionalProperties: false`, except
+  under nodes marked `x-kubernetes-preserve-unknown-fields: true`.
+- Integer-or-string fields are rewritten to `oneOf: [{type: string}, {type: integer}]`.
+- Optional fields are marked nullable (`type: [<t>, "null"]`), matching the
+  Kubernetes API server's behavior of accepting `null` for unset optional values.
+- `apiVersion` and `kind` are injected into every kind's properties and required list.
 
 ### Kubernetes Manifests Validation
 

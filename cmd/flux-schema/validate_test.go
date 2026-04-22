@@ -13,7 +13,9 @@ import (
 
 // extractWidgetSchema runs the extract crd command on minimalCRDYAML and returns
 // the schema directory. Dogfoods extract → validate round-trip so tests
-// exercise the real artifact users will point validate at.
+// exercise the real artifact users will point validate at. Pins the flat
+// kubeval-style layout so validate tests keep exercising a single
+// --schema-location template regardless of the extract default.
 func extractWidgetSchema(t *testing.T) string {
 	t.Helper()
 	g := NewWithT(t)
@@ -23,7 +25,11 @@ func extractWidgetSchema(t *testing.T) string {
 	g.Expect(os.WriteFile(crdPath, []byte(minimalCRDYAML), 0o644)).To(Succeed())
 
 	schemaDir := t.TempDir()
-	_, err := executeCommand([]string{"extract", "crd", crdPath, "--output-dir", schemaDir})
+	_, err := executeCommand([]string{
+		"extract", "crd", crdPath,
+		"--output-dir", schemaDir,
+		"--output-format", "{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json",
+	})
 	g.Expect(err).ToNot(HaveOccurred())
 	return schemaDir
 }

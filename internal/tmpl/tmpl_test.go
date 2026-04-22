@@ -50,6 +50,23 @@ func TestRender_DerivesGroupPrefix(t *testing.T) {
 	g.Expect(got).To(Equal("source"))
 }
 
+func TestRender_EmptyGroupNormalizesToCore(t *testing.T) {
+	g := NewWithT(t)
+	got, err := Render("{{ .Group }}/{{ .Kind }}_{{ .Version }}.json", SchemaVars{
+		Kind:    "Pod",
+		Version: "v1",
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(got).To(Equal("core/pod_v1.json"))
+}
+
+func TestRender_EmptyGroupNormalizesGroupPrefixToo(t *testing.T) {
+	g := NewWithT(t)
+	got, err := Render("{{ .GroupPrefix }}", SchemaVars{Kind: "Pod", Version: "v1"})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(got).To(Equal("core"))
+}
+
 func TestRender_UnknownVarErrors(t *testing.T) {
 	g := NewWithT(t)
 	_, err := Render("{{ .Foo }}", SchemaVars{Kind: "Widget"})
