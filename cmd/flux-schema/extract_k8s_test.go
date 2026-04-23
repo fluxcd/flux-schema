@@ -58,9 +58,26 @@ func TestExtractK8sCmd_File(t *testing.T) {
 
 	data, err := os.ReadFile(filepath.Join(outDir, "example.com", "widget_v1.json"))
 	g.Expect(err).ToNot(HaveOccurred())
-	g.Expect(string(data)).To(ContainSubstring(`"$schema"`))
 	g.Expect(string(data)).To(ContainSubstring(`"apiVersion"`))
 	g.Expect(string(data)).To(ContainSubstring(`"kind"`))
+	g.Expect(string(data)).ToNot(ContainSubstring(`"$schema"`))
+	// Descriptions are preserved by default (the injectGVK step adds them to
+	// apiVersion/kind); stripping is opt-in via --strip-description.
+	g.Expect(string(data)).To(ContainSubstring(`"description"`))
+}
+
+func TestExtractK8sCmd_StripDescription(t *testing.T) {
+	g := NewWithT(t)
+
+	outDir := t.TempDir()
+	input := writeSwaggerFixture(t)
+
+	_, err := executeCommand([]string{"extract", "k8s", input, "--output-dir", outDir, "--strip-description"})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	data, err := os.ReadFile(filepath.Join(outDir, "example.com", "widget_v1.json"))
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(string(data)).ToNot(ContainSubstring(`"description"`))
 }
 
 func TestExtractK8sCmd_NoInput(t *testing.T) {

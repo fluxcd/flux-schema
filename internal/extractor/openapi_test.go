@@ -120,7 +120,7 @@ func TestExtractOpenAPI_IntOrString(t *testing.T) {
 					"port": map[string]any{
 						"type":                       "string",
 						"format":                     "int-or-string",
-						"description":                "a port",
+						"default":                    "80",
 						"x-kubernetes-int-or-string": true,
 					},
 				},
@@ -138,7 +138,7 @@ func TestExtractOpenAPI_IntOrString(t *testing.T) {
 	props := out[0].JSON["properties"].(map[string]any)
 	port := props["port"].(map[string]any)
 	g.Expect(port).To(HaveKey("oneOf"))
-	g.Expect(port["description"]).To(Equal("a port"), "sibling description survives the rewrite")
+	g.Expect(port["default"]).To(Equal("80"), "metadata sibling survives the rewrite")
 	g.Expect(port).ToNot(HaveKey("type"))
 	g.Expect(port).ToNot(HaveKey("format"))
 	g.Expect(port).ToNot(HaveKey("x-kubernetes-int-or-string"))
@@ -434,11 +434,9 @@ func TestExtractOpenAPI_GVKInjection(t *testing.T) {
 	props := schema["properties"].(map[string]any)
 	apiVersion := props["apiVersion"].(map[string]any)
 	g.Expect(apiVersion["type"]).To(Equal("string"))
-	g.Expect(apiVersion["description"]).To(ContainSubstring("APIVersion"))
 
 	kind := props["kind"].(map[string]any)
 	g.Expect(kind["type"]).To(Equal("string"))
-	g.Expect(kind["description"]).To(ContainSubstring("Kind"))
 
 	required := schema["required"].([]any)
 	g.Expect(required).To(ContainElement("apiVersion"))
@@ -453,8 +451,8 @@ func TestExtractOpenAPI_GVKInjectionIdempotent(t *testing.T) {
 			"example.v1.Widget": map[string]any{
 				"type": "object",
 				"properties": map[string]any{
-					"apiVersion": map[string]any{"type": "string", "description": "custom"},
-					"kind":       map[string]any{"type": "string", "description": "custom"},
+					"apiVersion": map[string]any{"type": "string", "default": "custom/v1"},
+					"kind":       map[string]any{"type": "string", "default": "Widget"},
 				},
 				"x-kubernetes-group-version-kind": []any{
 					map[string]any{"group": "example.com", "version": "v1", "kind": "Widget"},
@@ -467,9 +465,9 @@ func TestExtractOpenAPI_GVKInjectionIdempotent(t *testing.T) {
 
 	props := out[0].JSON["properties"].(map[string]any)
 	apiVersion := props["apiVersion"].(map[string]any)
-	g.Expect(apiVersion["description"]).To(Equal("custom"))
+	g.Expect(apiVersion["default"]).To(Equal("custom/v1"))
 	kind := props["kind"].(map[string]any)
-	g.Expect(kind["description"]).To(Equal("custom"))
+	g.Expect(kind["default"]).To(Equal("Widget"))
 }
 
 func TestExtractOpenAPI_NoMetadataForBinding(t *testing.T) {
@@ -495,20 +493,20 @@ func TestExtractOpenAPI_NoMetadataForBinding(t *testing.T) {
 	g.Expect(required).ToNot(ContainElement("metadata"))
 }
 
-func TestExtractOpenAPI_RefSiblingDescriptionWins(t *testing.T) {
+func TestExtractOpenAPI_RefSiblingMetadataWins(t *testing.T) {
 	g := NewWithT(t)
 	doc := map[string]any{
 		"definitions": map[string]any{
 			"example.v1.Helper": map[string]any{
-				"type":        "object",
-				"description": "shared description",
+				"type":    "object",
+				"default": "shared",
 			},
 			"example.v1.Widget": map[string]any{
 				"type": "object",
 				"properties": map[string]any{
 					"helper": map[string]any{
-						"$ref":        "#/definitions/example.v1.Helper",
-						"description": "contextual description",
+						"$ref":    "#/definitions/example.v1.Helper",
+						"default": "contextual",
 					},
 				},
 				"required": []any{"helper"},
@@ -522,7 +520,7 @@ func TestExtractOpenAPI_RefSiblingDescriptionWins(t *testing.T) {
 	g.Expect(errs).To(BeEmpty())
 
 	helper := out[0].JSON["properties"].(map[string]any)["helper"].(map[string]any)
-	g.Expect(helper["description"]).To(Equal("contextual description"))
+	g.Expect(helper["default"]).To(Equal("contextual"))
 }
 
 func TestExtractOpenAPI_RefSiblingTypeLoses(t *testing.T) {
@@ -619,6 +617,7 @@ func TestExtractOpenAPI_MissingRefIsError(t *testing.T) {
 	g.Expect(out).To(HaveLen(1))
 
 	broken := out[0].JSON["properties"].(map[string]any)["broken"].(map[string]any)
+	g.Expect(broken["type"]).To(Equal("object"))
 	g.Expect(broken["description"]).To(ContainSubstring("unresolved $ref"))
 }
 
@@ -636,7 +635,14 @@ func TestExtractOpenAPI_StripsVendorExtensions(t *testing.T) {
 						"x-kubernetes-patch-strategy":  "merge",
 						"x-kubernetes-patch-merge-key": "name",
 					},
+					"count": map[string]any{
+						"type": "integer",
+						"x-kubernetes-validations": []any{
+							map[string]any{"rule": "self >= 0", "message": "must be non-negative"},
+						},
+					},
 				},
+				"required": []any{"count"},
 				"x-kubernetes-group-version-kind": []any{
 					map[string]any{"group": "example.com", "version": "v1", "kind": "Widget"},
 				},
@@ -654,14 +660,26 @@ func TestExtractOpenAPI_StripsVendorExtensions(t *testing.T) {
 	g.Expect(list).ToNot(HaveKey("x-kubernetes-list-map-keys"))
 	g.Expect(list).ToNot(HaveKey("x-kubernetes-patch-strategy"))
 	g.Expect(list).ToNot(HaveKey("x-kubernetes-patch-merge-key"))
+
+	// CEL validations are retained so the API server's rules survive in the
+	// extracted schema.
+	count := out[0].JSON["properties"].(map[string]any)["count"].(map[string]any)
+	g.Expect(count).To(HaveKey("x-kubernetes-validations"))
 }
 
-func TestExtractOpenAPI_SchemaURIInjected(t *testing.T) {
+func TestExtractOpenAPI_PreservesDescriptions(t *testing.T) {
 	g := NewWithT(t)
 	doc := map[string]any{
 		"definitions": map[string]any{
 			"example.v1.Widget": map[string]any{
-				"type": "object",
+				"type":        "object",
+				"description": "top-level description",
+				"properties": map[string]any{
+					"name": map[string]any{
+						"type":        "string",
+						"description": "property description",
+					},
+				},
 				"x-kubernetes-group-version-kind": []any{
 					map[string]any{"group": "example.com", "version": "v1", "kind": "Widget"},
 				},
@@ -670,7 +688,11 @@ func TestExtractOpenAPI_SchemaURIInjected(t *testing.T) {
 	}
 	out, errs := ExtractOpenAPI(mustMarshal(t, doc))
 	g.Expect(errs).To(BeEmpty())
-	g.Expect(out[0].JSON["$schema"]).To(Equal("http://json-schema.org/schema#"))
+
+	// Extraction keeps descriptions; stripping is an opt-in post-process.
+	g.Expect(out[0].JSON["description"]).To(Equal("top-level description"))
+	name := out[0].JSON["properties"].(map[string]any)["name"].(map[string]any)
+	g.Expect(name["description"]).To(Equal("property description"))
 }
 
 func TestExtractOpenAPI_SortedOutput(t *testing.T) {

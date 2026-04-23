@@ -183,6 +183,47 @@ func TestExtractCRDCmd_HelmReleaseGolden(t *testing.T) {
 	g.Expect(string(got)).To(Equal(string(want)))
 }
 
+func TestExtractCRDCmd_StripDescription(t *testing.T) {
+	g := NewWithT(t)
+
+	fixture := `apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: widgets.example.com
+spec:
+  group: example.com
+  names:
+    kind: Widget
+  versions:
+    - name: v1
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: top-level
+          properties:
+            spec:
+              type: object
+              description: spec block
+              properties:
+                name:
+                  type: string
+                  description: widget name
+`
+	tmp := t.TempDir()
+	input := filepath.Join(tmp, "fixture.yaml")
+	if err := os.WriteFile(input, []byte(fixture), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+	outDir := filepath.Join(tmp, "out")
+
+	_, err := executeCommand([]string{"extract", "crd", input, "--output-dir", outDir, "--strip-description"})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	data, err := os.ReadFile(filepath.Join(outDir, "example.com", "widget_v1.json"))
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(string(data)).ToNot(ContainSubstring(`"description"`))
+}
+
 func writeCRDFixture(t *testing.T) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "fixture.yaml")

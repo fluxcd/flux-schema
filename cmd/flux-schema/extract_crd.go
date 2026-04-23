@@ -16,10 +16,9 @@ import (
 	"github.com/fluxcd/pkg/tar"
 
 	"github.com/fluxcd/flux-schema/internal/extractor"
+	"github.com/fluxcd/flux-schema/internal/flags"
 	"github.com/fluxcd/flux-schema/internal/tmpl"
 )
-
-const defaultExtractCRDFormat = "{{ .Group }}/{{ .Kind }}_{{ .Version }}.json"
 
 var extractCRDCmd = &cobra.Command{
 	Use:   "crd [files...]",
@@ -41,25 +40,18 @@ var extractCRDCmd = &cobra.Command{
 }
 
 type extractCRDFlags struct {
-	outputDir     string
-	outputFormat  string
+	flags.ExtractOutput
 	outputArchive string
 }
 
 var extractCRDArgs = extractCRDFlags{
-	outputDir:    ".",
-	outputFormat: defaultExtractCRDFormat,
+	ExtractOutput: flags.NewExtractOutput(),
 }
 
 func init() {
-	extractCRDCmd.Flags().StringVarP(&extractCRDArgs.outputDir, "output-dir", "d", extractCRDArgs.outputDir,
-		"directory where JSON Schema files are written (created if missing)")
-	extractCRDCmd.Flags().StringVarP(&extractCRDArgs.outputFormat, "output-format", "f", defaultExtractCRDFormat,
-		"Go template for the output file path, relative to --output-dir; "+
-			"variables: .Group, .GroupPrefix, .Kind, .Version")
+	extractCRDArgs.Register(extractCRDCmd)
 	extractCRDCmd.Flags().StringVarP(&extractCRDArgs.outputArchive, "output-archive", "a", "",
 		"path to a tar.gz file to write all schemas into; mutually exclusive with --output-dir")
-	_ = extractCRDCmd.MarkFlagDirname("output-dir")
 	_ = extractCRDCmd.MarkFlagFilename("output-archive", "tar.gz", "tgz")
 	extractCRDCmd.MarkFlagsMutuallyExclusive("output-dir", "output-archive")
 	extractCmd.AddCommand(extractCRDCmd)
@@ -67,7 +59,7 @@ func init() {
 
 func extractCRDCmdRun(cmd *cobra.Command, args []string) error {
 	archive := extractCRDArgs.outputArchive
-	destDir := extractCRDArgs.outputDir
+	destDir := extractCRDArgs.Dir
 	if archive != "" {
 		if !hasArchiveExt(archive) {
 			return fmt.Errorf("output archive %q must end in .tar.gz or .tgz", archive)
@@ -98,6 +90,11 @@ func extractCRDCmdRun(cmd *cobra.Command, args []string) error {
 			continue
 		}
 		crds, errs := extractor.ExtractCRDs(data)
+		if extractCRDArgs.StripDescription {
+			for _, c := range crds {
+				extractor.StripDescriptions(c.JSON)
+			}
+		}
 		for _, e := range errs {
 			failures = append(failures, fmt.Errorf("%s: %w", path, e))
 		}
@@ -134,7 +131,7 @@ func extractCRDCmdRun(cmd *cobra.Command, args []string) error {
 }
 
 func writeCRDSchema(srcPath string, crd extractor.Schema, destDir string) (string, error) {
-	rendered, err := tmpl.Render(extractCRDArgs.outputFormat, tmpl.SchemaVars{
+	rendered, err := tmpl.Render(extractCRDArgs.Format, tmpl.SchemaVars{
 		Group:   crd.Group,
 		Kind:    crd.Kind,
 		Version: crd.Version,

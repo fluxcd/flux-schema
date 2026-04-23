@@ -23,9 +23,10 @@ Flux CLI plugin for Kubernetes schema extraction and manifests validation.
   - `-d, --output-dir`: Directory to write JSON Schema files to (mutually exclusive with `--output-archive`)
   - `-a, --output-archive`: Path to write a gzipped tar archive of JSON Schema files to
   - `-f, --output-format`: Go template for output file paths (default: `{{ .Group }}/{{ .Kind }}_{{ .Version }}.json`)
+  - `--strip-description`: Drop `description` fields from the generated schemas to reduce their size
 - `flux-schema extract k8s [swagger-file]`: Extract JSON Schema from a Kubernetes OpenAPI v2 swagger document
   - `--version X.Y.Z`: Fetch the swagger from `kubernetes/kubernetes` for the given release tag (mutually exclusive with a swagger file)
-  - `-d, --output-dir`, `-f, --output-format`: same as `extract crd`
+  - `-d, --output-dir`, `-f, --output-format`, `--strip-description`: same as `extract crd`
 
 ### Kubernetes Manifests Validation
 
