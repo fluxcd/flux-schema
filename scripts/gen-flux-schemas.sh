@@ -74,6 +74,7 @@ echo "Extracting schemas for ${FLUX_REPO}@${version} into ${dir}"
 cat <<EOF | flux-operator build instance -f - | \
   flux-schema extract crd /dev/stdin \
     -f '{{ .Group }}/{{ .Kind }}_{{ .Version }}.json' \
+    --strip-description \
     -d "$dir"
 apiVersion: fluxcd.controlplane.io/v1
 kind: FluxInstance
