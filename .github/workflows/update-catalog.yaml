@@ -27,6 +27,8 @@ jobs:
         run: rm -rf ./catalog/latest && mkdir -p ./catalog/latest
       - name: Update Kubernetes schemas
         run: ./scripts/gen-k8s-schemas.sh -d ./catalog/latest
+      - name: Update Gateway API schemas
+        run: ./scripts/gen-crd-schemas.sh -r kubernetes-sigs/gateway-api -d ./catalog/latest
       - name: Update Flux schemas
         run: ./scripts/gen-flux-schemas.sh -d ./catalog/latest
       - name: Update Flux Operator schemas
@@ -47,6 +49,7 @@ jobs:
             Automated update of `catalog/latest/`:
 
             - Kubernetes: ${{ env.K8S_VERSION }}
+            - Gateway API: ${{ env.GATEWAY_API_VERSION }}
             - Flux: ${{ env.FLUX_VERSION }}
             - Flux Operator: ${{ env.FLUX_OPERATOR_VERSION }}
           labels: |

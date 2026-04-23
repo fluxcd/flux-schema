@@ -1,0 +1,90 @@
+{
+  "properties": {
+    "apiVersion": {
+      "type": "string"
+    },
+    "kind": {
+      "type": "string"
+    },
+    "metadata": {
+      "type": "object"
+    },
+    "spec": {
+      "additionalProperties": false,
+      "properties": {
+        "from": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "group": {
+                "maxLength": 253,
+                "pattern": "^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
+                "type": "string"
+              },
+              "kind": {
+                "maxLength": 63,
+                "minLength": 1,
+                "pattern": "^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$",
+                "type": "string"
+              },
+              "namespace": {
+                "maxLength": 63,
+                "minLength": 1,
+                "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+                "type": "string"
+              }
+            },
+            "required": [
+              "group",
+              "kind",
+              "namespace"
+            ],
+            "type": "object"
+          },
+          "maxItems": 16,
+          "minItems": 1,
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
+        },
+        "to": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "group": {
+                "maxLength": 253,
+                "pattern": "^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
+                "type": "string"
+              },
+              "kind": {
+                "maxLength": 63,
+                "minLength": 1,
+                "pattern": "^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$",
+                "type": "string"
+              },
+              "name": {
+                "maxLength": 253,
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "group",
+              "kind"
+            ],
+            "type": "object"
+          },
+          "maxItems": 16,
+          "minItems": 1,
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "type": "object"
+    }
+  },
+  "type": "object"
+}
