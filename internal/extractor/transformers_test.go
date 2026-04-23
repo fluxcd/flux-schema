@@ -112,3 +112,180 @@ func TestStripDescriptions(t *testing.T) {
 	arr := props["items"].([]any)
 	g.Expect(arr[0]).ToNot(HaveKey("description"))
 }
+
+// TestStripDescriptions_PreservesPropertyNamedDescription guards against a
+// regression where a property literally named "description" (as
+// JSONSchemaProps has for CRD openAPIV3Schema) was deleted along with the
+// schema-metadata "description" keyword. The property itself must survive;
+// only its metadata siblings underneath get stripped.
+func TestStripDescriptions_PreservesPropertyNamedDescription(t *testing.T) {
+	g := NewWithT(t)
+	schema := map[string]any{
+		"type":        "object",
+		"description": "root doc",
+		"properties": map[string]any{
+			"description": map[string]any{
+				"type":        "string",
+				"description": "the description field's own doc",
+			},
+			"type": map[string]any{
+				"type":        "string",
+				"description": "the type field's own doc",
+			},
+		},
+		"patternProperties": map[string]any{
+			"^x-": map[string]any{
+				"description": "pattern prop doc",
+			},
+		},
+		"$defs": map[string]any{
+			"description": map[string]any{
+				"type":        "string",
+				"description": "def doc",
+			},
+		},
+		"definitions": map[string]any{
+			"description": map[string]any{
+				"type":        "string",
+				"description": "legacy def doc",
+			},
+		},
+	}
+	StripDescriptions(schema)
+
+	g.Expect(schema).ToNot(HaveKey("description"))
+
+	props := schema["properties"].(map[string]any)
+	g.Expect(props).To(HaveKey("description"), "property named 'description' must be preserved")
+	g.Expect(props["description"]).ToNot(HaveKey("description"))
+	g.Expect(props["description"]).To(HaveKeyWithValue("type", "string"))
+	g.Expect(props).To(HaveKey("type"))
+
+	pp := schema["patternProperties"].(map[string]any)
+	g.Expect(pp).To(HaveKey("^x-"))
+	g.Expect(pp["^x-"]).ToNot(HaveKey("description"))
+
+	defs := schema["$defs"].(map[string]any)
+	g.Expect(defs).To(HaveKey("description"))
+	g.Expect(defs["description"]).ToNot(HaveKey("description"))
+
+	legacyDefs := schema["definitions"].(map[string]any)
+	g.Expect(legacyDefs).To(HaveKey("description"))
+	g.Expect(legacyDefs["description"]).ToNot(HaveKey("description"))
+}
+
+// TestStripDescriptions_DeepNesting guards that a property named "description"
+// is preserved at every level of recursion, not just the top. Mirrors the
+// JSONSchemaProps shape where openAPIV3Schema → properties.foo → properties
+// reaches arbitrary depth.
+func TestStripDescriptions_DeepNesting(t *testing.T) {
+	g := NewWithT(t)
+	schema := map[string]any{
+		"description": "L0",
+		"properties": map[string]any{
+			"description": map[string]any{
+				"description": "L1",
+				"properties": map[string]any{
+					"description": map[string]any{
+						"description": "L2",
+						"type":        "string",
+					},
+				},
+			},
+		},
+	}
+	StripDescriptions(schema)
+
+	l1Props := schema["properties"].(map[string]any)
+	g.Expect(l1Props).To(HaveKey("description"))
+	l1 := l1Props["description"].(map[string]any)
+	g.Expect(l1).ToNot(HaveKey("description"))
+
+	l2Props := l1["properties"].(map[string]any)
+	g.Expect(l2Props).To(HaveKey("description"))
+	l2 := l2Props["description"].(map[string]any)
+	g.Expect(l2).ToNot(HaveKey("description"))
+	g.Expect(l2).To(HaveKeyWithValue("type", "string"))
+}
+
+// TestStripDescriptions_SchemaValuedKeywords confirms that schema-valued
+// keywords (additionalProperties, not, if/then/else, oneOf/anyOf/allOf) still
+// have their "description" metadata stripped — they are schema nodes, not
+// name→schema maps. Mixed with a nested properties map so both paths execute.
+func TestStripDescriptions_SchemaValuedKeywords(t *testing.T) {
+	g := NewWithT(t)
+	schema := map[string]any{
+		"additionalProperties": map[string]any{
+			"description": "addl",
+			"type":        "object",
+			"properties": map[string]any{
+				"description": map[string]any{
+					"description": "nested",
+					"type":        "string",
+				},
+			},
+		},
+		"not": map[string]any{"description": "not-doc", "type": "null"},
+		"if":  map[string]any{"description": "if-doc"},
+		"then": map[string]any{
+			"description": "then-doc",
+			"properties": map[string]any{
+				"description": map[string]any{"description": "then-prop", "type": "string"},
+			},
+		},
+		"else":  map[string]any{"description": "else-doc"},
+		"oneOf": []any{map[string]any{"description": "oneOf-0"}},
+		"anyOf": []any{map[string]any{"description": "anyOf-0"}},
+		"allOf": []any{map[string]any{"description": "allOf-0"}},
+	}
+	StripDescriptions(schema)
+
+	addl := schema["additionalProperties"].(map[string]any)
+	g.Expect(addl).ToNot(HaveKey("description"))
+	addlProps := addl["properties"].(map[string]any)
+	g.Expect(addlProps).To(HaveKey("description"))
+	g.Expect(addlProps["description"]).ToNot(HaveKey("description"))
+
+	for _, k := range []string{"not", "if", "then", "else"} {
+		sub, ok := schema[k].(map[string]any)
+		g.Expect(ok).To(BeTrue(), "key %s should be a map", k)
+		g.Expect(sub).ToNot(HaveKey("description"), "metadata under %s must be stripped", k)
+	}
+	thenProps := schema["then"].(map[string]any)["properties"].(map[string]any)
+	g.Expect(thenProps).To(HaveKey("description"))
+	g.Expect(thenProps["description"]).ToNot(HaveKey("description"))
+
+	for _, k := range []string{"oneOf", "anyOf", "allOf"} {
+		arr := schema[k].([]any)
+		g.Expect(arr[0]).ToNot(HaveKey("description"), "metadata under %s[0] must be stripped", k)
+	}
+}
+
+// TestStripDescriptions_ItemsWithNestedProperties pins the array `items`
+// path: items is a schema node (not a name map), so its own description is
+// stripped, but a property named "description" living under items.properties
+// must still survive. Models `type: array` children of JSONSchemaProps.
+func TestStripDescriptions_ItemsWithNestedProperties(t *testing.T) {
+	g := NewWithT(t)
+	schema := map[string]any{
+		"type": "array",
+		"items": map[string]any{
+			"description": "items-doc",
+			"type":        "object",
+			"properties": map[string]any{
+				"description": map[string]any{
+					"description": "nested under items",
+					"type":        "string",
+				},
+			},
+		},
+	}
+	StripDescriptions(schema)
+
+	items := schema["items"].(map[string]any)
+	g.Expect(items).ToNot(HaveKey("description"))
+	itemsProps := items["properties"].(map[string]any)
+	g.Expect(itemsProps).To(HaveKey("description"))
+	g.Expect(itemsProps["description"]).ToNot(HaveKey("description"))
+	g.Expect(itemsProps["description"]).To(HaveKeyWithValue("type", "string"))
+}

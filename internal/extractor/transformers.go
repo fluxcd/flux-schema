@@ -16,6 +16,8 @@ import (
 // optional post-process that callers can apply to trim documentation-only
 // fields from the output.
 
+const keyProperties = "properties"
+
 // --- $ref inlining ---
 
 // inlineRefs walks node and replaces every {$ref: "#/definitions/X"} object
@@ -129,10 +131,10 @@ func overlaySiblings(inlined map[string]any, host map[string]any) map[string]any
 // and adds them to required. metadata is left as-is: absent kinds stay absent,
 // and inlined metadata is neither promoted to required nor demoted.
 func injectGVK(schema map[string]any) {
-	props, _ := schema["properties"].(map[string]any)
+	props, _ := schema[keyProperties].(map[string]any)
 	if props == nil {
 		props = map[string]any{}
-		schema["properties"] = props
+		schema[keyProperties] = props
 	}
 
 	required := toStringSlice(schema["required"])
@@ -260,7 +262,7 @@ func nullableOptional(node any) {
 		if preserve, _ := n["x-kubernetes-preserve-unknown-fields"].(bool); preserve {
 			return
 		}
-		props, _ := n["properties"].(map[string]any)
+		props, _ := n[keyProperties].(map[string]any)
 		if props != nil {
 			required := toStringSlice(n["required"])
 			for name, prop := range props {
@@ -279,7 +281,7 @@ func nullableOptional(node any) {
 			}
 		}
 		for k, v := range n {
-			if k == "properties" {
+			if k == keyProperties {
 				continue
 			}
 			nullableOptional(v)
@@ -350,7 +352,7 @@ func closeAdditionalProperties(node any) {
 		if preserve, _ := n["x-kubernetes-preserve-unknown-fields"].(bool); preserve {
 			return
 		}
-		if _, hasProps := n["properties"]; hasProps {
+		if _, hasProps := n[keyProperties]; hasProps {
 			if _, hasAP := n["additionalProperties"]; !hasAP {
 				n["additionalProperties"] = false
 			}
@@ -427,11 +429,24 @@ func keepVendorExtension(k string) bool {
 // them trims the output substantially for native Kubernetes schemas, where
 // descriptions make up the bulk of the payload. This is an optional
 // post-process — the extraction pipeline does not call it automatically.
+//
+// Keys inside "properties", "patternProperties", "$defs", and "definitions"
+// are user-defined property/schema names, not schema keywords, so a field
+// literally named "description" (as JSONSchemaProps has) is preserved and
+// only its metadata siblings underneath are stripped.
 func StripDescriptions(node any) {
 	switch n := node.(type) {
 	case map[string]any:
 		delete(n, "description")
-		for _, v := range n {
+		for k, v := range n {
+			if isSchemaNameMap(k) {
+				if m, ok := v.(map[string]any); ok {
+					for _, child := range m {
+						StripDescriptions(child)
+					}
+					continue
+				}
+			}
 			StripDescriptions(v)
 		}
 	case []any:
@@ -439,6 +454,22 @@ func StripDescriptions(node any) {
 			StripDescriptions(v)
 		}
 	}
+}
+
+// isSchemaNameMap reports whether the value under k is a map of user-defined
+// names to subschemas, rather than a schema itself. Inside such maps, the keys
+// are property or definition names and must not be confused with JSON Schema
+// keywords like "description".
+//
+// "dependentSchemas" (Draft 2019-09+) is deliberately omitted: kube-openapi
+// does not emit it, and CRDs reject it under structural-schema rules, so it
+// never appears in this project's inputs.
+func isSchemaNameMap(k string) bool {
+	switch k {
+	case keyProperties, "patternProperties", "$defs", "definitions":
+		return true
+	}
+	return false
 }
 
 // --- shared across sections ---
@@ -451,7 +482,7 @@ func StripDescriptions(node any) {
 // int-or-string node into a oneOf.
 func isStructuralKey(k string) bool {
 	switch k {
-	case "type", "properties", "items", "required",
+	case "type", keyProperties, "items", "required",
 		"oneOf", "allOf", "anyOf", "not",
 		"additionalProperties",
 		"enum", "format", "pattern",
