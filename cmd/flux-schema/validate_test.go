@@ -286,6 +286,28 @@ func TestValidateCmd_InvalidMetadataFixtures(t *testing.T) {
 	g.Expect(out).To(ContainSubstring("Summary: 3 resources found in 1 file - Valid: 0, Invalid: 3, Skipped: 0"))
 }
 
+// TestValidateCmd_SchemaLocationShorthand pins that a --schema-location value
+// without a trailing ".json" template is auto-expanded to the catalog layout
+// ("{Group}/{Kind}_{Version}.json"), so users can pass a bare directory that
+// matches the default output of `flux-schema extract`.
+func TestValidateCmd_SchemaLocationShorthand(t *testing.T) {
+	g := NewWithT(t)
+
+	out, err := executeCommand([]string{
+		"validate",
+		"./testdata/validate/manifests/valid-sources.yaml",
+		"--schema-location", "./testdata/validate/schemas",
+		"--skip-missing-schemas",
+		"--verbose",
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+	// A representative valid line proves the shorthand resolved to real schemas.
+	g.Expect(out).To(ContainSubstring("Bucket/default/minio-bucket is valid"))
+	// The Secret has no schema under that layout, so --skip-missing-schemas
+	// turns it into a skipped line — confirms the layout is being rendered.
+	g.Expect(out).To(ContainSubstring("Secret/default/minio-bucket-secret is skipped"))
+}
+
 // TestValidateCmd_SkipKind exercises all three accepted pattern shapes against
 // the real Flux fixtures: a bare Kind, an apiVersion/Kind, and a
 // group/version/Kind. Each doc that matches is skipped instead of being
@@ -336,24 +358,66 @@ func TestExpandSchemaLocations(t *testing.T) {
 		return out
 	}
 
+	// "default" alias expands to the hosted catalog URL.
 	g.Expect(expand([]string{"default"})).
 		To(Equal([]string{defaultValidateSchemaLocation}))
 
+	g.Expect(expand([]string{"DEFAULT", "Default"})).
+		To(Equal([]string{defaultValidateSchemaLocation, defaultValidateSchemaLocation}))
+
+	// Values ending in .json are taken verbatim as full templates.
+	g.Expect(expand([]string{"./local/{{.Kind}}.json"})).
+		To(Equal([]string{"./local/{{.Kind}}.json"}))
+
+	// Bare paths get the catalog layout appended.
+	g.Expect(expand([]string{"./my-schemas"})).
+		To(Equal([]string{"./my-schemas/" + defaultSchemaLayout}))
+
+	// Trailing slashes are collapsed so the result has exactly one separator.
+	g.Expect(expand([]string{"./my-schemas/"})).
+		To(Equal([]string{"./my-schemas/" + defaultSchemaLayout}))
+	g.Expect(expand([]string{"./my-schemas///"})).
+		To(Equal([]string{"./my-schemas/" + defaultSchemaLayout}))
+
+	// Backslashes are also trimmed so Windows-style paths ("\", "/") produce
+	// a clean single-separator join. Go accepts forward slashes on Windows.
+	g.Expect(expand([]string{`.\my-schemas\`})).
+		To(Equal([]string{`.\my-schemas/` + defaultSchemaLayout}))
+
+	// Bare URLs get the same tail appended; protocol is untouched.
+	g.Expect(expand([]string{"https://example.com/catalog"})).
+		To(Equal([]string{"https://example.com/catalog/" + defaultSchemaLayout}))
+
+	// URL query string is preserved on the right of the template tail so the
+	// template lands on the path, not inside the query.
+	g.Expect(expand([]string{"https://example.com/catalog?ref=main"})).
+		To(Equal([]string{"https://example.com/catalog/" + defaultSchemaLayout + "?ref=main"}))
+
+	// URL fragment is handled the same way as a query string.
+	g.Expect(expand([]string{"https://example.com/catalog#v1"})).
+		To(Equal([]string{"https://example.com/catalog/" + defaultSchemaLayout + "#v1"}))
+
+	// Trailing slash before the query is also collapsed.
+	g.Expect(expand([]string{"https://example.com/catalog/?ref=main"})).
+		To(Equal([]string{"https://example.com/catalog/" + defaultSchemaLayout + "?ref=main"}))
+
+	// Mixed inputs preserve order and apply each rule independently.
 	g.Expect(expand([]string{"default", "./local/{{.Kind}}.json"})).
 		To(Equal([]string{defaultValidateSchemaLocation, "./local/{{.Kind}}.json"}))
 
 	g.Expect(expand([]string{"./local/{{.Kind}}.json", "default"})).
 		To(Equal([]string{"./local/{{.Kind}}.json", defaultValidateSchemaLocation}))
 
-	g.Expect(expand([]string{"./local/{{.Kind}}.json"})).
-		To(Equal([]string{"./local/{{.Kind}}.json"}))
-
-	g.Expect(expand([]string{"DEFAULT", "Default"})).
-		To(Equal([]string{defaultValidateSchemaLocation, defaultValidateSchemaLocation}))
+	g.Expect(expand([]string{"default", "./my-schemas"})).
+		To(Equal([]string{defaultValidateSchemaLocation, "./my-schemas/" + defaultSchemaLayout}))
 
 	_, err := expandSchemaLocations([]string{""})
 	g.Expect(err).To(MatchError(ContainSubstring("--schema-location must not be empty")))
 
 	_, err = expandSchemaLocations([]string{"default", ""})
+	g.Expect(err).To(MatchError(ContainSubstring("--schema-location must not be empty")))
+
+	// Whitespace-only values are rejected the same way as empty strings.
+	_, err = expandSchemaLocations([]string{"   "})
 	g.Expect(err).To(MatchError(ContainSubstring("--schema-location must not be empty")))
 }

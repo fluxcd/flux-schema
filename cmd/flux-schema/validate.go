@@ -22,12 +22,11 @@ var validateCmd = &cobra.Command{
   # https://github.com/fluxcd/flux-schema/tree/main/catalog
   flux-schema validate ./manifests --verbose
 
-  # Validate against local schemas only
-  flux-schema validate ./manifests \
-    --schema-location './schemas/{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json' \
-    --skip-missing-schemas
+  # Validate against a local schema directory written by 'flux-schema extract'
+  # (bare paths/URLs get '{{.Group}}/{{.Kind}}_{{.Version}}.json' appended)
+  flux-schema validate ./manifests --schema-location ./my-schemas
 
-  # Combine the default catalog with local CRD schemas (use 'default' as an alias)
+  # Combine the default catalog with a custom local schema layout
   flux-schema validate ./manifests \
     --schema-location default \
     --schema-location './schemas/{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json'
@@ -35,7 +34,7 @@ var validateCmd = &cobra.Command{
   # Read manifests from a pipe
   kustomize build . | flux-schema validate /dev/stdin \
     --schema-location default \
-    --schema-location './schemas/{{.Group}}/{{.Kind}}_{{.Version}}.json'
+    --schema-location ./crd-schemas
 
   # Skip specific kinds by Kind or apiVersion/Kind
   flux-schema validate ./manifests \
@@ -56,7 +55,14 @@ type validateFlags struct {
 // covering the latest stable Kubernetes and Flux APIs.
 // It is used when no --schema-location is provided, and is what
 // the literal value "default" expands to in --schema-location.
-const defaultValidateSchemaLocation = "https://raw.githubusercontent.com/fluxcd/flux-schema/main/catalog/latest/{{.Group}}/{{.Kind}}_{{.Version}}.json"
+const defaultValidateSchemaLocation = "https://raw.githubusercontent.com/fluxcd/flux-schema/main/catalog/latest/" + defaultSchemaLayout
+
+// defaultSchemaLayout is the Go-template tail appended to any --schema-location
+// value that doesn't already end in .json, so a bare path/URL like
+// "./my-schemas" expands to "./my-schemas/{{.Group}}/{{.Kind}}_{{.Version}}.json".
+// This matches the per-group directory layout that `flux-schema extract` writes
+// by default, so the common case round-trips without a Go template on the flag.
+const defaultSchemaLayout = "{{.Group}}/{{.Kind}}_{{.Version}}.json"
 
 var validateArgs = validateFlags{}
 
@@ -64,7 +70,7 @@ const stdinPath = "/dev/stdin"
 
 func init() {
 	validateCmd.Flags().StringArrayVar(&validateArgs.schemaLocations, "schema-location", nil,
-		"template URL or file path for schemas (repeatable); use 'default' for the built-in catalog")
+		"URL or file path for schemas (repeatable); bare paths/URLs get the default layout appended; 'default' points at the built-in catalog")
 	validateCmd.Flags().BoolVar(&validateArgs.skipMissingSchemas, "skip-missing-schemas", false,
 		"skip documents for which no schema can be found instead of failing")
 	validateCmd.Flags().StringArrayVar(&validateArgs.skipKinds, "skip-kind", nil,
@@ -218,23 +224,51 @@ func validateCmdRun(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// expandSchemaLocations replaces every case-insensitive "default" with
-// defaultValidateSchemaLocation, preserving order so the user controls
-// fallback priority (e.g. --schema-location default --schema-location ./local
-// keeps the catalog first).
+// expandSchemaLocations normalizes each --schema-location value so callers can
+// pass either a full Go template or a bare path/URL:
+//
+//   - A case-insensitive literal "default" expands to defaultValidateSchemaLocation.
+//   - A value ending in ".json" is assumed to already be a complete template and
+//     is taken verbatim.
+//   - Anything else has defaultSchemaLayout appended under a single "/", so
+//     "./my-schemas" becomes "./my-schemas/{{.Group}}/{{.Kind}}_{{.Version}}.json".
+//     For URLs, the tail is spliced before any "?query" or "#fragment" so the
+//     template lands on the path, not inside the query string.
+//
+// Order is preserved so the user controls fallback priority.
+//
+// Note: when no --schema-location is passed the caller uses
+// defaultValidateSchemaLocation directly (see validateCmdRun) and does not go
+// through this function — that default is already a complete template.
 func expandSchemaLocations(locations []string) ([]string, error) {
 	out := make([]string, len(locations))
 	for i, loc := range locations {
-		if loc == "" {
+		if strings.TrimSpace(loc) == "" {
 			return nil, fmt.Errorf("--schema-location must not be empty")
 		}
 		if strings.EqualFold(loc, "default") {
 			out[i] = defaultValidateSchemaLocation
-		} else {
-			out[i] = loc
+			continue
 		}
+		if !strings.HasSuffix(loc, ".json") {
+			loc = appendSchemaLayout(loc)
+		}
+		out[i] = loc
 	}
 	return out, nil
+}
+
+// appendSchemaLayout appends defaultSchemaLayout to loc, preserving any URL
+// query string or fragment. "./schemas" → "./schemas/<layout>";
+// "https://host/catalog?ref=main" → "https://host/catalog/<layout>?ref=main".
+// Trailing "/" and "\" are both stripped so a Windows path like ".\schemas\"
+// normalizes cleanly — Go's filepath layer accepts forward slashes on Windows.
+func appendSchemaLayout(loc string) string {
+	base, tail := loc, ""
+	if i := strings.IndexAny(loc, "?#"); i >= 0 {
+		base, tail = loc[:i], loc[i:]
+	}
+	return strings.TrimRight(base, `/\`) + "/" + defaultSchemaLayout + tail
 }
 
 // shouldPrint returns true when this result should be written to stdout.
