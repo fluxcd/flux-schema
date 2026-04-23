@@ -286,6 +286,47 @@ func TestValidateCmd_InvalidMetadataFixtures(t *testing.T) {
 	g.Expect(out).To(ContainSubstring("Summary: 3 resources found in 1 file - Valid: 0, Invalid: 3, Skipped: 0"))
 }
 
+// TestValidateCmd_SkipKind exercises all three accepted pattern shapes against
+// the real Flux fixtures: a bare Kind, an apiVersion/Kind, and a
+// group/version/Kind. Each doc that matches is skipped instead of being
+// validated, with a short-circuit line reading "... is skipped: kind skipped".
+func TestValidateCmd_SkipKind(t *testing.T) {
+	g := NewWithT(t)
+
+	reconcilersPath := "./testdata/validate/manifests/valid-reconcilers.yaml"
+	sourcesPath := "./testdata/validate/manifests/valid-sources.yaml"
+
+	out, err := executeCommand([]string{
+		"validate",
+		reconcilersPath,
+		sourcesPath,
+		"--schema-location", "./testdata/validate/schemas/{{ .Group }}/{{ .Kind }}_{{ .Version }}.json",
+		"--skip-kind", "Secret",
+		"--skip-kind", "source.toolkit.fluxcd.io/v1/GitRepository",
+		"--skip-kind", "helm.toolkit.fluxcd.io/v2/HelmRelease",
+		"--verbose",
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	g.Expect(out).To(ContainSubstring(sourcesPath + " - Secret/default/minio-bucket-secret is skipped: kind skipped"))
+	g.Expect(out).To(ContainSubstring(" - GitRepository/"))
+	g.Expect(out).To(ContainSubstring("is skipped: kind skipped"))
+	g.Expect(out).To(ContainSubstring(" - HelmRelease/"))
+}
+
+func TestValidateCmd_SkipKind_Invalid(t *testing.T) {
+	g := NewWithT(t)
+	manifestDir := t.TempDir()
+	writeManifest(t, manifestDir, "ok.yaml", validWidget)
+
+	_, err := executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", filepath.Join(t.TempDir(), "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+		"--skip-kind", "v1/",
+	})
+	g.Expect(err).To(MatchError(ContainSubstring("skip kind pattern")))
+}
+
 func TestExpandSchemaLocations(t *testing.T) {
 	g := NewWithT(t)
 

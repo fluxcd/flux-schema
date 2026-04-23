@@ -35,7 +35,12 @@ var validateCmd = &cobra.Command{
   # Read manifests from a pipe
   kustomize build . | flux-schema validate /dev/stdin \
     --schema-location default \
-    --schema-location './schemas/{{.Group}}/{{.Kind}}_{{.Version}}.json'`,
+    --schema-location './schemas/{{.Group}}/{{.Kind}}_{{.Version}}.json'
+
+  # Skip specific kinds by Kind or apiVersion/Kind
+  flux-schema validate ./manifests \
+    --skip-kind Secret \
+    --skip-kind source.toolkit.fluxcd.io/v1/GitRepository`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: validateCmdRun,
 }
@@ -43,6 +48,7 @@ var validateCmd = &cobra.Command{
 type validateFlags struct {
 	schemaLocations    []string
 	skipMissingSchemas bool
+	skipKinds          []string
 	verbose            bool
 }
 
@@ -61,6 +67,8 @@ func init() {
 		"template URL or file path for schemas (repeatable); use 'default' for the built-in catalog")
 	validateCmd.Flags().BoolVar(&validateArgs.skipMissingSchemas, "skip-missing-schemas", false,
 		"skip documents for which no schema can be found instead of failing")
+	validateCmd.Flags().StringArrayVar(&validateArgs.skipKinds, "skip-kind", nil,
+		"skip documents matching Kind or apiVersion/Kind (repeatable)")
 	validateCmd.Flags().BoolVarP(&validateArgs.verbose, "verbose", "v", false,
 		"print a line for every document, including valid and skipped")
 	rootCmd.AddCommand(validateCmd)
@@ -81,6 +89,7 @@ func validateCmdRun(cmd *cobra.Command, args []string) error {
 	v, err := validator.New(validator.Options{
 		SchemaLocations:    locations,
 		SkipMissingSchemas: validateArgs.skipMissingSchemas,
+		SkipKinds:          validateArgs.skipKinds,
 		HTTPTimeout:        rootArgs.timeout,
 	})
 	if err != nil {
