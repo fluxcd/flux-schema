@@ -49,6 +49,10 @@ lint: golangci-lint ## Run golangci linters.
 build: tidy fmt vet ## Build CLI binary.
 	CGO_ENABLED=0 go build -ldflags="-s -w -X main.VERSION=$(VERSION_DEV)" -o ./bin/flux-schema ./cmd/flux-schema/
 
+.PHONY: install
+install: test lint build ## Test, lint, build and copy the binary to GOBIN.
+	cp bin/flux-schema $(GOBIN)
+
 .PHONY: run
 run: build ## Run CLI binary.
 	./bin/flux-schema $(GO_RUN_ARGS)
