@@ -1,18 +1,13 @@
 {
-  "$schema": "http://json-schema.org/schema#",
   "additionalProperties": false,
-  "description": "Event represents a single event to a watched resource.",
   "properties": {
     "apiVersion": {
-      "description": "APIVersion defines the versioned schema of this representation of an object.",
       "type": "string"
     },
     "kind": {
-      "description": "Kind is a string value representing the REST resource this object represents.",
       "type": "string"
     },
     "object": {
-      "description": "Object is:\n * If Type is Added or Modified: the new state of the object.\n * If Type is Deleted: the state of the object immediately before deletion.\n * If Type is Error: *Status is recommended; other types may make sense\n   depending on context.",
       "type": "object"
     },
     "type": {
