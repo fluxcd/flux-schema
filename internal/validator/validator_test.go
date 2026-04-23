@@ -702,6 +702,146 @@ func TestIsContentFree(t *testing.T) {
 	}
 }
 
+func TestParseSkipKind(t *testing.T) {
+	cases := map[string]struct {
+		in         string
+		wantAPIVer string
+		wantKind   string
+		wantErr    bool
+	}{
+		"kind only":             {in: "Secret", wantKind: "Secret"},
+		"core gvk":              {in: "v1/Secret", wantAPIVer: "v1", wantKind: "Secret"},
+		"group gvk":             {in: "source.toolkit.fluxcd.io/v1/GitRepository", wantAPIVer: "source.toolkit.fluxcd.io/v1", wantKind: "GitRepository"},
+		"whitespace trimmed":    {in: "  Secret  ", wantKind: "Secret"},
+		"empty":                 {in: "", wantErr: true},
+		"whitespace only":       {in: "   ", wantErr: true},
+		"trailing slash":        {in: "v1/", wantErr: true},
+		"leading slash":         {in: "/Secret", wantErr: true},
+		"double slash in group": {in: "//Secret", wantErr: true},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			g := NewWithT(t)
+			m, err := parseSkipKind(tc.in)
+			if tc.wantErr {
+				g.Expect(err).To(HaveOccurred())
+				return
+			}
+			g.Expect(err).ToNot(HaveOccurred())
+			g.Expect(m.apiVersion).To(Equal(tc.wantAPIVer))
+			g.Expect(m.kind).To(Equal(tc.wantKind))
+		})
+	}
+}
+
+func TestSkipKindMatcher_Matches(t *testing.T) {
+	g := NewWithT(t)
+	kindOnly, err := parseSkipKind("Secret")
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(kindOnly.matches("v1", "Secret")).To(BeTrue())
+	g.Expect(kindOnly.matches("example.com/v1", "Secret")).To(BeTrue())
+	g.Expect(kindOnly.matches("v1", "ConfigMap")).To(BeFalse())
+
+	core, err := parseSkipKind("v1/Secret")
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(core.matches("v1", "Secret")).To(BeTrue())
+	g.Expect(core.matches("example.com/v1", "Secret")).To(BeFalse())
+
+	gvk, err := parseSkipKind("source.toolkit.fluxcd.io/v1/GitRepository")
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(gvk.matches("source.toolkit.fluxcd.io/v1", "GitRepository")).To(BeTrue())
+	g.Expect(gvk.matches("source.toolkit.fluxcd.io/v1beta2", "GitRepository")).To(BeFalse())
+	g.Expect(gvk.matches("source.toolkit.fluxcd.io/v1", "HelmRepository")).To(BeFalse())
+}
+
+func TestValidateBytes_SkipKind_KindOnly(t *testing.T) {
+	g := NewWithT(t)
+	dir := t.TempDir()
+	v, err := New(Options{
+		SchemaLocations: []string{filepath.Join(dir, "{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json")},
+		SkipKinds:       []string{"Secret"},
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	doc := []byte(`apiVersion: v1
+kind: Secret
+metadata:
+  name: s1
+stringData:
+  foo: bar
+`)
+	results := v.ValidateBytes(context.Background(), "test.yaml", doc)
+	g.Expect(results).To(HaveLen(1))
+	g.Expect(results[0].Status).To(Equal(StatusSkipped))
+	g.Expect(results[0].Message).To(Equal("kind skipped"))
+	g.Expect(results[0].Identifier()).To(Equal("Secret/s1"))
+}
+
+func TestValidateBytes_SkipKind_GVKMatchesOnlyExactVersion(t *testing.T) {
+	g := NewWithT(t)
+	dir := t.TempDir()
+	writeWidgetSchema(t, dir)
+	v, err := New(Options{
+		SchemaLocations: []string{filepath.Join(dir, "{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json")},
+		SkipKinds:       []string{"example.com/v1/Widget"},
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	skipped := []byte(`apiVersion: example.com/v1
+kind: Widget
+metadata:
+  name: w1
+spec:
+  name: ok
+`)
+	results := v.ValidateBytes(context.Background(), "test.yaml", skipped)
+	g.Expect(results[0].Status).To(Equal(StatusSkipped))
+
+	// A different version must not match; it falls through to normal
+	// resolution and errors out with "schema not found".
+	other := []byte(`apiVersion: example.com/v2
+kind: Widget
+metadata:
+  name: w1
+spec:
+  name: ok
+`)
+	results = v.ValidateBytes(context.Background(), "test.yaml", other)
+	g.Expect(results[0].Status).To(Equal(StatusInvalid))
+	g.Expect(results[0].Message).To(Equal("schema not found"))
+}
+
+func TestValidateBytes_SkipKind_BypassesAdmissionCheck(t *testing.T) {
+	// Sealed/encrypted manifests often omit metadata.name — --skip-kind must
+	// short-circuit before the name/generateName rule so those docs don't
+	// surface as invalid.
+	g := NewWithT(t)
+	dir := t.TempDir()
+	v, err := New(Options{
+		SchemaLocations: []string{filepath.Join(dir, "{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json")},
+		SkipKinds:       []string{"Secret"},
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	doc := []byte(`apiVersion: v1
+kind: Secret
+metadata:
+  namespace: default
+`)
+	results := v.ValidateBytes(context.Background(), "test.yaml", doc)
+	g.Expect(results).To(HaveLen(1))
+	g.Expect(results[0].Status).To(Equal(StatusSkipped))
+}
+
+func TestNew_RejectsBadSkipKind(t *testing.T) {
+	g := NewWithT(t)
+	_, err := New(Options{
+		SchemaLocations: []string{"./{{ .Kind }}.json"},
+		SkipKinds:       []string{""},
+	})
+	g.Expect(err).To(HaveOccurred())
+}
+
 func TestNew_RejectsBadTemplate(t *testing.T) {
 	g := NewWithT(t)
 	_, err := New(Options{SchemaLocations: []string{"{{ .Unknown }}"}})

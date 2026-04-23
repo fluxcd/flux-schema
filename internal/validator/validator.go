@@ -1,13 +1,6 @@
 // Copyright 2026 The Flux Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package validator validates Kubernetes YAML manifests against JSON
-// Schemas resolved from one or more --schema-location templates.
-//
-// Validation is strict by default: YAML duplicate keys are rejected,
-// documents missing both metadata.name and metadata.generateName are
-// flagged (kube-apiserver admission rule), and schemas produced by
-// flux-schema extract enforce additionalProperties: false.
 package validator
 
 import (
@@ -17,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"text/template"
@@ -98,6 +92,7 @@ func (r Result) Identifier() string {
 type Options struct {
 	SchemaLocations    []string
 	SkipMissingSchemas bool
+	SkipKinds          []string
 	HTTPClient         *retryablehttp.Client
 	HTTPTimeout        time.Duration
 	Workers            int
@@ -106,8 +101,44 @@ type Options struct {
 // Validator resolves and applies JSON Schemas to Kubernetes manifests.
 // It is safe for concurrent use by multiple goroutines.
 type Validator struct {
-	opts   Options
-	loader *SchemaLoader
+	opts      Options
+	loader    *SchemaLoader
+	skipKinds []skipKindMatcher
+}
+
+// skipKindMatcher matches a document by Kind, optionally scoped to an
+// apiVersion. An empty apiVersion matches any group/version.
+type skipKindMatcher struct {
+	apiVersion string
+	kind       string
+}
+
+// parseSkipKind parses a SkipKinds pattern. Accepted shapes:
+//
+//	Kind              e.g. "Secret"
+//	apiVersion/Kind   e.g. "v1/Secret", "source.toolkit.fluxcd.io/v1/GitRepository"
+func parseSkipKind(s string) (skipKindMatcher, error) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return skipKindMatcher{}, errors.New("skip kind pattern must not be empty")
+	}
+	parts := strings.Split(s, "/")
+	if slices.Contains(parts, "") {
+		return skipKindMatcher{}, fmt.Errorf("skip kind pattern %q: segments must not be empty", s)
+	}
+	kind := parts[len(parts)-1]
+	var apiVersion string
+	if len(parts) > 1 {
+		apiVersion = strings.Join(parts[:len(parts)-1], "/")
+	}
+	return skipKindMatcher{apiVersion: apiVersion, kind: kind}, nil
+}
+
+func (m skipKindMatcher) matches(apiVersion, kind string) bool {
+	if m.kind != kind {
+		return false
+	}
+	return m.apiVersion == "" || m.apiVersion == apiVersion
 }
 
 // New returns a Validator configured from opts. Each location template is
@@ -139,9 +170,19 @@ func New(opts Options) (*Validator, error) {
 		opts.HTTPClient = c
 	}
 
+	skipKinds := make([]skipKindMatcher, 0, len(opts.SkipKinds))
+	for _, s := range opts.SkipKinds {
+		m, err := parseSkipKind(s)
+		if err != nil {
+			return nil, err
+		}
+		skipKinds = append(skipKinds, m)
+	}
+
 	return &Validator{
-		opts:   opts,
-		loader: NewSchemaLoader(templates, opts.HTTPClient, opts.HTTPTimeout),
+		opts:      opts,
+		loader:    NewSchemaLoader(templates, opts.HTTPClient, opts.HTTPTimeout),
+		skipKinds: skipKinds,
 	}, nil
 }
 
@@ -367,8 +408,8 @@ func (v *Validator) validateDoc(ctx context.Context, source string, idx int, raw
 		return r, true
 	}
 	// missingSchemaStatus picks between StatusSkipped and StatusInvalid for
-	// "we can't resolve a schema for this document" cases, honoring the
-	// --skip-missing-schemas flag.
+	// "we can't resolve a schema for this document" cases, honoring
+	// Options.SkipMissingSchemas.
 	missingSchemaStatus := func() Status {
 		if v.opts.SkipMissingSchemas {
 			return StatusSkipped
@@ -378,9 +419,9 @@ func (v *Validator) validateDoc(ctx context.Context, source string, idx int, raw
 
 	var doc map[string]any
 	if err := yaml.UnmarshalStrict(raw, &doc); err != nil {
-		// Lenient re-parse so the CLI line can still show Kind/Namespace/Name
-		// for a doc that failed admission (e.g. duplicate keys), rather than
-		// the anonymous "/#1".
+		// Lenient re-parse so callers can still render Kind/Namespace/Name
+		// for a doc that failed admission (e.g. duplicate keys), rather
+		// than the anonymous "/#1".
 		var lenient map[string]any
 		if yaml.Unmarshal(raw, &lenient) == nil && lenient != nil {
 			r.APIVersion, r.Kind, r.Namespace, r.Name = extractIdentity(lenient)
@@ -401,6 +442,15 @@ func (v *Validator) validateDoc(ctx context.Context, source string, idx int, raw
 	metadata, _ := doc["metadata"].(map[string]any)
 	name, hasIdentity := computeName(metadata, idx)
 	r.Name = name
+
+	// SkipKinds matching runs before admission and schema checks so a
+	// kind-only entry (e.g. "Secret") also covers sealed/encrypted manifests
+	// that would otherwise fail the name/generateName rule.
+	for _, m := range v.skipKinds {
+		if m.matches(r.APIVersion, r.Kind) {
+			return settle(StatusSkipped, "kind skipped")
+		}
+	}
 
 	if r.APIVersion == "" || r.Kind == "" {
 		return settle(missingSchemaStatus(), "document missing apiVersion/kind")

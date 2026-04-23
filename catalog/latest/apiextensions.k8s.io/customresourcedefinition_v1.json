@@ -360,6 +360,12 @@
                 "items": {
                   "additionalProperties": false,
                   "properties": {
+                    "description": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "format": {
                       "type": [
                         "string",
@@ -468,6 +474,12 @@
                           "null"
                         ]
                       },
+                      "description": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
                       "enum": {
                         "items": {},
                         "type": [
@@ -491,6 +503,12 @@
                       "externalDocs": {
                         "additionalProperties": false,
                         "properties": {
+                          "description": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "url": {
                             "type": [
                               "string",

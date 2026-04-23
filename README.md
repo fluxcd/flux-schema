@@ -18,7 +18,8 @@ Flux CLI plugin for Kubernetes schema extraction and manifests validation.
 - `flux-schema validate [paths...]`: Validate Kubernetes manifests against JSON Schemas
     - `--schema-location`: Template URL or file path for schemas (repeatable, tried in order); use `default` for the Flux catalog
     - `--skip-missing-schemas`: Skip documents for which no schema can be found
-    - `-v, --verbose`: Print a line for every document, including valid and skipped
+    - `--skip-kind`: Skip documents matching `Kind` or `apiVersion/Kind` (repeatable)
+    - `-v, --verbose`: Print a line for every document, including valid and skipped ones
 - `flux-schema extract crd [files...]`: Extract JSON Schema from Kubernetes CRD YAMLs
   - `-d, --output-dir`: Directory to write JSON Schema files to (mutually exclusive with `--output-archive`)
   - `-a, --output-archive`: Path to write a gzipped tar archive of JSON Schema files to
@@ -45,13 +46,14 @@ To validate against your own schemas, pass `--schema-location` with a Go templat
 
 ```shell
 flux-schema validate ./manifests \
+  --skip-missing-schemas \
   --schema-location './schemas/{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json'
 ```
 
 Template variables are `.Group`, `.GroupPrefix`, `.Kind`, and `.Version`.
 
-The flag is repeatable and locations are tried in order — the first match wins. Pass the
-literal value `default` to include the flux-schema catalog alongside your own schemas:
+The `--schema-location` flag is repeatable and locations are tried in order — the first match wins.
+Pass the literal value `default` to include the flux-schema catalog alongside your own schemas:
 
 ```shell
 flux-schema validate ./manifests \
@@ -60,10 +62,12 @@ flux-schema validate ./manifests \
   --schema-location './schemas/{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json'
 ```
 
-Manifests can also be piped via `/dev/stdin`:
+Manifests can also be piped via `/dev/stdin` and certain documents skipped with `--skip-kind`:
 
 ```shell
-kustomize build . | flux-schema validate /dev/stdin
+kustomize build . | flux-schema validate /dev/stdin \
+  --skip-kind 'v1/Secret' \
+  --skip-kind 'source.toolkit.fluxcd.io/v1/ExternalArtifact'
 ```
 
 Output example with validation errors:
@@ -77,14 +81,15 @@ manifests/sources.yaml - Bucket/apps/s3-data is invalid: schema validation faile
 manifests/sources.yaml - OCIRepository/apps/podinfo is invalid: YAML parse failed
   - line 18: key "app.kubernetes.io/name" already set in map
 manifests/sources.yaml - HelmChart/apps/redis is valid
-Summary: 3 resources found in 1 file - Valid: 1, Invalid: 2, Skipped: 0
+manifests/sources.yaml - Secret/apps/auth-sops is skipped: kind skipped
+Summary: 4 resources found in 1 file - Valid: 1, Invalid: 2, Skipped: 1
 ```
 
 A non-zero exit code is returned when any document is invalid or errored.
 
 Validation is strict by default:
 
-- YAML documents with duplicate keys are rejected.
+- YAML documents with duplicate keys are rejected matching Flux behavior.
 - Documents missing both `metadata.name` and `metadata.generateName` are flagged as invalid
   matching Kubernetes API behavior.
 - Schemas produced by `flux-schema extract crd` close objects with `additionalProperties: false`,
