@@ -6,8 +6,10 @@ package validator
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"slices"
@@ -25,8 +27,6 @@ import (
 )
 
 const (
-	defaultWorkers = 8
-
 	extYAML = ".yaml"
 	extYML  = ".yml"
 )
@@ -89,13 +89,18 @@ func (r Result) Identifier() string {
 }
 
 // Options configures a Validator.
+//
+// InsecureSkipTLSVerify is only applied when HTTPClient is nil and the
+// validator constructs its own client. Callers who supply HTTPClient are
+// responsible for configuring TLS on that client themselves.
 type Options struct {
-	SchemaLocations    []string
-	SkipMissingSchemas bool
-	SkipKinds          []string
-	HTTPClient         *retryablehttp.Client
-	HTTPTimeout        time.Duration
-	Workers            int
+	SchemaLocations       []string
+	SkipMissingSchemas    bool
+	SkipKinds             []string
+	HTTPClient            *retryablehttp.Client
+	HTTPTimeout           time.Duration
+	Workers               int
+	InsecureSkipTLSVerify bool
 }
 
 // Validator resolves and applies JSON Schemas to Kubernetes manifests.
@@ -162,11 +167,14 @@ func New(opts Options) (*Validator, error) {
 		templates[i] = tpl
 	}
 	if opts.Workers <= 0 {
-		opts.Workers = defaultWorkers
+		opts.Workers = DefaultWorkers
 	}
 	if opts.HTTPClient == nil {
 		c := retryablehttp.NewClient()
 		c.Logger = nil
+		if opts.InsecureSkipTLSVerify {
+			applyInsecureTLS(c)
+		}
 		opts.HTTPClient = c
 	}
 
@@ -267,6 +275,14 @@ func (v *Validator) ValidateSources(ctx context.Context, paths []string) <-chan 
 
 		close(jobs)
 		workerWG.Wait()
+		// Drain any jobs that workers left behind when ctx was cancelled:
+		// streamFile calls sourceWG.Add(1) before the send, and a worker's
+		// select may pick <-ctx.Done() over <-jobs even when both are ready,
+		// leaving queued jobs with unbalanced Add counts. Without this drain
+		// per-source waiters would block forever and results would never close.
+		for j := range jobs {
+			j.sourceWG.Done()
+		}
 		waiterWG.Wait()
 		close(results)
 	}()
@@ -570,6 +586,24 @@ func computeName(metadata map[string]any, docIndex int) (string, bool) {
 		return generateName + "{{ generateName }}", true
 	}
 	return fmt.Sprintf("#%d", docIndex), false
+}
+
+// applyInsecureTLS clones the retryablehttp client's underlying transport and
+// enables InsecureSkipVerify on its TLS config. Cloning avoids mutating the
+// shared cleanhttp default transport, which would leak the setting into
+// unrelated HTTP clients in the same process.
+func applyInsecureTLS(c *retryablehttp.Client) {
+	t, ok := c.HTTPClient.Transport.(*http.Transport)
+	if !ok {
+		t = &http.Transport{}
+	} else {
+		t = t.Clone()
+	}
+	if t.TLSClientConfig == nil {
+		t.TLSClientConfig = &tls.Config{}
+	}
+	t.TLSClientConfig.InsecureSkipVerify = true
+	c.HTTPClient.Transport = t
 }
 
 // flattenErrors walks a ValidationError tree and returns one entry per leaf

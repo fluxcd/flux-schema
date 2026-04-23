@@ -19,6 +19,9 @@ Flux CLI plugin for Kubernetes schema extraction and manifests validation.
     - `--schema-location`: URL or file path for schemas (repeatable, tried in order); `default` points at the built-in catalog
     - `--skip-missing-schemas`: Skip documents for which no schema can be found
     - `--skip-kind`: Skip documents matching `Kind` or `apiVersion/Kind` (repeatable)
+    - `--fail-fast`: Exit after the first invalid document
+    - `--concurrent`: Number of concurrent workers (default 8)
+    - `--insecure-skip-tls-verify`: Disable TLS certificate verification when fetching schemas over HTTPS
     - `-v, --verbose`: Print a line for every document, including valid and skipped ones
 - `flux-schema extract crd [files...]`: Extract JSON Schema from Kubernetes CRD YAMLs
   - `-d, --output-dir`: Directory to write JSON Schema files to (mutually exclusive with `--output-archive`)

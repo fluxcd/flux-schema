@@ -4,11 +4,16 @@
 package main
 
 import (
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
 
 	. "github.com/onsi/gomega"
+
+	"github.com/fluxcd/flux-schema/internal/validator"
 )
 
 // extractWidgetSchema runs the extract crd command on minimalCRDYAML and returns
@@ -336,6 +341,106 @@ func TestValidateCmd_SkipKind(t *testing.T) {
 	g.Expect(out).To(ContainSubstring(" - HelmRelease/"))
 }
 
+// TestValidateCmd_FailFast pins the short-circuit behavior: a multi-doc file
+// containing many invalid documents must still trigger a non-zero exit, but
+// --fail-fast should stop counting well before every document runs. With
+// --concurrent 1 the pool is near-deterministic — we expect exactly 1 or 2
+// invalid lines (one picked up before the cancel fires, plus at most one
+// already in the worker pipeline) and a matching summary count.
+func TestValidateCmd_FailFast(t *testing.T) {
+	g := NewWithT(t)
+	schemaDir := extractWidgetSchema(t)
+	manifestDir := t.TempDir()
+
+	// 50 invalid docs — the pool with a single worker will cancel long
+	// before all of them are counted.
+	var body []byte
+	for i := range 50 {
+		if i > 0 {
+			body = append(body, []byte("---\n")...)
+		}
+		body = append(body, []byte(invalidWidget)...)
+	}
+	writeManifest(t, manifestDir, "multi.yaml", string(body))
+
+	out, err := executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+		"--fail-fast",
+		"--concurrent", "1",
+	})
+	g.Expect(err).To(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("is invalid: schema validation failed"))
+	// Single-digit invalid count proves fail-fast cut the run short of 50.
+	g.Expect(out).To(MatchRegexp(`Invalid: [1-9],`))
+}
+
+// TestValidateCmd_ConcurrentFlag pins that --concurrent accepts a value and
+// that an invalid (<1) value is rejected with a clear error.
+func TestValidateCmd_ConcurrentFlag(t *testing.T) {
+	g := NewWithT(t)
+	schemaDir := extractWidgetSchema(t)
+	manifestDir := t.TempDir()
+	writeManifest(t, manifestDir, "ok.yaml", validWidget)
+
+	out, err := executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+		"--concurrent", "2",
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("Valid: 1"))
+
+	_, err = executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+		"--concurrent", "0",
+	})
+	g.Expect(err).To(MatchError(ContainSubstring("--concurrent must be >= 1")))
+}
+
+// TestValidateCmd_InsecureSkipTLSVerify points --schema-location at a TLS
+// httptest server backed by a self-signed cert. The default run must fail
+// with a TLS verification error; passing the flag must make it succeed.
+func TestValidateCmd_InsecureSkipTLSVerify(t *testing.T) {
+	g := NewWithT(t)
+
+	schemaBody, err := json.Marshal(map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"apiVersion": map[string]any{"type": "string"},
+			"kind":       map[string]any{"type": "string"},
+			"metadata":   map[string]any{"type": "object"},
+			"spec":       map[string]any{"type": "object"},
+		},
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write(schemaBody)
+	}))
+	t.Cleanup(srv.Close)
+
+	manifestDir := t.TempDir()
+	writeManifest(t, manifestDir, "ok.yaml", validWidget)
+
+	// Without --insecure-skip-tls-verify the self-signed cert must be rejected.
+	_, err = executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", srv.URL + "/{{.Kind}}_{{.Version}}.json",
+	})
+	g.Expect(err).To(HaveOccurred())
+
+	// With the flag, the same run succeeds.
+	out, err := executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", srv.URL + "/{{.Kind}}_{{.Version}}.json",
+		"--insecure-skip-tls-verify",
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("Valid: 1"))
+}
+
 func TestValidateCmd_SkipKind_Invalid(t *testing.T) {
 	g := NewWithT(t)
 	manifestDir := t.TempDir()
@@ -360,10 +465,10 @@ func TestExpandSchemaLocations(t *testing.T) {
 
 	// "default" alias expands to the hosted catalog URL.
 	g.Expect(expand([]string{"default"})).
-		To(Equal([]string{defaultValidateSchemaLocation}))
+		To(Equal([]string{validator.DefaultSchemaLocation}))
 
 	g.Expect(expand([]string{"DEFAULT", "Default"})).
-		To(Equal([]string{defaultValidateSchemaLocation, defaultValidateSchemaLocation}))
+		To(Equal([]string{validator.DefaultSchemaLocation, validator.DefaultSchemaLocation}))
 
 	// Values ending in .json are taken verbatim as full templates.
 	g.Expect(expand([]string{"./local/{{.Kind}}.json"})).
@@ -371,45 +476,45 @@ func TestExpandSchemaLocations(t *testing.T) {
 
 	// Bare paths get the catalog layout appended.
 	g.Expect(expand([]string{"./my-schemas"})).
-		To(Equal([]string{"./my-schemas/" + defaultSchemaLayout}))
+		To(Equal([]string{"./my-schemas/" + validator.DefaultSchemaLayout}))
 
 	// Trailing slashes are collapsed so the result has exactly one separator.
 	g.Expect(expand([]string{"./my-schemas/"})).
-		To(Equal([]string{"./my-schemas/" + defaultSchemaLayout}))
+		To(Equal([]string{"./my-schemas/" + validator.DefaultSchemaLayout}))
 	g.Expect(expand([]string{"./my-schemas///"})).
-		To(Equal([]string{"./my-schemas/" + defaultSchemaLayout}))
+		To(Equal([]string{"./my-schemas/" + validator.DefaultSchemaLayout}))
 
 	// Backslashes are also trimmed so Windows-style paths ("\", "/") produce
 	// a clean single-separator join. Go accepts forward slashes on Windows.
 	g.Expect(expand([]string{`.\my-schemas\`})).
-		To(Equal([]string{`.\my-schemas/` + defaultSchemaLayout}))
+		To(Equal([]string{`.\my-schemas/` + validator.DefaultSchemaLayout}))
 
 	// Bare URLs get the same tail appended; protocol is untouched.
 	g.Expect(expand([]string{"https://example.com/catalog"})).
-		To(Equal([]string{"https://example.com/catalog/" + defaultSchemaLayout}))
+		To(Equal([]string{"https://example.com/catalog/" + validator.DefaultSchemaLayout}))
 
 	// URL query string is preserved on the right of the template tail so the
 	// template lands on the path, not inside the query.
 	g.Expect(expand([]string{"https://example.com/catalog?ref=main"})).
-		To(Equal([]string{"https://example.com/catalog/" + defaultSchemaLayout + "?ref=main"}))
+		To(Equal([]string{"https://example.com/catalog/" + validator.DefaultSchemaLayout + "?ref=main"}))
 
 	// URL fragment is handled the same way as a query string.
 	g.Expect(expand([]string{"https://example.com/catalog#v1"})).
-		To(Equal([]string{"https://example.com/catalog/" + defaultSchemaLayout + "#v1"}))
+		To(Equal([]string{"https://example.com/catalog/" + validator.DefaultSchemaLayout + "#v1"}))
 
 	// Trailing slash before the query is also collapsed.
 	g.Expect(expand([]string{"https://example.com/catalog/?ref=main"})).
-		To(Equal([]string{"https://example.com/catalog/" + defaultSchemaLayout + "?ref=main"}))
+		To(Equal([]string{"https://example.com/catalog/" + validator.DefaultSchemaLayout + "?ref=main"}))
 
 	// Mixed inputs preserve order and apply each rule independently.
 	g.Expect(expand([]string{"default", "./local/{{.Kind}}.json"})).
-		To(Equal([]string{defaultValidateSchemaLocation, "./local/{{.Kind}}.json"}))
+		To(Equal([]string{validator.DefaultSchemaLocation, "./local/{{.Kind}}.json"}))
 
 	g.Expect(expand([]string{"./local/{{.Kind}}.json", "default"})).
-		To(Equal([]string{"./local/{{.Kind}}.json", defaultValidateSchemaLocation}))
+		To(Equal([]string{"./local/{{.Kind}}.json", validator.DefaultSchemaLocation}))
 
 	g.Expect(expand([]string{"default", "./my-schemas"})).
-		To(Equal([]string{defaultValidateSchemaLocation, "./my-schemas/" + defaultSchemaLayout}))
+		To(Equal([]string{validator.DefaultSchemaLocation, "./my-schemas/" + validator.DefaultSchemaLayout}))
 
 	_, err := expandSchemaLocations([]string{""})
 	g.Expect(err).To(MatchError(ContainSubstring("--schema-location must not be empty")))
