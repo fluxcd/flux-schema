@@ -83,8 +83,6 @@ func ExtractOpenAPI(data []byte) ([]Schema, []error) {
 	return out, errs
 }
 
-const jsonSchemaURI = "http://json-schema.org/schema#"
-
 func readGVKs(def map[string]any) []GVK {
 	raw, ok := def["x-kubernetes-group-version-kind"].([]any)
 	if !ok {
@@ -142,11 +140,9 @@ func buildSchema(name string, def map[string]any, defs map[string]any) (map[stri
 	//    keys alongside apiVersion/kind/metadata/spec/... are rejected.
 	closeAdditionalProperties(inlined)
 
-	// 7. Strip remaining x-kubernetes-* extensions (keep preserve-unknown-fields).
+	// 7. Strip remaining x-kubernetes-* extensions (keep preserve-unknown-fields
+	//    and validations).
 	stripVendorExtensions(inlined)
-
-	// 8. Inject $schema so editors auto-detect.
-	inlined["$schema"] = jsonSchemaURI
 
 	return inlined, nil
 }

@@ -82,6 +82,7 @@ mkdir -p "$dir"
 kubectl kustomize "https://github.com/${repo}/config/crd?ref=${version}" | \
   flux-schema extract crd /dev/stdin \
     -f '{{ .Group }}/{{ .Kind }}_{{ .Version }}.json' \
+    --strip-description \
     -d "$dir"
 
 if [[ "${GITHUB_ACTIONS:-}" == "true" && -n "${GITHUB_ENV:-}" ]]; then

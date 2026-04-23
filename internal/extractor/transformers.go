@@ -12,7 +12,9 @@ import (
 
 // Functions in this file follow the buildSchema pipeline order:
 // inlineRefs → injectGVK → replaceIntOrString → nullableOptional →
-// closeAdditionalProperties → stripVendorExtensions.
+// closeAdditionalProperties → stripVendorExtensions. StripDescriptions is an
+// optional post-process that callers can apply to trim documentation-only
+// fields from the output.
 
 // --- $ref inlining ---
 
@@ -383,9 +385,10 @@ func closeAdditionalPropertiesChildren(node any) {
 
 // --- vendor extension stripping ---
 
-// stripVendorExtensions removes every x-kubernetes-* key from the tree except
-// x-kubernetes-preserve-unknown-fields, which carries structural meaning for
-// downstream validators.
+// stripVendorExtensions removes x-kubernetes-* keys from the tree except those
+// that carry validation semantics: x-kubernetes-preserve-unknown-fields (keeps
+// subtrees open for server-side unknown fields) and x-kubernetes-validations
+// (CEL rules enforced by the API server).
 func stripVendorExtensions(node any) {
 	switch n := node.(type) {
 	case map[string]any:
@@ -393,7 +396,7 @@ func stripVendorExtensions(node any) {
 			if !strings.HasPrefix(k, "x-kubernetes-") {
 				continue
 			}
-			if k == "x-kubernetes-preserve-unknown-fields" {
+			if keepVendorExtension(k) {
 				continue
 			}
 			delete(n, k)
@@ -404,6 +407,36 @@ func stripVendorExtensions(node any) {
 	case []any:
 		for _, v := range n {
 			stripVendorExtensions(v)
+		}
+	}
+}
+
+func keepVendorExtension(k string) bool {
+	switch k {
+	case "x-kubernetes-preserve-unknown-fields",
+		"x-kubernetes-validations":
+		return true
+	}
+	return false
+}
+
+// --- description stripping ---
+
+// StripDescriptions removes every "description" key from the tree. Descriptions
+// are documentation-only and don't affect JSON Schema validation; dropping
+// them trims the output substantially for native Kubernetes schemas, where
+// descriptions make up the bulk of the payload. This is an optional
+// post-process — the extraction pipeline does not call it automatically.
+func StripDescriptions(node any) {
+	switch n := node.(type) {
+	case map[string]any:
+		delete(n, "description")
+		for _, v := range n {
+			StripDescriptions(v)
+		}
+	case []any:
+		for _, v := range n {
+			StripDescriptions(v)
 		}
 	}
 }

@@ -89,3 +89,26 @@ func TestReplaceIntOrString_StructuralExtension(t *testing.T) {
 	_, hasExt := port["x-kubernetes-int-or-string"]
 	g.Expect(hasExt).To(BeFalse(), "replacement should not retain the extension")
 }
+
+func TestStripDescriptions(t *testing.T) {
+	g := NewWithT(t)
+	schema := map[string]any{
+		"type":        "object",
+		"description": "root",
+		"properties": map[string]any{
+			"name": map[string]any{
+				"type":        "string",
+				"description": "prop",
+			},
+			"items": []any{
+				map[string]any{"description": "inside-array"},
+			},
+		},
+	}
+	StripDescriptions(schema)
+	g.Expect(schema).ToNot(HaveKey("description"))
+	props := schema["properties"].(map[string]any)
+	g.Expect(props["name"]).ToNot(HaveKey("description"))
+	arr := props["items"].([]any)
+	g.Expect(arr[0]).ToNot(HaveKey("description"))
+}

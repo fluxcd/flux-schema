@@ -65,6 +65,7 @@ echo "Extracting schemas for ${K8S_REPO}@v${version} into ${dir}"
 
 flux-schema extract k8s --version "${version}" \
   -f '{{ .Group }}/{{ .Kind }}_{{ .Version }}.json' \
+  --strip-description \
   -d "$dir"
 
 if [[ "${GITHUB_ACTIONS:-}" == "true" && -n "${GITHUB_ENV:-}" ]]; then

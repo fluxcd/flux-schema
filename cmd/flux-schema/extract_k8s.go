@@ -18,13 +18,11 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/fluxcd/flux-schema/internal/extractor"
+	"github.com/fluxcd/flux-schema/internal/flags"
 	"github.com/fluxcd/flux-schema/internal/tmpl"
 )
 
-const (
-	defaultExtractK8sFormat = "{{ .Group }}/{{ .Kind }}_{{ .Version }}.json"
-	defaultK8sSwaggerURL    = "https://raw.githubusercontent.com/kubernetes/kubernetes/%s/api/openapi-spec/swagger.json"
-)
+const defaultK8sSwaggerURL = "https://raw.githubusercontent.com/kubernetes/kubernetes/%s/api/openapi-spec/swagger.json"
 
 var extractK8sCmd = &cobra.Command{
 	Use:   "k8s [swagger-file]",
@@ -43,25 +41,18 @@ var extractK8sCmd = &cobra.Command{
 }
 
 type extractK8sFlags struct {
-	outputDir    string
-	outputFormat string
-	k8sVersion   string
+	flags.ExtractOutput
+	k8sVersion string
 }
 
 var extractK8sArgs = extractK8sFlags{
-	outputDir:    ".",
-	outputFormat: defaultExtractK8sFormat,
+	ExtractOutput: flags.NewExtractOutput(),
 }
 
 func init() {
-	extractK8sCmd.Flags().StringVarP(&extractK8sArgs.outputDir, "output-dir", "d", extractK8sArgs.outputDir,
-		"directory where JSON Schema files are written (created if missing)")
-	extractK8sCmd.Flags().StringVarP(&extractK8sArgs.outputFormat, "output-format", "f", defaultExtractK8sFormat,
-		"Go template for the output file path, relative to --output-dir; "+
-			"variables: .Group, .GroupPrefix, .Kind, .Version")
+	extractK8sArgs.Register(extractK8sCmd)
 	extractK8sCmd.Flags().StringVar(&extractK8sArgs.k8sVersion, "version", "",
 		"Kubernetes release tag (e.g. 1.35.0) to fetch the upstream swagger from kubernetes/kubernetes")
-	_ = extractK8sCmd.MarkFlagDirname("output-dir")
 	extractCmd.AddCommand(extractK8sCmd)
 }
 
@@ -100,7 +91,7 @@ func extractK8sCmdRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	destDir := extractK8sArgs.outputDir
+	destDir := extractK8sArgs.Dir
 	if err := os.MkdirAll(destDir, 0o755); err != nil {
 		return fmt.Errorf("create output dir: %w", err)
 	}
@@ -108,6 +99,12 @@ func extractK8sCmdRun(cmd *cobra.Command, args []string) error {
 	cmd.Printf("reading %s\n", source)
 
 	schemas, errs := extractor.ExtractOpenAPI(data)
+
+	if extractK8sArgs.StripDescription {
+		for _, s := range schemas {
+			extractor.StripDescriptions(s.JSON)
+		}
+	}
 
 	var failures []error
 	for _, e := range errs {
@@ -137,7 +134,7 @@ func extractK8sCmdRun(cmd *cobra.Command, args []string) error {
 }
 
 func writeK8sSchema(schema extractor.Schema, destDir string) (string, error) {
-	rendered, err := tmpl.Render(extractK8sArgs.outputFormat, tmpl.SchemaVars{
+	rendered, err := tmpl.Render(extractK8sArgs.Format, tmpl.SchemaVars{
 		Group:   schema.Group,
 		Kind:    schema.Kind,
 		Version: schema.Version,
