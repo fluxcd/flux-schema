@@ -4,6 +4,12 @@
     "apiVersion": {
       "type": "string"
     },
+    "description": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "globalDefault": {
       "type": [
         "boolean",
