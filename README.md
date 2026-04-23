@@ -73,10 +73,10 @@ flux-schema validate ./manifests \
   --schema-location './schemas/{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json'
 ```
 
-Manifests can also be piped via `/dev/stdin` and certain documents skipped with `--skip-kind`:
+Manifests can also be piped in and certain documents skipped with `--skip-kind`:
 
 ```shell
-kustomize build . | flux-schema validate /dev/stdin \
+kustomize build . | flux-schema validate \
   --skip-kind 'v1/Secret' \
   --skip-kind 'source.toolkit.fluxcd.io/v1/ExternalArtifact'
 ```
@@ -118,7 +118,7 @@ Generate schemas for every CRD installed in a cluster, using the
 per-group-directory layout:
 
 ```shell
-kubectl get crds -o yaml | flux-schema extract crd /dev/stdin -d ./schemas
+kubectl get crds -o yaml | flux-schema extract crd -d ./schemas
 ```
 
 You can supply `-f, --output-format` with a Go template to change the layout, e.g. the
@@ -135,7 +135,7 @@ To bundle the schemas into a gzipped tar archive instead of writing to a directo
 use `-a, --output-archive`:
 
 ```shell
-kustomize build config/crd | flux-schema extract crd /dev/stdin -a dist/crd-schemas.tar.gz
+kustomize build config/crd | flux-schema extract crd -a dist/crd-schemas.tar.gz
 ```
 
 The archive path must end in `.tar.gz` or `.tgz`, and its parent directory is created if missing.
@@ -178,7 +178,7 @@ flux-schema extract k8s --version 1.35.0 -d ./schemas
 Supply the swagger file from the cluster:
 
 ```shell
-kubectl get --raw /openapi/v2 | flux-schema extract k8s /dev/stdin -d ./schemas
+kubectl get --raw /openapi/v2 | flux-schema extract k8s -d ./schemas
 ```
 
 The same `-f, --output-format` template used by `extract crd` works here, so the

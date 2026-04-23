@@ -85,7 +85,6 @@ func TestExtractOpenAPI_InlinesRef(t *testing.T) {
 
 	props := widget.JSON["properties"].(map[string]any)
 	helper := props["helper"].(map[string]any)
-	// Inlined: has object shape from the helper definition.
 	g.Expect(helper["type"]).To(Equal("object"))
 	g.Expect(helper).To(HaveKey("properties"))
 }
@@ -652,7 +651,6 @@ func TestExtractOpenAPI_StripsVendorExtensions(t *testing.T) {
 	out, errs := ExtractOpenAPI(mustMarshal(t, doc))
 	g.Expect(errs).To(BeEmpty())
 
-	// Root: no GVK extension anymore.
 	g.Expect(out[0].JSON).ToNot(HaveKey("x-kubernetes-group-version-kind"))
 
 	list := out[0].JSON["properties"].(map[string]any)["list"].(map[string]any)
@@ -689,7 +687,6 @@ func TestExtractOpenAPI_PreservesDescriptions(t *testing.T) {
 	out, errs := ExtractOpenAPI(mustMarshal(t, doc))
 	g.Expect(errs).To(BeEmpty())
 
-	// Extraction keeps descriptions; stripping is an opt-in post-process.
 	g.Expect(out[0].JSON["description"]).To(Equal("top-level description"))
 	name := out[0].JSON["properties"].(map[string]any)["name"].(map[string]any)
 	g.Expect(name["description"]).To(Equal("property description"))
@@ -741,7 +738,6 @@ func TestExtractOpenAPI_PreservesJSONNumber(t *testing.T) {
 	g.Expect(errs).To(BeEmpty())
 
 	count := out[0].JSON["properties"].(map[string]any)["count"].(map[string]any)
-	// json.Number stringifies as the original literal.
 	g.Expect(count["default"].(json.Number).String()).To(Equal("42"))
 	g.Expect(count["minimum"].(json.Number).String()).To(Equal("1"))
 }

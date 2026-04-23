@@ -35,7 +35,7 @@ var extractK8sCmd = &cobra.Command{
   flux-schema extract k8s swagger.json -d ./schemas
 
   # Pipe from stdin
-  kubectl get --raw /openapi/v2 | flux-schema extract k8s /dev/stdin -d ./schemas`,
+  kubectl get --raw /openapi/v2 | flux-schema extract k8s -d ./schemas`,
 	Args: requireFileOrVersion,
 	RunE: extractK8sCmdRun,
 }
@@ -59,8 +59,8 @@ func init() {
 var k8sVersionRe = regexp.MustCompile(`^v?\d+\.\d+\.\d+$`)
 
 // requireFileOrVersion enforces mutual exclusion between a single positional
-// swagger file and --version. Cobra's MarkFlagsMutuallyExclusive only covers
-// flag pairs.
+// swagger file (or piped stdin) and --version. Cobra's
+// MarkFlagsMutuallyExclusive only covers flag pairs.
 func requireFileOrVersion(cmd *cobra.Command, args []string) error {
 	if len(args) > 1 {
 		return fmt.Errorf("accepts at most 1 positional argument, received %d", len(args))
@@ -69,16 +69,21 @@ func requireFileOrVersion(cmd *cobra.Command, args []string) error {
 	switch {
 	case hasVersion && len(args) == 1:
 		return fmt.Errorf("--version and a swagger file are mutually exclusive")
-	case !hasVersion && len(args) == 0:
-		return fmt.Errorf("either a swagger file or --version is required")
+	case !hasVersion && len(args) == 0 && !stdinIsPiped():
+		return fmt.Errorf("either a swagger file, piped stdin, or --version is required")
 	}
 	return nil
 }
 
 func extractK8sCmdRun(cmd *cobra.Command, args []string) error {
+	// --version mode skips positional input and falls through to fetchK8sSwagger.
 	var arg string
-	if len(args) == 1 {
-		arg = args[0]
+	if extractK8sArgs.k8sVersion == "" {
+		inputs, err := resolveStdinArgs(args)
+		if err != nil {
+			return err
+		}
+		arg = inputs[0]
 	}
 	client := newDefaultK8sHTTPClient()
 	ctx := cmd.Context()
@@ -172,7 +177,7 @@ func resolveK8sInput(ctx context.Context, client *retryablehttp.Client,
 	urlTemplate, arg, version string, timeout time.Duration,
 ) (string, []byte, error) {
 	if arg != "" {
-		data, err := os.ReadFile(arg)
+		data, err := readSource(arg)
 		if err != nil {
 			return "", nil, fmt.Errorf("read %s: %w", arg, err)
 		}

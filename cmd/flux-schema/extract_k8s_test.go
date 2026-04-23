@@ -80,11 +80,35 @@ func TestExtractK8sCmd_StripDescription(t *testing.T) {
 	g.Expect(string(data)).ToNot(ContainSubstring(`"description"`))
 }
 
+func TestExtractK8sCmd_StdinDash(t *testing.T) {
+	g := NewWithT(t)
+	outDir := t.TempDir()
+	replaceStdin(t, minimalSwagger)
+
+	out, err := executeCommand([]string{"extract", "k8s", "-", "--output-dir", outDir})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("reading stdin"))
+	_, err = os.Stat(filepath.Join(outDir, "example.com", "widget_v1.json"))
+	g.Expect(err).ToNot(HaveOccurred())
+}
+
+func TestExtractK8sCmd_StdinBare(t *testing.T) {
+	g := NewWithT(t)
+	outDir := t.TempDir()
+	replaceStdin(t, minimalSwagger)
+
+	_, err := executeCommand([]string{"extract", "k8s", "--output-dir", outDir})
+	g.Expect(err).ToNot(HaveOccurred())
+	_, err = os.Stat(filepath.Join(outDir, "example.com", "widget_v1.json"))
+	g.Expect(err).ToNot(HaveOccurred())
+}
+
 func TestExtractK8sCmd_NoInput(t *testing.T) {
 	g := NewWithT(t)
+	forceStdinTTY(t)
 	_, err := executeCommand([]string{"extract", "k8s"})
 	g.Expect(err).To(HaveOccurred())
-	g.Expect(err.Error()).To(ContainSubstring("either a swagger file or --version is required"))
+	g.Expect(err.Error()).To(ContainSubstring("either a swagger file, piped stdin, or --version is required"))
 }
 
 func TestExtractK8sCmd_FileAndVersion(t *testing.T) {
@@ -221,9 +245,7 @@ func TestFetchK8sSwagger_NotFound(t *testing.T) {
 }
 
 func TestExtractK8sCmd_VersionFetch(t *testing.T) {
-	// Exercises the full --version path by monkey-patching the URL template.
-	// The httptest server-based fetch is tested directly in TestFetchK8sSwagger_*.
-	// This asserts the CLI wiring: version + output-dir produces a schema file.
+	// Exercises the --version path via a monkey-patched URL template.
 	g := NewWithT(t)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

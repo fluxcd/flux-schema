@@ -21,10 +21,17 @@ jobs:
         with:
           go-version-file: go.mod
           cache-dependency-path: go.sum
+      - name: Setup Flux CLI
+        uses: fluxcd/flux2/action@04acaec6161ac4fb1a82ffafa88901c03271d34f # v2.8.6
       - name: Run tests
         run: make test
       - name: Run linters
         run: make lint
+      - name: Build binary
+        run: make build
+      - name: Run smoke test
+        run: |
+          flux install --export | ./bin/flux-schema validate -v --schema-location ./catalog/latest
       - name: Check if working tree is dirty
         run: |
           if [[ $(git diff --stat) != '' ]]; then

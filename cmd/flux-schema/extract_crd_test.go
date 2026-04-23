@@ -224,6 +224,38 @@ spec:
 	g.Expect(string(data)).ToNot(ContainSubstring(`"description"`))
 }
 
+func TestExtractCRDCmd_StdinDash(t *testing.T) {
+	g := NewWithT(t)
+	outDir := t.TempDir()
+	replaceStdin(t, minimalCRDYAML)
+
+	_, err := executeCommand([]string{"extract", "crd", "-", "--output-dir", outDir})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	got, err := os.ReadFile(filepath.Join(outDir, "example.com", "widget_v1.json"))
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(string(got)).To(Equal(minimalCRDGolden))
+}
+
+func TestExtractCRDCmd_StdinBare(t *testing.T) {
+	g := NewWithT(t)
+	outDir := t.TempDir()
+	replaceStdin(t, minimalCRDYAML)
+
+	_, err := executeCommand([]string{"extract", "crd", "--output-dir", outDir})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	_, err = os.Stat(filepath.Join(outDir, "example.com", "widget_v1.json"))
+	g.Expect(err).ToNot(HaveOccurred())
+}
+
+func TestExtractCRDCmd_NoArgsNoPipe(t *testing.T) {
+	g := NewWithT(t)
+	forceStdinTTY(t)
+	_, err := executeCommand([]string{"extract", "crd", "--output-dir", t.TempDir()})
+	g.Expect(err).To(MatchError(ContainSubstring("no input")))
+}
+
 func writeCRDFixture(t *testing.T) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "fixture.yaml")

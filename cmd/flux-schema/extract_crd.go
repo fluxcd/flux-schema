@@ -33,9 +33,8 @@ var extractCRDCmd = &cobra.Command{
     --output-format '{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json'
 
   # Extract all schemas and store them in a tar.gz archive
-  kustomize build config/crd | flux-schema extract crd /dev/stdin \
+  kustomize build config/crd | flux-schema extract crd \
     --output-archive dist/crd-schemas.tar.gz`,
-	Args: cobra.MinimumNArgs(1),
 	RunE: extractCRDCmdRun,
 }
 
@@ -58,6 +57,11 @@ func init() {
 }
 
 func extractCRDCmdRun(cmd *cobra.Command, args []string) error {
+	inputs, err := resolveStdinArgs(args)
+	if err != nil {
+		return err
+	}
+
 	archive := extractCRDArgs.outputArchive
 	destDir := extractCRDArgs.Dir
 	if archive != "" {
@@ -83,8 +87,8 @@ func extractCRDCmdRun(cmd *cobra.Command, args []string) error {
 		failures []error
 		written  int
 	)
-	for _, path := range args {
-		data, err := os.ReadFile(path)
+	for _, path := range inputs {
+		data, err := readSource(path)
 		if err != nil {
 			failures = append(failures, fmt.Errorf("%s: %w", path, err))
 			continue
