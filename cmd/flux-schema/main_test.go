@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/fluxcd/flux-schema/internal/flags"
+	"github.com/fluxcd/flux-schema/internal/validator"
 )
 
 var (
@@ -49,7 +50,7 @@ func resetCmdArgs() {
 	versionArgs = versionFlags{output: "text"}
 	extractCRDArgs = extractCRDFlags{ExtractOutput: flags.NewExtractOutput()}
 	extractK8sArgs = extractK8sFlags{ExtractOutput: flags.NewExtractOutput()}
-	validateArgs = validateFlags{}
+	validateArgs = validateFlags{concurrent: validator.DefaultWorkers}
 
 	// pflag.Flag.Changed persists across Execute calls on the shared rootCmd,
 	// which breaks MarkFlagRequired validation in subsequent tests. Clear it

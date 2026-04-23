@@ -19,7 +19,7 @@ var validateCmd = &cobra.Command{
 	Short: "Validate Kubernetes manifests against JSON Schemas",
 	Example: `  # Validate YAMLs under ./manifests against the default catalog
   # The default catalog covers the latest stable Kubernetes and Flux APIs
-  # https://github.com/fluxcd/flux-schema/tree/main/catalog
+  # https://github.com/fluxcd/flux-schema/blob/main/catalog/README.md
   flux-schema validate ./manifests --verbose
 
   # Validate against a local schema directory written by 'flux-schema extract'
@@ -31,10 +31,11 @@ var validateCmd = &cobra.Command{
     --schema-location default \
     --schema-location './schemas/{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json'
 
-  # Read manifests from a pipe
+  # Read manifests from a pipe and add remote schema fallback
   kustomize build . | flux-schema validate /dev/stdin \
     --schema-location default \
-    --schema-location ./crd-schemas
+    --schema-location ./crd-schemas \
+    --schema-location https://raw.githubusercontent.com/datreeio/CRDs-catalog/main
 
   # Skip specific kinds by Kind or apiVersion/Kind
   flux-schema validate ./manifests \
@@ -45,45 +46,43 @@ var validateCmd = &cobra.Command{
 }
 
 type validateFlags struct {
-	schemaLocations    []string
-	skipMissingSchemas bool
-	skipKinds          []string
-	verbose            bool
+	schemaLocations       []string
+	skipMissingSchemas    bool
+	skipKinds             []string
+	verbose               bool
+	failFast              bool
+	concurrent            int
+	insecureSkipTLSVerify bool
 }
 
-// defaultValidateSchemaLocation points at the flux-schema catalog,
-// covering the latest stable Kubernetes and Flux APIs.
-// It is used when no --schema-location is provided, and is what
-// the literal value "default" expands to in --schema-location.
-const defaultValidateSchemaLocation = "https://raw.githubusercontent.com/fluxcd/flux-schema/main/catalog/latest/" + defaultSchemaLayout
-
-// defaultSchemaLayout is the Go-template tail appended to any --schema-location
-// value that doesn't already end in .json, so a bare path/URL like
-// "./my-schemas" expands to "./my-schemas/{{.Group}}/{{.Kind}}_{{.Version}}.json".
-// This matches the per-group directory layout that `flux-schema extract` writes
-// by default, so the common case round-trips without a Go template on the flag.
-const defaultSchemaLayout = "{{.Group}}/{{.Kind}}_{{.Version}}.json"
-
-var validateArgs = validateFlags{}
+var validateArgs = validateFlags{
+	concurrent: validator.DefaultWorkers,
+}
 
 const stdinPath = "/dev/stdin"
 
 func init() {
 	validateCmd.Flags().StringArrayVar(&validateArgs.schemaLocations, "schema-location", nil,
-		"URL or file path for schemas (repeatable); bare paths/URLs get the default layout appended; 'default' points at the built-in catalog")
+		"URL or file path for schemas (repeatable); 'default' points at the built-in catalog")
 	validateCmd.Flags().BoolVar(&validateArgs.skipMissingSchemas, "skip-missing-schemas", false,
 		"skip documents for which no schema can be found instead of failing")
 	validateCmd.Flags().StringArrayVar(&validateArgs.skipKinds, "skip-kind", nil,
 		"skip documents matching Kind or apiVersion/Kind (repeatable)")
 	validateCmd.Flags().BoolVarP(&validateArgs.verbose, "verbose", "v", false,
 		"print a line for every document, including valid and skipped")
+	validateCmd.Flags().BoolVar(&validateArgs.failFast, "fail-fast", false,
+		"exit after the first invalid document")
+	validateCmd.Flags().IntVar(&validateArgs.concurrent, "concurrent", validator.DefaultWorkers,
+		"number of concurrent workers")
+	validateCmd.Flags().BoolVar(&validateArgs.insecureSkipTLSVerify, "insecure-skip-tls-verify", false,
+		"disable TLS certificate verification when fetching schemas over HTTPS")
 	rootCmd.AddCommand(validateCmd)
 }
 
 func validateCmdRun(cmd *cobra.Command, args []string) error {
 	locations := validateArgs.schemaLocations
 	if len(locations) == 0 {
-		locations = []string{defaultValidateSchemaLocation}
+		locations = []string{validator.DefaultSchemaLocation}
 	} else {
 		expanded, err := expandSchemaLocations(locations)
 		if err != nil {
@@ -92,11 +91,17 @@ func validateCmdRun(cmd *cobra.Command, args []string) error {
 		locations = expanded
 	}
 
+	if validateArgs.concurrent < 1 {
+		return fmt.Errorf("--concurrent must be >= 1, got %d", validateArgs.concurrent)
+	}
+
 	v, err := validator.New(validator.Options{
-		SchemaLocations:    locations,
-		SkipMissingSchemas: validateArgs.skipMissingSchemas,
-		SkipKinds:          validateArgs.skipKinds,
-		HTTPTimeout:        rootArgs.timeout,
+		SchemaLocations:       locations,
+		SkipMissingSchemas:    validateArgs.skipMissingSchemas,
+		SkipKinds:             validateArgs.skipKinds,
+		HTTPTimeout:           rootArgs.timeout,
+		Workers:               validateArgs.concurrent,
+		InsecureSkipTLSVerify: validateArgs.insecureSkipTLSVerify,
 	})
 	if err != nil {
 		return err
@@ -203,6 +208,15 @@ func validateCmdRun(cmd *cobra.Command, args []string) error {
 		if currentIdx < len(sourceOrder) && sourceOrder[currentIdx] == r.Source {
 			flushContiguous(r.Source)
 		}
+
+		// --fail-fast: cancel the validator on the first invalid result.
+		// Workers see ctx.Done() and return; ValidateSources closes the
+		// channel after draining the pool, so the loop exits cleanly and
+		// the defensive flush below prints any buffered invalid result
+		// even when an earlier source never reached its Final sentinel.
+		if validateArgs.failFast && r.Status == validator.StatusInvalid {
+			cancel()
+		}
 	}
 
 	// Channel closed: every source we registered should have received a
@@ -227,10 +241,10 @@ func validateCmdRun(cmd *cobra.Command, args []string) error {
 // expandSchemaLocations normalizes each --schema-location value so callers can
 // pass either a full Go template or a bare path/URL:
 //
-//   - A case-insensitive literal "default" expands to defaultValidateSchemaLocation.
+//   - A case-insensitive literal "default" expands to validator.DefaultSchemaLocation.
 //   - A value ending in ".json" is assumed to already be a complete template and
 //     is taken verbatim.
-//   - Anything else has defaultSchemaLayout appended under a single "/", so
+//   - Anything else has validator.DefaultSchemaLayout appended under a single "/", so
 //     "./my-schemas" becomes "./my-schemas/{{.Group}}/{{.Kind}}_{{.Version}}.json".
 //     For URLs, the tail is spliced before any "?query" or "#fragment" so the
 //     template lands on the path, not inside the query string.
@@ -238,7 +252,7 @@ func validateCmdRun(cmd *cobra.Command, args []string) error {
 // Order is preserved so the user controls fallback priority.
 //
 // Note: when no --schema-location is passed the caller uses
-// defaultValidateSchemaLocation directly (see validateCmdRun) and does not go
+// validator.DefaultSchemaLocation directly (see validateCmdRun) and does not go
 // through this function — that default is already a complete template.
 func expandSchemaLocations(locations []string) ([]string, error) {
 	out := make([]string, len(locations))
@@ -247,7 +261,7 @@ func expandSchemaLocations(locations []string) ([]string, error) {
 			return nil, fmt.Errorf("--schema-location must not be empty")
 		}
 		if strings.EqualFold(loc, "default") {
-			out[i] = defaultValidateSchemaLocation
+			out[i] = validator.DefaultSchemaLocation
 			continue
 		}
 		if !strings.HasSuffix(loc, ".json") {
@@ -258,7 +272,7 @@ func expandSchemaLocations(locations []string) ([]string, error) {
 	return out, nil
 }
 
-// appendSchemaLayout appends defaultSchemaLayout to loc, preserving any URL
+// appendSchemaLayout appends validator.DefaultSchemaLayout to loc, preserving any URL
 // query string or fragment. "./schemas" → "./schemas/<layout>";
 // "https://host/catalog?ref=main" → "https://host/catalog/<layout>?ref=main".
 // Trailing "/" and "\" are both stripped so a Windows path like ".\schemas\"
@@ -268,7 +282,7 @@ func appendSchemaLayout(loc string) string {
 	if i := strings.IndexAny(loc, "?#"); i >= 0 {
 		base, tail = loc[:i], loc[i:]
 	}
-	return strings.TrimRight(base, `/\`) + "/" + defaultSchemaLayout + tail
+	return strings.TrimRight(base, `/\`) + "/" + validator.DefaultSchemaLayout + tail
 }
 
 // shouldPrint returns true when this result should be written to stdout.
