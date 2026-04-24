@@ -1,0 +1,68 @@
+{
+  "properties": {
+    "apiVersion": {
+      "type": "string"
+    },
+    "kind": {
+      "type": "string"
+    },
+    "metadata": {
+      "type": "object"
+    },
+    "spec": {
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "type",
+            "address"
+          ]
+        },
+        {
+          "required": [
+            "type",
+            "secretRef"
+          ]
+        }
+      ],
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "channel": {
+          "type": "string"
+        },
+        "proxy": {
+          "type": "string"
+        },
+        "secretRef": {
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "type": "object"
+        },
+        "type": {
+          "enum": [
+            "slack",
+            "msteams",
+            "discord",
+            "rocket",
+            "gchat"
+          ],
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "type": "object"
+}
