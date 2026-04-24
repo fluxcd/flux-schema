@@ -105,7 +105,7 @@ spec:
 	results := v.ValidateBytes(context.Background(), "test.yaml", doc)
 	g.Expect(results).To(HaveLen(1))
 	g.Expect(results[0].Status).To(Equal(StatusInvalid))
-	g.Expect(results[0].Message).To(Equal("schema validation failed"))
+	g.Expect(results[0].Reason).To(Equal(ReasonSchemaViolation))
 	g.Expect(results[0].Errors).ToNot(BeEmpty())
 	found := false
 	for _, e := range results[0].Errors {
@@ -138,7 +138,7 @@ spec:
 	results := v.ValidateBytes(context.Background(), "test.yaml", doc)
 	g.Expect(results).To(HaveLen(1))
 	g.Expect(results[0].Status).To(Equal(StatusInvalid))
-	g.Expect(results[0].Message).To(Equal("schema validation failed"))
+	g.Expect(results[0].Reason).To(Equal(ReasonSchemaViolation))
 	// flattenErrors must surface one entry per leaf cause; we don't pin the
 	// exact count (jsonschema/v6 can emit multiple causes per keyword) but
 	// every expected path must appear at least once.
@@ -183,7 +183,7 @@ spec:
 			results := v.ValidateBytes(context.Background(), "test.yaml", doc)
 			g.Expect(results).To(HaveLen(1))
 			g.Expect(results[0].Status).To(Equal(StatusValid),
-				"duration %q should validate; got %s: %s", d, results[0].Status, results[0].Message)
+				"duration %q should validate; got %s: %s", d, results[0].Status, results[0].Reason)
 		})
 	}
 }
@@ -239,7 +239,7 @@ spec:
 `)
 	results := v.ValidateBytes(context.Background(), "test.yaml", doc)
 	g.Expect(results[0].Status).To(Equal(StatusInvalid))
-	g.Expect(results[0].Message).To(Equal("schema not found"))
+	g.Expect(results[0].Reason).To(Equal(ReasonSchemaNotFound))
 	g.Expect(results[0].Errors).To(ConsistOf(
 		ValidationError{Msg: `no schema for kind "Widget" in version "example.com/v1"`},
 	))
@@ -384,7 +384,7 @@ spec:
 `)
 	results := v.ValidateBytes(context.Background(), "test.yaml", doc)
 	g.Expect(results[0].Status).To(Equal(StatusInvalid))
-	g.Expect(results[0].Message).To(Equal("validation failed"))
+	g.Expect(results[0].Reason).To(Equal(ReasonSchemaViolation))
 	g.Expect(results[0].Errors).To(ConsistOf(
 		ValidationError{Path: "/metadata", Msg: "missing property 'name' or 'generateName'"},
 	))
@@ -407,7 +407,7 @@ spec:
 `)
 	results := v.ValidateBytes(context.Background(), "test.yaml", doc)
 	g.Expect(results[0].Status).To(Equal(StatusInvalid))
-	g.Expect(results[0].Message).To(Equal("YAML parse failed"))
+	g.Expect(results[0].Reason).To(Equal(ReasonYAMLParseError))
 	g.Expect(results[0].Errors).ToNot(BeEmpty())
 	// The last-wins lenient parse must recover identity fields so the CLI
 	// line reads "Widget/.../w2" rather than "/#1".
@@ -475,7 +475,7 @@ spec:
 	g.Expect(results[0].Identifier()).To(Equal("Widget/default/#1"))
 }
 
-func TestValidateBytes_MissingApiVersion(t *testing.T) {
+func TestValidateBytes_MissingApiVersionAndKind(t *testing.T) {
 	g := NewWithT(t)
 	dir := t.TempDir()
 	v := newLocalValidator(t, dir, false)
@@ -485,7 +485,66 @@ func TestValidateBytes_MissingApiVersion(t *testing.T) {
 `)
 	results := v.ValidateBytes(context.Background(), "test.yaml", doc)
 	g.Expect(results[0].Status).To(Equal(StatusInvalid))
-	g.Expect(results[0].Message).To(ContainSubstring("missing apiVersion/kind"))
+	g.Expect(results[0].Reason).To(Equal(ReasonSchemaViolation))
+	g.Expect(results[0].Errors).To(ConsistOf(
+		ValidationError{Path: "/apiVersion", Msg: "missing required property"},
+		ValidationError{Path: "/kind", Msg: "missing required property"},
+	))
+}
+
+func TestValidateBytes_MissingApiVersionOnly(t *testing.T) {
+	g := NewWithT(t)
+	dir := t.TempDir()
+	v := newLocalValidator(t, dir, false)
+
+	doc := []byte(`kind: Widget
+metadata:
+  name: w1
+`)
+	results := v.ValidateBytes(context.Background(), "test.yaml", doc)
+	g.Expect(results[0].Status).To(Equal(StatusInvalid))
+	g.Expect(results[0].Reason).To(Equal(ReasonSchemaViolation))
+	g.Expect(results[0].Errors).To(ConsistOf(
+		ValidationError{Path: "/apiVersion", Msg: "missing required property"},
+	))
+}
+
+func TestValidateBytes_MissingKindOnly(t *testing.T) {
+	g := NewWithT(t)
+	dir := t.TempDir()
+	v := newLocalValidator(t, dir, false)
+
+	doc := []byte(`apiVersion: example.com/v1
+metadata:
+  name: w1
+`)
+	results := v.ValidateBytes(context.Background(), "test.yaml", doc)
+	g.Expect(results[0].Status).To(Equal(StatusInvalid))
+	g.Expect(results[0].Reason).To(Equal(ReasonSchemaViolation))
+	g.Expect(results[0].Errors).To(ConsistOf(
+		ValidationError{Path: "/kind", Msg: "missing required property"},
+	))
+}
+
+func TestValidateBytes_MissingApiVersionAndKind_Skipped(t *testing.T) {
+	// With --skip-missing-schemas the result is treated the same way as "no
+	// schema file matches the GVK": a single message-only error, no path.
+	// The reason this belongs with schema-not-found (not schema-violation) is
+	// that we can't look up a schema without a GVK, so the user's skip policy
+	// is what decides the outcome — not a content-shape violation.
+	g := NewWithT(t)
+	dir := t.TempDir()
+	v := newLocalValidator(t, dir, true)
+
+	doc := []byte(`metadata:
+  name: w1
+`)
+	results := v.ValidateBytes(context.Background(), "test.yaml", doc)
+	g.Expect(results[0].Status).To(Equal(StatusSkipped))
+	g.Expect(results[0].Reason).To(Equal(ReasonSchemaNotFound))
+	g.Expect(results[0].Errors).To(ConsistOf(
+		ValidationError{Msg: "no schema: document is missing apiVersion/kind"},
+	))
 }
 
 func TestValidateSources_ConcurrencyCacheDedup(t *testing.T) {
@@ -544,12 +603,74 @@ spec: {}
 		if r.Final {
 			continue
 		}
-		g.Expect(r.Status).To(Equal(StatusValid), "unexpected status for doc %d: %s %s", r.DocIndex, r.Status, r.Message)
+		g.Expect(r.Status).To(Equal(StatusValid), "unexpected status for doc %d: %s %s", r.DocIndex, r.Status, r.Reason)
 		count++
 	}
 	g.Expect(count).To(Equal(50))
 	// Exactly one HTTP fetch thanks to the sync.Map + sync.Once cache.
 	g.Expect(requestCount.Load()).To(Equal(int32(1)))
+}
+
+// TestValidateSources_SourceLoadError exercises the produceFromPath →
+// runJob.loadErr branch: a non-existent input path must surface as a
+// single invalid result with Reason=ReasonSourceLoadError and the raw
+// OS error text attached to Errors[0].Msg (not to the deprecated Message
+// field). Downstream consumers of the structured output contract rely on
+// the raw text living in Errors[0].
+func TestValidateSources_SourceLoadError(t *testing.T) {
+	g := NewWithT(t)
+	dir := t.TempDir()
+	writeWidgetSchema(t, dir)
+	v := newLocalValidator(t, dir, false)
+
+	missing := filepath.Join(t.TempDir(), "does-not-exist.yaml")
+	ch := v.ValidateSources(context.Background(), []string{missing})
+
+	var got []Result
+	for r := range ch {
+		if r.Final {
+			continue
+		}
+		got = append(got, r)
+	}
+	g.Expect(got).To(HaveLen(1))
+	g.Expect(got[0].Source).To(Equal(missing))
+	g.Expect(got[0].Status).To(Equal(StatusInvalid))
+	g.Expect(got[0].Reason).To(Equal(ReasonSourceLoadError))
+	g.Expect(got[0].Errors).To(HaveLen(1))
+	g.Expect(got[0].Errors[0].Path).To(BeEmpty())
+	g.Expect(got[0].Errors[0].Msg).To(ContainSubstring("no such file or directory"))
+}
+
+// TestValidateBytes_SchemaLoadError exercises the loader.Resolve error
+// branch: a schema file on disk that is not valid JSON must produce
+// Reason=ReasonSchemaLoadError with the compile error in Errors[0].Msg.
+func TestValidateBytes_SchemaLoadError(t *testing.T) {
+	g := NewWithT(t)
+	dir := t.TempDir()
+	// Matches the template used by newLocalValidator
+	// ("{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json").
+	g.Expect(os.WriteFile(
+		filepath.Join(dir, "Widget-example-v1.json"),
+		[]byte("{not valid json"),
+		0o644,
+	)).To(Succeed())
+	v := newLocalValidator(t, dir, false)
+
+	doc := []byte(`apiVersion: example.com/v1
+kind: Widget
+metadata:
+  name: w1
+spec:
+  name: ok
+`)
+	results := v.ValidateBytes(context.Background(), "test.yaml", doc)
+	g.Expect(results).To(HaveLen(1))
+	g.Expect(results[0].Status).To(Equal(StatusInvalid))
+	g.Expect(results[0].Reason).To(Equal(ReasonSchemaLoadError))
+	g.Expect(results[0].Errors).To(HaveLen(1))
+	g.Expect(results[0].Errors[0].Path).To(BeEmpty())
+	g.Expect(results[0].Errors[0].Msg).ToNot(BeEmpty())
 }
 
 func TestValidateSources_WalksDirectory(t *testing.T) {
@@ -766,7 +887,7 @@ stringData:
 	results := v.ValidateBytes(context.Background(), "test.yaml", doc)
 	g.Expect(results).To(HaveLen(1))
 	g.Expect(results[0].Status).To(Equal(StatusSkipped))
-	g.Expect(results[0].Message).To(Equal("kind skipped"))
+	g.Expect(results[0].Reason).To(Equal(ReasonKindSkipped))
 	g.Expect(results[0].Identifier()).To(Equal("Secret/s1"))
 }
 
@@ -801,7 +922,7 @@ spec:
 `)
 	results = v.ValidateBytes(context.Background(), "test.yaml", other)
 	g.Expect(results[0].Status).To(Equal(StatusInvalid))
-	g.Expect(results[0].Message).To(Equal("schema not found"))
+	g.Expect(results[0].Reason).To(Equal(ReasonSchemaNotFound))
 }
 
 func TestValidateBytes_SkipKind_BypassesAdmissionCheck(t *testing.T) {

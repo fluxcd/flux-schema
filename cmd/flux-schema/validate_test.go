@@ -88,7 +88,7 @@ func TestValidateCmd_InvalidManifest_PrintsViolationAndFails(t *testing.T) {
 		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
 	})
 	g.Expect(err).To(HaveOccurred())
-	g.Expect(out).To(ContainSubstring(path + " - Widget/default/bad-widget is invalid: schema validation failed"))
+	g.Expect(out).To(ContainSubstring(path + " - Widget/default/bad-widget is invalid: schema violation"))
 	g.Expect(out).To(MatchRegexp(`(?m)^  - /spec/name: `))
 	g.Expect(out).To(ContainSubstring("Summary: 1 resource found in 1 file - Valid: 0, Invalid: 1, Skipped: 0"))
 }
@@ -155,7 +155,7 @@ spec:
 	// Admission-rule check runs before schema resolution, so the result is
 	// invalid even under --skip-missing-schemas.
 	g.Expect(err).To(HaveOccurred())
-	g.Expect(out).To(ContainSubstring("Widget/default/#1 is invalid: validation failed"))
+	g.Expect(out).To(ContainSubstring("Widget/default/#1 is invalid: schema violation"))
 	g.Expect(out).To(MatchRegexp(`(?m)^  - /metadata: missing property 'name' or 'generateName'$`))
 }
 
@@ -218,10 +218,10 @@ func TestValidateCmd_InvalidFluxManifestsFixtures(t *testing.T) {
 	})
 	g.Expect(err).To(HaveOccurred())
 
-	g.Expect(out).To(ContainSubstring(invalidPath + " - Bucket/default/minio-bucket is invalid: schema validation failed"))
-	g.Expect(out).To(ContainSubstring(invalidPath + " - HelmRepository/default/example is invalid: schema validation failed"))
-	g.Expect(out).To(ContainSubstring(invalidPath + " - GitRepository/default/podinfo is invalid: schema validation failed"))
-	g.Expect(out).To(ContainSubstring(invalidPath + " - OCIRepository/default/podinfo is invalid: schema validation failed"))
+	g.Expect(out).To(ContainSubstring(invalidPath + " - Bucket/default/minio-bucket is invalid: schema violation"))
+	g.Expect(out).To(ContainSubstring(invalidPath + " - HelmRepository/default/example is invalid: schema violation"))
+	g.Expect(out).To(ContainSubstring(invalidPath + " - GitRepository/default/podinfo is invalid: schema violation"))
+	g.Expect(out).To(ContainSubstring(invalidPath + " - OCIRepository/default/podinfo is invalid: schema violation"))
 	g.Expect(out).To(ContainSubstring(invalidPath + " - ArtifactGenerator/apps/podinfo-composite is invalid: schema not found"))
 	g.Expect(out).To(MatchRegexp(`(?m)^  - no schema for kind "ArtifactGenerator" in version "source\.extensions\.fluxcd\.io/v1alpha1"$`))
 	g.Expect(out).To(ContainSubstring(invalidPath + " - HelmChart/default/podinfo is valid"))
@@ -251,12 +251,12 @@ func TestValidateCmd_InvalidMetadataFixtures(t *testing.T) {
 	})
 	g.Expect(err).To(HaveOccurred())
 
-	g.Expect(out).To(ContainSubstring(invalidPath + " - OCIRepository/default/duplicate-labels is invalid: YAML parse failed"))
-	g.Expect(out).To(ContainSubstring(invalidPath + " - OCIRepository/default/duplicate-fields is invalid: YAML parse failed"))
+	g.Expect(out).To(ContainSubstring(invalidPath + " - OCIRepository/default/duplicate-labels is invalid: yaml parse error"))
+	g.Expect(out).To(ContainSubstring(invalidPath + " - OCIRepository/default/duplicate-fields is invalid: yaml parse error"))
 	g.Expect(out).To(MatchRegexp(`(?m)^  - line 8: key "app" already set in map$`))
 	g.Expect(out).To(MatchRegexp(`(?m)^  - line 11: key "tag" already set in map$`))
 
-	g.Expect(out).To(ContainSubstring(invalidPath + " - OCIRepository/default/#3 is invalid: validation failed"))
+	g.Expect(out).To(ContainSubstring(invalidPath + " - OCIRepository/default/#3 is invalid: schema violation"))
 	g.Expect(out).To(MatchRegexp(`(?m)^  - /metadata: missing property 'name' or 'generateName'$`))
 
 	g.Expect(out).To(ContainSubstring("Summary: 3 resources found in 1 file - Valid: 0, Invalid: 3, Skipped: 0"))
@@ -333,7 +333,7 @@ func TestValidateCmd_FailFast(t *testing.T) {
 		"--concurrent", "1",
 	})
 	g.Expect(err).To(HaveOccurred())
-	g.Expect(out).To(ContainSubstring("is invalid: schema validation failed"))
+	g.Expect(out).To(ContainSubstring("is invalid: schema violation"))
 	g.Expect(out).To(MatchRegexp(`Invalid: [1-9],`))
 }
 

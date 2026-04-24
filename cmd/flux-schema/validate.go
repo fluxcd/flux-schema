@@ -327,8 +327,8 @@ func writeResult(cmd *cobra.Command, r validator.Result) {
 	case validator.StatusSkipped:
 		verb = "is skipped"
 	}
-	if r.Message != "" {
-		cmd.Printf("%s - %s %s: %s\n", r.Source, r.Identifier(), verb, r.Message)
+	if r.Reason != validator.ReasonNone {
+		cmd.Printf("%s - %s %s: %s\n", r.Source, r.Identifier(), verb, r.Reason)
 	} else {
 		cmd.Printf("%s - %s %s\n", r.Source, r.Identifier(), verb)
 	}

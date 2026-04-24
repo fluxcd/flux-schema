@@ -85,12 +85,12 @@ kustomize build . | flux-schema validate \
 Output example with validation errors:
 
 ```
-manifests/sources.yaml - Bucket/apps/s3-data is invalid: schema validation failed
+manifests/sources.yaml - Bucket/apps/s3-data is invalid: schema violation
   - /spec: missing property 'bucketName'
   - /spec/interval: got number, want string
   - /spec/secretRef/name: got object, want string
   - /spec: additional properties 'force' not allowed
-manifests/sources.yaml - OCIRepository/apps/podinfo is invalid: YAML parse failed
+manifests/sources.yaml - OCIRepository/apps/podinfo is invalid: yaml parse error
   - line 18: key "app.kubernetes.io/name" already set in map
 manifests/sources.yaml - HelmChart/apps/redis is valid
 manifests/sources.yaml - Secret/apps/auth-sops is skipped: kind skipped
