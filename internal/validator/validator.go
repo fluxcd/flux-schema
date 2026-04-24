@@ -9,6 +9,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -93,6 +94,10 @@ func (r Result) Identifier() string {
 // InsecureSkipTLSVerify is only applied when HTTPClient is nil and the
 // validator constructs its own client. Callers who supply HTTPClient are
 // responsible for configuring TLS on that client themselves.
+//
+// Stdin is read when an input path passed to ValidateSources equals
+// StdinSource. It is the caller's responsibility to pass a non-nil reader
+// (typically os.Stdin) when that sentinel is used.
 type Options struct {
 	SchemaLocations       []string
 	SkipMissingSchemas    bool
@@ -101,6 +106,7 @@ type Options struct {
 	HTTPTimeout           time.Duration
 	Workers               int
 	InsecureSkipTLSVerify bool
+	Stdin                 io.Reader
 }
 
 // Validator resolves and applies JSON Schemas to Kubernetes manifests.
@@ -346,6 +352,15 @@ func (v *Validator) ValidateBytes(ctx context.Context, source string, data []byt
 // opened; per-document failures are reported via validateDoc inside the
 // worker pool.
 func (v *Validator) produceFromPath(ctx context.Context, path string, jobs chan<- job, spawnWaiter func(string, *sync.WaitGroup)) error {
+	if path == StdinSource {
+		if v.opts.Stdin == nil {
+			return fmt.Errorf("source %q requires Options.Stdin to be set", StdinSource)
+		}
+		wg := &sync.WaitGroup{}
+		err := v.streamReader(ctx, StdinSource, v.opts.Stdin, jobs, wg)
+		spawnWaiter(StdinSource, wg)
+		return err
+	}
 	info, err := os.Stat(path)
 	if err != nil {
 		return err
@@ -383,8 +398,15 @@ func (v *Validator) streamFile(ctx context.Context, path string, jobs chan<- job
 		return err
 	}
 	defer f.Close()
+	return v.streamReader(ctx, path, f, jobs, sourceWG)
+}
 
-	scanner := yamldoc.NewScanner(f)
+// streamReader splits r into YAML documents and pushes them into the job
+// channel under the given source label. Used by streamFile for on-disk
+// inputs and by produceFromPath directly for the StdinSource sentinel so
+// stdin doesn't go through a platform-specific path like "/dev/stdin".
+func (v *Validator) streamReader(ctx context.Context, source string, r io.Reader, jobs chan<- job, sourceWG *sync.WaitGroup) error {
+	scanner := yamldoc.NewScanner(r)
 	idx := 0
 	for scanner.Scan() {
 		raw := bytes.TrimSpace(scanner.Bytes())
@@ -399,11 +421,11 @@ func (v *Validator) streamFile(ctx context.Context, path string, jobs chan<- job
 		case <-ctx.Done():
 			sourceWG.Done()
 			return ctx.Err()
-		case jobs <- job{source: path, docIndex: idx, raw: buf, sourceWG: sourceWG}:
+		case jobs <- job{source: source, docIndex: idx, raw: buf, sourceWG: sourceWG}:
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("scan %s: %w", path, err)
+		return fmt.Errorf("scan %s: %w", source, err)
 	}
 	return nil
 }

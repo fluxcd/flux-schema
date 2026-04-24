@@ -107,7 +107,6 @@ spec:
 	g.Expect(results[0].Status).To(Equal(StatusInvalid))
 	g.Expect(results[0].Message).To(Equal("schema validation failed"))
 	g.Expect(results[0].Errors).ToNot(BeEmpty())
-	// At least one error must reference /spec/name
 	found := false
 	for _, e := range results[0].Errors {
 		if e.Path == "/spec/name" {
@@ -385,9 +384,6 @@ spec:
 `)
 	results := v.ValidateBytes(context.Background(), "test.yaml", doc)
 	g.Expect(results[0].Status).To(Equal(StatusInvalid))
-	// Two-level rendering: the admission-rule violation lives in Errors as
-	// a JSON Pointer + message pair, matching how JSON Schema violations
-	// surface through flattenErrors.
 	g.Expect(results[0].Message).To(Equal("validation failed"))
 	g.Expect(results[0].Errors).To(ConsistOf(
 		ValidationError{Path: "/metadata", Msg: "missing property 'name' or 'generateName'"},
@@ -411,8 +407,6 @@ spec:
 `)
 	results := v.ValidateBytes(context.Background(), "test.yaml", doc)
 	g.Expect(results[0].Status).To(Equal(StatusInvalid))
-	// Two-level rendering: top-line is the short summary, the library's
-	// per-line details land in Errors so the CLI can indent them.
 	g.Expect(results[0].Message).To(Equal("YAML parse failed"))
 	g.Expect(results[0].Errors).ToNot(BeEmpty())
 	// The last-wins lenient parse must recover identity fields so the CLI
@@ -593,7 +587,6 @@ spec:
 		count++
 	}
 	g.Expect(count).To(Equal(2))
-	// One Final sentinel per discovered file.
 	g.Expect(finals).To(HaveLen(2))
 }
 

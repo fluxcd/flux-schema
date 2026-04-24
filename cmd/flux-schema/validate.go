@@ -6,6 +6,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+	"slices"
 	"sort"
 	"strings"
 
@@ -32,7 +34,7 @@ var validateCmd = &cobra.Command{
     --schema-location './schemas/{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json'
 
   # Read manifests from a pipe and add remote schema fallback
-  kustomize build . | flux-schema validate /dev/stdin \
+  kustomize build . | flux-schema validate \
     --schema-location default \
     --schema-location ./crd-schemas \
     --schema-location https://raw.githubusercontent.com/datreeio/CRDs-catalog/main
@@ -40,8 +42,10 @@ var validateCmd = &cobra.Command{
   # Skip specific kinds by Kind or apiVersion/Kind
   flux-schema validate ./manifests \
     --skip-kind Secret \
-    --skip-kind source.toolkit.fluxcd.io/v1/GitRepository`,
-	Args: cobra.MinimumNArgs(1),
+    --skip-kind source.toolkit.fluxcd.io/v1/GitRepository
+
+  # Load flag defaults from a checked-in YAML config (CLI flags still override)
+  flux-schema validate ./manifests --config .flux-schema.yaml`,
 	RunE: validateCmdRun,
 }
 
@@ -53,13 +57,12 @@ type validateFlags struct {
 	failFast              bool
 	concurrent            int
 	insecureSkipTLSVerify bool
+	configFile            string
 }
 
 var validateArgs = validateFlags{
 	concurrent: validator.DefaultWorkers,
 }
-
-const stdinPath = "/dev/stdin"
 
 func init() {
 	validateCmd.Flags().StringArrayVar(&validateArgs.schemaLocations, "schema-location", nil,
@@ -76,17 +79,38 @@ func init() {
 		"number of concurrent workers")
 	validateCmd.Flags().BoolVar(&validateArgs.insecureSkipTLSVerify, "insecure-skip-tls-verify", false,
 		"disable TLS certificate verification when fetching schemas over HTTPS")
+	validateCmd.Flags().StringVar(&validateArgs.configFile, "config", "",
+		"path to a YAML file supplying default values for validate flags "+
+			"(env: "+envConfigFile+")")
+	_ = validateCmd.MarkFlagFilename("config", "yaml", "yml")
 	rootCmd.AddCommand(validateCmd)
 }
 
 func validateCmdRun(cmd *cobra.Command, args []string) error {
+	configPath := validateArgs.configFile
+	if configPath == "" {
+		configPath = os.Getenv(envConfigFile)
+	}
+	if configPath != "" {
+		cfg, err := loadConfigFile(configPath)
+		if err != nil {
+			return err
+		}
+		applyValidateConfig(cmd, cfg.Validate, &validateArgs)
+	}
+
+	inputs, err := resolveStdinArgs(args)
+	if err != nil {
+		return err
+	}
+
 	locations := validateArgs.schemaLocations
 	if len(locations) == 0 {
 		locations = []string{validator.DefaultSchemaLocation}
 	} else {
-		expanded, err := expandSchemaLocations(locations)
-		if err != nil {
-			return err
+		expanded, lerr := expandSchemaLocations(locations)
+		if lerr != nil {
+			return lerr
 		}
 		locations = expanded
 	}
@@ -95,14 +119,18 @@ func validateCmdRun(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("--concurrent must be >= 1, got %d", validateArgs.concurrent)
 	}
 
-	v, err := validator.New(validator.Options{
+	opts := validator.Options{
 		SchemaLocations:       locations,
 		SkipMissingSchemas:    validateArgs.skipMissingSchemas,
 		SkipKinds:             validateArgs.skipKinds,
 		HTTPTimeout:           rootArgs.timeout,
 		Workers:               validateArgs.concurrent,
 		InsecureSkipTLSVerify: validateArgs.insecureSkipTLSVerify,
-	})
+	}
+	if slices.Contains(inputs, stdinLabel) {
+		opts.Stdin = stdinReader
+	}
+	v, err := validator.New(opts)
 	if err != nil {
 		return err
 	}
@@ -110,7 +138,7 @@ func validateCmdRun(cmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithCancel(cmd.Context())
 	defer cancel()
 
-	stdinOnly := len(args) == 1 && args[0] == stdinPath
+	stdinOnly := len(inputs) == 1 && inputs[0] == stdinLabel
 
 	files := make(map[string]struct{})
 	var nValid, nInvalid, nSkipped int
@@ -183,7 +211,7 @@ func validateCmdRun(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	for r := range v.ValidateSources(ctx, args) {
+	for r := range v.ValidateSources(ctx, inputs) {
 		if r.Final {
 			completed[r.Source] = true
 			tryAdvance()
@@ -209,11 +237,8 @@ func validateCmdRun(cmd *cobra.Command, args []string) error {
 			flushContiguous(r.Source)
 		}
 
-		// --fail-fast: cancel the validator on the first invalid result.
-		// Workers see ctx.Done() and return; ValidateSources closes the
-		// channel after draining the pool, so the loop exits cleanly and
-		// the defensive flush below prints any buffered invalid result
-		// even when an earlier source never reached its Final sentinel.
+		// Fail-fast cancels mid-stream; the defensive flush below still prints
+		// any buffered invalid even when an earlier source lost its Final.
 		if validateArgs.failFast && r.Status == validator.StatusInvalid {
 			cancel()
 		}

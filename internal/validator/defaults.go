@@ -17,3 +17,8 @@ const DefaultSchemaLayout = "{{.Group}}/{{.Kind}}_{{.Version}}.json"
 // DefaultWorkers is the fallback concurrency level used
 // by ValidateSources when Options.Workers is left at 0.
 const DefaultWorkers = 8
+
+// StdinSource is the canonical source label for documents read from an
+// io.Reader rather than a file path. Options.Stdin must be non-nil when any
+// input path equals this sentinel; callers typically pass os.Stdin.
+const StdinSource = "stdin"

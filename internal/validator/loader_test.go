@@ -148,7 +148,6 @@ func TestSchemaLoader_Resolve_HTTP500ReturnsError(t *testing.T) {
 func TestSchemaLoader_Resolve_InvalidSchemaBodyReturnsCompileError(t *testing.T) {
 	g := NewWithT(t)
 	dir := t.TempDir()
-	// Not a valid JSON Schema object — the compiler rejects it.
 	bad := []byte(`"not an object"`)
 	g.Expect(os.WriteFile(filepath.Join(dir, "widget-example-v1.json"), bad, 0o644)).To(Succeed())
 	l := newTestLoader(t, filepath.Join(dir, "{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json"))
@@ -182,7 +181,6 @@ func TestSchemaLoader_Resolve_WithInternalRef(t *testing.T) {
 	s, _, found, err := l.Resolve(context.Background(), widgetVars)
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(found).To(BeTrue())
-	// Internal $ref must compile and validate a document end-to-end.
 	g.Expect(s.Validate(map[string]any{"metadata": map[string]any{"name": "r1"}})).To(Succeed())
 }
 
