@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
+	k8syaml "sigs.k8s.io/yaml"
 
 	"github.com/fluxcd/flux-schema/internal/validator"
 )
@@ -733,4 +734,272 @@ func TestExpandSchemaLocations(t *testing.T) {
 
 	_, err = expandSchemaLocations([]string{"   "})
 	g.Expect(err).To(MatchError(ContainSubstring("--schema-location must not be empty")))
+}
+
+// decodeReport parses the envelope emitted by --output json and returns the
+// inner body for convenient assertions.
+func decodeReport(t *testing.T, raw string) validator.Report {
+	t.Helper()
+	var env validator.Report
+	if err := json.Unmarshal([]byte(raw), &env); err != nil {
+		t.Fatalf("decode report: %v\nraw: %s", err, raw)
+	}
+	return env
+}
+
+func TestValidateCmd_Output_JSON_ValidManifest(t *testing.T) {
+	g := NewWithT(t)
+	schemaDir := extractWidgetSchema(t)
+	manifestDir := t.TempDir()
+	path := writeManifest(t, manifestDir, "ok.yaml", validWidget)
+
+	out, err := executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+		"-o", "json",
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	env := decodeReport(t, out)
+	g.Expect(env.Version).To(Equal(validator.ReportVersion))
+	g.Expect(env.Schema).To(Equal(validator.ReportSchema))
+	g.Expect(env.Report.Reporter).To(HavePrefix("flux-schema/"))
+	g.Expect(env.Report.Timestamp).ToNot(BeEmpty())
+	g.Expect(env.Report.Summary).To(Equal(validator.ReportSummary{Total: 1, Valid: 1, Invalid: 0, Skipped: 0}))
+	g.Expect(env.Report.Results).To(HaveLen(1))
+
+	res := env.Report.Results[0]
+	g.Expect(res.Source).To(Equal(path))
+	g.Expect(res.Idx).To(Equal(1))
+	g.Expect(res.Status).To(Equal("valid"))
+	g.Expect(res.Reason).To(Equal(validator.ReasonNone))
+	g.Expect(res.Violations).To(BeEmpty())
+	g.Expect(res.Resource).ToNot(BeNil())
+	g.Expect(*res.Resource).To(Equal(validator.ReportResource{
+		APIVersion: "example.com/v1",
+		Kind:       "Widget",
+		Namespace:  "default",
+		Name:       "ok-widget",
+	}))
+
+	// `reason` and `violations` must be omitted from the wire form of a valid
+	// result so consumers can branch on presence.
+	g.Expect(out).ToNot(ContainSubstring(`"reason"`))
+	g.Expect(out).ToNot(ContainSubstring(`"violations"`))
+}
+
+func TestValidateCmd_Output_JSON_SchemaViolation(t *testing.T) {
+	g := NewWithT(t)
+	schemaDir := extractWidgetSchema(t)
+	manifestDir := t.TempDir()
+	writeManifest(t, manifestDir, "bad.yaml", invalidWidget)
+
+	out, err := executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+		"-o", "json",
+	})
+	g.Expect(err).To(HaveOccurred())
+
+	env := decodeReport(t, out)
+	g.Expect(env.Report.Summary).To(Equal(validator.ReportSummary{Total: 1, Valid: 0, Invalid: 1, Skipped: 0}))
+	g.Expect(env.Report.Results).To(HaveLen(1))
+	res := env.Report.Results[0]
+	g.Expect(res.Status).To(Equal("invalid"))
+	g.Expect(res.Reason).To(Equal(validator.ReasonSchemaViolation))
+	g.Expect(res.Violations).ToNot(BeEmpty())
+	g.Expect(res.Violations[0].Path).To(Equal("/spec/name"))
+	g.Expect(res.Violations[0].Message).ToNot(BeEmpty())
+}
+
+func TestValidateCmd_Output_JSON_MissingAPIVersionKind(t *testing.T) {
+	g := NewWithT(t)
+	manifestDir := t.TempDir()
+	writeManifest(t, manifestDir, "noheader.yaml", `metadata:
+  name: orphan
+spec:
+  name: x
+`)
+
+	out, err := executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", filepath.Join(t.TempDir(), "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+		"-o", "json",
+	})
+	g.Expect(err).To(HaveOccurred())
+
+	env := decodeReport(t, out)
+	g.Expect(env.Report.Results).To(HaveLen(1))
+	res := env.Report.Results[0]
+	g.Expect(res.Status).To(Equal("invalid"))
+	g.Expect(res.Reason).To(Equal(validator.ReasonSchemaViolation))
+	paths := make([]string, 0, len(res.Violations))
+	for _, v := range res.Violations {
+		paths = append(paths, v.Path)
+	}
+	g.Expect(paths).To(ConsistOf("/apiVersion", "/kind"))
+	for _, v := range res.Violations {
+		g.Expect(v.Message).To(Equal("missing required property"))
+	}
+}
+
+func TestValidateCmd_Output_JSON_KindSkipped(t *testing.T) {
+	g := NewWithT(t)
+	schemaDir := extractWidgetSchema(t)
+	manifestDir := t.TempDir()
+	writeManifest(t, manifestDir, "ok.yaml", validWidget)
+
+	out, err := executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+		"--skip-kind", "Widget",
+		"-o", "json",
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	env := decodeReport(t, out)
+	g.Expect(env.Report.Summary).To(Equal(validator.ReportSummary{Total: 1, Valid: 0, Invalid: 0, Skipped: 1}))
+	g.Expect(env.Report.Results).To(HaveLen(1))
+	res := env.Report.Results[0]
+	g.Expect(res.Status).To(Equal("skipped"))
+	g.Expect(res.Reason).To(Equal(validator.ReasonKindSkipped))
+	g.Expect(res.Violations).To(BeEmpty())
+}
+
+func TestValidateCmd_Output_JSON_SchemaNotFound(t *testing.T) {
+	g := NewWithT(t)
+	manifestDir := t.TempDir()
+	writeManifest(t, manifestDir, "ok.yaml", validWidget)
+
+	out, err := executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", filepath.Join(t.TempDir(), "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+		"--skip-missing-schemas",
+		"-o", "json",
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	env := decodeReport(t, out)
+	g.Expect(env.Report.Summary).To(Equal(validator.ReportSummary{Total: 1, Valid: 0, Invalid: 0, Skipped: 1}))
+	res := env.Report.Results[0]
+	g.Expect(res.Status).To(Equal("skipped"))
+	g.Expect(res.Reason).To(Equal(validator.ReasonSchemaNotFound))
+	g.Expect(res.Violations).To(HaveLen(1))
+	g.Expect(res.Violations[0].Path).To(BeEmpty())
+	g.Expect(res.Violations[0].Message).To(ContainSubstring(`no schema for kind "Widget"`))
+}
+
+func TestValidateCmd_Output_JSON_SourceLoadError(t *testing.T) {
+	g := NewWithT(t)
+	missing := filepath.Join(t.TempDir(), "does-not-exist.yaml")
+
+	out, err := executeCommand([]string{
+		"validate", missing,
+		"--schema-location", filepath.Join(t.TempDir(), "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+		"-o", "json",
+	})
+	g.Expect(err).To(HaveOccurred())
+
+	env := decodeReport(t, out)
+	g.Expect(env.Report.Results).To(HaveLen(1))
+	res := env.Report.Results[0]
+	g.Expect(res.Resource).To(BeNil())
+	g.Expect(res.Status).To(Equal("invalid"))
+	g.Expect(res.Reason).To(Equal(validator.ReasonSourceLoadError))
+	g.Expect(res.Violations).To(HaveLen(1))
+	g.Expect(res.Violations[0].Message).To(ContainSubstring("no such file or directory"))
+
+	// `"resource": null` must appear on the wire so consumers can distinguish
+	// "no identity" from an empty object.
+	g.Expect(out).To(ContainSubstring(`"resource": null`))
+}
+
+func TestValidateCmd_Output_YAML_SmokeTest(t *testing.T) {
+	g := NewWithT(t)
+	schemaDir := extractWidgetSchema(t)
+	manifestDir := t.TempDir()
+	writeManifest(t, manifestDir, "ok.yaml", validWidget)
+
+	out, err := executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+		"-o", "yaml",
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("version: 1.0.0"))
+	g.Expect(out).To(ContainSubstring("reporter: flux-schema/"))
+	g.Expect(out).To(ContainSubstring("status: valid"))
+	// $schema is a JSON-only pointer; dropping it keeps YAML output clean
+	// for consumers like yq that don't care about the envelope schema URL.
+	g.Expect(out).ToNot(ContainSubstring("$schema"))
+
+	var env validator.Report
+	// sigs.k8s.io/yaml re-encodes through JSON; json.Unmarshal is not
+	// appropriate here. Use sigs.k8s.io/yaml.Unmarshal for parity.
+	g.Expect(k8syaml.Unmarshal([]byte(out), &env)).To(Succeed())
+	g.Expect(env.Version).To(Equal(validator.ReportVersion))
+	g.Expect(env.Schema).To(BeEmpty())
+	g.Expect(env.Report.Summary.Valid).To(Equal(1))
+}
+
+// JSON/YAML output always emits every result regardless of --verbose; the
+// structured form is for machines, and filtering belongs downstream.
+func TestValidateCmd_Output_JSON_IgnoresVerbose(t *testing.T) {
+	g := NewWithT(t)
+	schemaDir := extractWidgetSchema(t)
+	manifestDir := t.TempDir()
+	writeManifest(t, manifestDir, "mixed.yaml", validWidget+"---\n"+invalidWidget)
+
+	out, err := executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+		"-o", "json",
+	})
+	g.Expect(err).To(HaveOccurred())
+
+	env := decodeReport(t, out)
+	g.Expect(env.Report.Summary).To(Equal(validator.ReportSummary{Total: 2, Valid: 1, Invalid: 1, Skipped: 0}))
+	g.Expect(env.Report.Results).To(HaveLen(2))
+
+	statuses := []string{env.Report.Results[0].Status, env.Report.Results[1].Status}
+	g.Expect(statuses).To(ConsistOf("valid", "invalid"))
+}
+
+func TestValidateCmd_Output_JSON_Config(t *testing.T) {
+	g := NewWithT(t)
+	schemaDir := extractWidgetSchema(t)
+	manifestDir := t.TempDir()
+	writeManifest(t, manifestDir, "ok.yaml", validWidget)
+
+	cfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `version: "1"
+validate:
+  output: json
+`)
+
+	out, err := executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+		"--config", cfg,
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	env := decodeReport(t, out)
+	g.Expect(env.Version).To(Equal(validator.ReportVersion))
+	g.Expect(env.Report.Summary.Valid).To(Equal(1))
+}
+
+func TestValidateCmd_Output_Unsupported(t *testing.T) {
+	g := NewWithT(t)
+	_, err := executeCommand([]string{"validate", "--output", "toml"})
+	g.Expect(err).To(MatchError(ContainSubstring("unsupported output format")))
+}
+
+func TestValidateCmd_Config_InvalidOutput(t *testing.T) {
+	g := NewWithT(t)
+	cfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `version: "1"
+validate:
+  output: toml
+`)
+	_, err := executeCommand([]string{"validate", "--config", cfg})
+	g.Expect(err).To(MatchError(ContainSubstring("unsupported output format")))
 }

@@ -30,6 +30,7 @@ type validateConfig struct {
 	FailFast              bool     `json:"fail-fast,omitempty"`
 	Concurrent            *int     `json:"concurrent,omitempty"`
 	InsecureSkipTLSVerify bool     `json:"insecure-skip-tls-verify,omitempty"`
+	Output                string   `json:"output,omitempty"`
 }
 
 func loadConfigFile(path string) (*configFile, error) {
@@ -50,10 +51,13 @@ func loadConfigFile(path string) (*configFile, error) {
 
 // applyValidateConfig copies cfg values into args for flags not set on the CLI,
 // giving CLI > config > defaults precedence. Nil cfg is a no-op so callers can
-// pass cfg.Validate directly without a nil check.
-func applyValidateConfig(cmd *cobra.Command, cfg *validateConfig, args *validateFlags) {
+// pass cfg.Validate directly without a nil check. Returns an error when a
+// config value fails the same validation the CLI flag would apply (e.g. an
+// invalid output format), so bad config is caught up-front rather than
+// silently ignored.
+func applyValidateConfig(cmd *cobra.Command, cfg *validateConfig, args *validateFlags) error {
 	if cfg == nil {
-		return
+		return nil
 	}
 	flags := cmd.Flags()
 
@@ -78,4 +82,10 @@ func applyValidateConfig(cmd *cobra.Command, cfg *validateConfig, args *validate
 	if !flags.Changed("insecure-skip-tls-verify") {
 		args.insecureSkipTLSVerify = cfg.InsecureSkipTLSVerify
 	}
+	if cfg.Output != "" && !flags.Changed("output") {
+		if err := args.output.Set(cfg.Output); err != nil {
+			return fmt.Errorf("config output: %w", err)
+		}
+	}
+	return nil
 }

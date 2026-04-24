@@ -5,14 +5,18 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"slices"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
+	"sigs.k8s.io/yaml"
 
+	"github.com/fluxcd/flux-schema/internal/flags"
 	"github.com/fluxcd/flux-schema/internal/validator"
 )
 
@@ -58,10 +62,12 @@ type validateFlags struct {
 	concurrent            int
 	insecureSkipTLSVerify bool
 	configFile            string
+	output                flags.Output
 }
 
 var validateArgs = validateFlags{
 	concurrent: validator.DefaultWorkers,
+	output:     "text",
 }
 
 func init() {
@@ -83,20 +89,13 @@ func init() {
 		"path to a YAML file supplying default values for validate flags "+
 			"(env: "+envConfigFile+")")
 	_ = validateCmd.MarkFlagFilename("config", "yaml", "yml")
+	validateCmd.Flags().VarP(&validateArgs.output, "output", "o", validateArgs.output.Description())
 	rootCmd.AddCommand(validateCmd)
 }
 
 func validateCmdRun(cmd *cobra.Command, args []string) error {
-	configPath := validateArgs.configFile
-	if configPath == "" {
-		configPath = os.Getenv(envConfigFile)
-	}
-	if configPath != "" {
-		cfg, err := loadConfigFile(configPath)
-		if err != nil {
-			return err
-		}
-		applyValidateConfig(cmd, cfg.Validate, &validateArgs)
+	if err := loadValidateConfig(cmd); err != nil {
+		return err
 	}
 
 	inputs, err := resolveStdinArgs(args)
@@ -104,31 +103,9 @@ func validateCmdRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	locations := validateArgs.schemaLocations
-	if len(locations) == 0 {
-		locations = []string{validator.DefaultSchemaLocation}
-	} else {
-		expanded, lerr := expandSchemaLocations(locations)
-		if lerr != nil {
-			return lerr
-		}
-		locations = expanded
-	}
-
-	if validateArgs.concurrent < 1 {
-		return fmt.Errorf("--concurrent must be >= 1, got %d", validateArgs.concurrent)
-	}
-
-	opts := validator.Options{
-		SchemaLocations:       locations,
-		SkipMissingSchemas:    validateArgs.skipMissingSchemas,
-		SkipKinds:             validateArgs.skipKinds,
-		HTTPTimeout:           rootArgs.timeout,
-		Workers:               validateArgs.concurrent,
-		InsecureSkipTLSVerify: validateArgs.insecureSkipTLSVerify,
-	}
-	if slices.Contains(inputs, stdinLabel) {
-		opts.Stdin = stdinReader
+	opts, err := buildValidatorOptions(inputs)
+	if err != nil {
+		return err
 	}
 	v, err := validator.New(opts)
 	if err != nil {
@@ -139,9 +116,23 @@ func validateCmdRun(cmd *cobra.Command, args []string) error {
 	defer cancel()
 
 	stdinOnly := len(inputs) == 1 && inputs[0] == stdinLabel
+	mode := validateArgs.output.String()
 
 	files := make(map[string]struct{})
 	var nValid, nInvalid, nSkipped int
+	var collected []validator.Result
+
+	// Text mode streams per-result; structured modes buffer so the envelope
+	// can carry the full summary ahead of results[].
+	emit := func(r validator.Result) {
+		if mode == "text" {
+			if shouldPrint(r.Status, validateArgs.verbose) {
+				writeResult(cmd, r)
+			}
+			return
+		}
+		collected = append(collected, r)
+	}
 
 	// Reorder buffer: workers complete documents out of order, but we want
 	// deterministic (source, docIndex) output. For each source we track the
@@ -169,9 +160,7 @@ func validateCmdRun(cmd *cobra.Command, args []string) error {
 			if !ok {
 				return
 			}
-			if shouldPrint(r.Status, validateArgs.verbose) {
-				writeResult(cmd, r)
-			}
+			emit(r)
 			delete(buf.pending, buf.nextIdx)
 			buf.nextIdx++
 		}
@@ -191,10 +180,7 @@ func validateCmdRun(cmd *cobra.Command, args []string) error {
 		}
 		sort.Ints(indices)
 		for _, i := range indices {
-			r := buf.pending[i]
-			if shouldPrint(r.Status, validateArgs.verbose) {
-				writeResult(cmd, r)
-			}
+			emit(buf.pending[i])
 		}
 		buf.pending = nil
 	}
@@ -253,7 +239,20 @@ func validateCmdRun(cmd *cobra.Command, args []string) error {
 		flushRemaining(src)
 	}
 
-	writeSummary(cmd, len(files), nValid+nInvalid+nSkipped, nValid, nInvalid, nSkipped, stdinOnly)
+	if mode != "text" {
+		summary := validator.ReportSummary{
+			Total:   nValid + nInvalid + nSkipped,
+			Valid:   nValid,
+			Invalid: nInvalid,
+			Skipped: nSkipped,
+		}
+		report := validator.NewReport("flux-schema/"+VERSION, time.Now(), collected, summary)
+		if err := writeReport(cmd, mode, report); err != nil {
+			return err
+		}
+	} else {
+		writeSummary(cmd, len(files), nValid+nInvalid+nSkipped, nValid, nInvalid, nSkipped, stdinOnly)
+	}
 
 	if nInvalid > 0 {
 		// Summary line already communicates the failure; exit non-zero
@@ -261,6 +260,31 @@ func validateCmdRun(cmd *cobra.Command, args []string) error {
 		return errSilent
 	}
 	return nil
+}
+
+// writeReport streams report to cmd's output as JSON or YAML. The `$schema`
+// key is JSON-only: it points at a JSON Schema document and carries no
+// meaning for YAML consumers, so we drop it in YAML mode.
+func writeReport(cmd *cobra.Command, mode string, report validator.Report) error {
+	switch mode {
+	case "json":
+		enc := json.NewEncoder(cmd.OutOrStdout())
+		enc.SetIndent("", "  ")
+		if err := enc.Encode(report); err != nil {
+			return fmt.Errorf("marshal report: %w", err)
+		}
+		return nil
+	case "yaml":
+		report.Schema = ""
+		data, err := yaml.Marshal(report)
+		if err != nil {
+			return fmt.Errorf("marshal report: %w", err)
+		}
+		cmd.Print(string(data))
+		return nil
+	default:
+		return fmt.Errorf("unsupported output format %q", mode)
+	}
 }
 
 // expandSchemaLocations normalizes each --schema-location value so callers can
@@ -358,4 +382,52 @@ func pluralize(word string, n int) string {
 		return word
 	}
 	return word + "s"
+}
+
+// loadValidateConfig applies a config file resolved from --config or the
+// FLUX_SCHEMA_CONFIG env var; missing path is a no-op.
+func loadValidateConfig(cmd *cobra.Command) error {
+	configPath := validateArgs.configFile
+	if configPath == "" {
+		configPath = os.Getenv(envConfigFile)
+	}
+	if configPath == "" {
+		return nil
+	}
+	cfg, err := loadConfigFile(configPath)
+	if err != nil {
+		return err
+	}
+	return applyValidateConfig(cmd, cfg.Validate, &validateArgs)
+}
+
+// buildValidatorOptions expands --schema-location values, validates flag
+// invariants, and assembles the validator.Options. Stdin is wired in when
+// inputs references the stdin sentinel.
+func buildValidatorOptions(inputs []string) (validator.Options, error) {
+	locations := validateArgs.schemaLocations
+	if len(locations) == 0 {
+		locations = []string{validator.DefaultSchemaLocation}
+	} else {
+		expanded, err := expandSchemaLocations(locations)
+		if err != nil {
+			return validator.Options{}, err
+		}
+		locations = expanded
+	}
+	if validateArgs.concurrent < 1 {
+		return validator.Options{}, fmt.Errorf("--concurrent must be >= 1, got %d", validateArgs.concurrent)
+	}
+	opts := validator.Options{
+		SchemaLocations:       locations,
+		SkipMissingSchemas:    validateArgs.skipMissingSchemas,
+		SkipKinds:             validateArgs.skipKinds,
+		HTTPTimeout:           rootArgs.timeout,
+		Workers:               validateArgs.concurrent,
+		InsecureSkipTLSVerify: validateArgs.insecureSkipTLSVerify,
+	}
+	if slices.Contains(inputs, stdinLabel) {
+		opts.Stdin = stdinReader
+	}
+	return opts, nil
 }

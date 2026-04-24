@@ -23,6 +23,7 @@ Flux CLI plugin for Kubernetes schema extraction and manifests validation.
     - `--concurrent`: Number of concurrent workers (default 8)
     - `--insecure-skip-tls-verify`: Disable TLS certificate verification when fetching schemas over HTTPS
     - `-v, --verbose`: Print a line for every document, including valid and skipped ones
+    - `-o, --output`: Output format, one of `text|json|yaml` (default: `text`)
     - `--config`: Path to a YAML file supplying default values for validate flags (env: `FLUX_SCHEMA_CONFIG`)
 - `flux-schema extract crd [files...]`: Extract JSON Schema from Kubernetes CRD YAMLs
   - `-d, --output-dir`: Directory to write JSON Schema files to (mutually exclusive with `--output-archive`)
@@ -99,6 +100,20 @@ Summary: 4 resources found in 1 file - Valid: 1, Invalid: 2, Skipped: 1
 
 A non-zero exit code is returned when any document is invalid or errored.
 
+#### Structured output
+
+For CI pipelines and tooling, pass `-o json` (or `-o yaml`) to emit a
+machine-readable report instead of text:
+
+```shell
+flux-schema validate ./manifests -o json | jq '.report.summary'
+```
+
+See the [validation report reference](docs/report/README.md) for the full
+envelope shape, the `reason` enum, and an example covering every result
+type. The report is versioned by a published
+[JSON Schema](docs/report/schema-1.0.0.json).
+
 #### Validation rules
 
 - YAML documents with duplicate keys are rejected matching Flux behavior.
@@ -137,6 +152,7 @@ validate:
   fail-fast: false
   concurrent: 8
   insecure-skip-tls-verify: false
+  output: text
 ```
 
 Rules:

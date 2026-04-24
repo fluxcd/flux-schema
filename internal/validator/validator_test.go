@@ -648,10 +648,10 @@ func TestValidateSources_SourceLoadError(t *testing.T) {
 func TestValidateBytes_SchemaLoadError(t *testing.T) {
 	g := NewWithT(t)
 	dir := t.TempDir()
-	// Matches the template used by newLocalValidator
-	// ("{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json").
+	// Template variables lowercase at render time, so the file must match
+	// the rendered path on case-sensitive filesystems (Linux CI).
 	g.Expect(os.WriteFile(
-		filepath.Join(dir, "Widget-example-v1.json"),
+		filepath.Join(dir, "widget-example-v1.json"),
 		[]byte("{not valid json"),
 		0o644,
 	)).To(Succeed())

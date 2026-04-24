@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/fluxcd/flux-schema/main/docs/report/schema-1.0.0.json",
+  "title": "flux-schema validation report",
+  "description": "Structured report emitted by `flux-schema validate --output json|yaml`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "report"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "$schema": {
+      "type": "string",
+      "format": "uri"
+    },
+    "report": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reporter", "timestamp", "summary", "results"],
+      "properties": {
+        "reporter": {
+          "type": "string",
+          "pattern": "^flux-schema/"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "summary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["total", "valid", "invalid", "skipped"],
+          "properties": {
+            "total":   { "type": "integer", "minimum": 0 },
+            "valid":   { "type": "integer", "minimum": 0 },
+            "invalid": { "type": "integer", "minimum": 0 },
+            "skipped": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "results": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/result" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["resource", "source", "idx", "status"],
+      "properties": {
+        "resource": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/resource" }
+          ]
+        },
+        "source": { "type": "string" },
+        "idx":    { "type": "integer", "minimum": 0 },
+        "status": {
+          "type": "string",
+          "enum": ["valid", "invalid", "skipped"]
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "source-load-error",
+            "yaml-parse-error",
+            "kind-skipped",
+            "schema-load-error",
+            "schema-not-found",
+            "schema-violation"
+          ]
+        },
+        "violations": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/violation" }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "valid" } } },
+          "then": {
+            "not": { "required": ["reason"] }
+          },
+          "else": {
+            "required": ["reason"]
+          }
+        }
+      ]
+    },
+    "resource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["apiVersion", "kind"],
+      "properties": {
+        "apiVersion": { "type": "string" },
+        "kind":       { "type": "string" },
+        "namespace":  { "type": "string" },
+        "name":       { "type": "string" }
+      }
+    },
+    "violation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["message"],
+      "properties": {
+        "path":    { "type": "string" },
+        "message": { "type": "string" }
+      }
+    }
+  }
+}
