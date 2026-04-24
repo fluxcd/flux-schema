@@ -1,0 +1,82 @@
+{
+  "properties": {
+    "apiVersion": {
+      "type": "string"
+    },
+    "kind": {
+      "type": "string"
+    },
+    "metadata": {
+      "type": "object"
+    },
+    "spec": {
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "additionalProperties": false,
+          "properties": {
+            "address": {
+              "type": "string"
+            },
+            "headers": {
+              "additionalProperties": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "type": "object"
+            },
+            "insecureSkipVerify": {
+              "type": "boolean"
+            },
+            "region": {
+              "type": "string"
+            },
+            "secretRef": {
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "type": "object"
+            },
+            "type": {
+              "enum": [
+                "prometheus",
+                "influxdb",
+                "datadog",
+                "externalmetrics",
+                "stackdriver",
+                "cloudwatch",
+                "newrelic",
+                "graphite",
+                "dynatrace",
+                "keptn",
+                "splunk"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        "query": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "provider",
+        "query"
+      ],
+      "type": "object"
+    }
+  },
+  "type": "object"
+}

@@ -31,6 +31,8 @@ jobs:
         run: ./scripts/gen-crd-schemas.sh -r kubernetes-sigs/gateway-api -d ./catalog/latest
       - name: Update Flux schemas
         run: ./scripts/gen-flux-schemas.sh -d ./catalog/latest
+      - name: Update Flagger schemas
+        run: ./scripts/gen-crd-schemas.sh -r fluxcd/flagger -p kustomize/kubernetes -d ./catalog/latest
       - name: Update Flux Operator schemas
         run: ./scripts/gen-crd-schemas.sh -r controlplaneio-fluxcd/flux-operator -d ./catalog/latest
       - name: Update README versions
@@ -51,6 +53,7 @@ jobs:
             - Kubernetes: ${{ env.K8S_VERSION }}
             - Gateway API: ${{ env.GATEWAY_API_VERSION }}
             - Flux: ${{ env.FLUX_VERSION }}
+            - Flagger: ${{ env.FLAGGER_VERSION }}
             - Flux Operator: ${{ env.FLUX_OPERATOR_VERSION }}
           labels: |
             area/catalog

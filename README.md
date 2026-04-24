@@ -40,7 +40,7 @@ and validates each document against a JSON Schema resolved from its `apiVersion`
 
 When no `--schema-location` is given, validate uses the [flux-schema catalog](catalog/README.md),
 which covers the latest Kubernetes APIs, the stable channel of Gateway API,
-and the Flux CRDs (controllers and operator):
+and the Flux ecosystem CRDs:
 
 ```shell
 flux-schema validate ./manifests

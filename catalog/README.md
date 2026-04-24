@@ -9,12 +9,13 @@ used by the `flux schema validation` tool.
 | [kubernetes/kubernetes](https://github.com/kubernetes/kubernetes) | v1.35.4 |
 | [kubernetes-sigs/gateway-api](https://github.com/kubernetes-sigs/gateway-api) | v1.5.1 |
 | [fluxcd/flux2](https://github.com/fluxcd/flux2) | v2.8.6 |
+| [fluxcd/flagger](https://github.com/fluxcd/flagger) | v1.43.0 |
 | [controlplaneio-fluxcd/flux-operator](https://github.com/controlplaneio-fluxcd/flux-operator) | v0.48.0 |
 <!-- versions:end -->
 
 ## Flux APIs
 
-Extracted from the CRDs shipped by the latest stable Flux distribution and Flux Operator.
+Extracted from the CRDs shipped by the latest stable Flux distribution, Flagger and Flux Operator.
 
 - `helm.toolkit.fluxcd.io` — `HelmRelease`
 - `image.toolkit.fluxcd.io` — `ImagePolicy`, `ImageRepository`, `ImageUpdateAutomation`
@@ -22,6 +23,7 @@ Extracted from the CRDs shipped by the latest stable Flux distribution and Flux 
 - `notification.toolkit.fluxcd.io` — `Alert`, `Provider`, `Receiver`
 - `source.toolkit.fluxcd.io` — `Bucket`, `ExternalArtifact`, `GitRepository`, `HelmChart`, `HelmRepository`, `OCIRepository`
 - `source.extensions.fluxcd.io` — `ArtifactGenerator`
+- `flagger.app` — `Canary`, `MetricTemplate`, `AlertProvider`
 - `fluxcd.controlplane.io` — `FluxInstance`, `FluxReport`, `ResourceSet`, `ResourceSetInputProvider`
 
 ## Kubernetes APIs
