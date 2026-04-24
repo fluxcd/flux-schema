@@ -23,6 +23,7 @@ Flux CLI plugin for Kubernetes schema extraction and manifests validation.
     - `--concurrent`: Number of concurrent workers (default 8)
     - `--insecure-skip-tls-verify`: Disable TLS certificate verification when fetching schemas over HTTPS
     - `-v, --verbose`: Print a line for every document, including valid and skipped ones
+    - `--config`: Path to a YAML file supplying default values for validate flags (env: `FLUX_SCHEMA_CONFIG`)
 - `flux-schema extract crd [files...]`: Extract JSON Schema from Kubernetes CRD YAMLs
   - `-d, --output-dir`: Directory to write JSON Schema files to (mutually exclusive with `--output-archive`)
   - `-a, --output-archive`: Path to write a gzipped tar archive of JSON Schema files to
@@ -38,8 +39,8 @@ The validate command reads Kubernetes YAML manifests from one or more files or d
 and validates each document against a JSON Schema resolved from its `apiVersion` and `kind`.
 
 When no `--schema-location` is given, validate uses the [flux-schema catalog](catalog/README.md),
-which covers the latest stable Kubernetes APIs and the Flux ecosystem CRDs (Flux toolkit
-controllers and the Flux Operator):
+which covers the latest Kubernetes APIs, the stable channel of Gateway API,
+and the Flux CRDs (controllers and operator):
 
 ```shell
 flux-schema validate ./manifests
@@ -63,7 +64,7 @@ flux-schema validate ./manifests \
 
 Template variables are `.Group`, `.GroupPrefix`, `.Kind`, and `.Version`.
 
-The `--schema-location` flag is repeatable and locations are tried in order — the first match wins.
+The `--schema-location` flag is repeatable and locations are tried in order (the first match wins).
 Pass the literal value `default` to include the flux-schema catalog alongside your own schemas:
 
 ```shell
@@ -98,7 +99,7 @@ Summary: 4 resources found in 1 file - Valid: 1, Invalid: 2, Skipped: 1
 
 A non-zero exit code is returned when any document is invalid or errored.
 
-Validation is strict by default:
+#### Validation rules
 
 - YAML documents with duplicate keys are rejected matching Flux behavior.
 - Documents missing both `metadata.name` and `metadata.generateName` are flagged as invalid
@@ -107,6 +108,42 @@ Validation is strict by default:
   so undocumented fields under `spec` fail validation.
 - String formats `duration`, `date`, `datetime`/`date-time`, and `time` are validated
   matching Kubernetes API conventions.
+
+#### Config file
+
+Flag values can be pre-set in a YAML config file and referenced with `--config`
+or with the `FLUX_SCHEMA_CONFIG` environment variable.
+This keeps long invocations out of CI scripts and makes validation reproducible
+across developers:
+
+```shell
+flux-schema validate ./manifests --config .flux-schema.yaml
+```
+
+The file has a `version` (required, must be `"1"`) and a `validate` section
+whose keys mirror the CLI flag names:
+
+```yaml
+version: "1"
+validate:
+  schema-location:
+    - default
+    - https://raw.githubusercontent.com/datreeio/CRDs-catalog/main
+  skip-kind:
+    - v1/Secret
+    - source.toolkit.fluxcd.io/v1/ExternalArtifact
+  skip-missing-schemas: false
+  verbose: true
+  fail-fast: false
+  concurrent: 8
+  insecure-skip-tls-verify: false
+```
+
+Rules:
+
+- CLI flags override config values. Setting `--verbose=false` wins over `verbose: true` in the file.
+- Setting `--config` overrides `FLUX_SCHEMA_CONFIG`. When both are set, the flag wins and the env var is ignored.
+- Manifest paths stay positional. The config file configures how to validate; paths are given on the command line.
 
 ### Kubernetes CRD Extraction
 

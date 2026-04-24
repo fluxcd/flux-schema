@@ -454,6 +454,226 @@ func TestValidateCmd_SkipKind_Invalid(t *testing.T) {
 	g.Expect(err).To(MatchError(ContainSubstring("skip kind pattern")))
 }
 
+func TestValidateCmd_Config_AppliesFlagValues(t *testing.T) {
+	g := NewWithT(t)
+	schemaDir := extractWidgetSchema(t)
+	manifestDir := t.TempDir()
+	writeManifest(t, manifestDir, "ok.yaml", validWidget)
+
+	cfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `version: "1"
+validate:
+  verbose: true
+  skip-kind:
+    - Widget
+`)
+
+	out, err := executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+		"--config", cfg,
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("Widget/default/ok-widget is skipped: kind skipped"))
+	g.Expect(out).To(ContainSubstring("Valid: 0, Invalid: 0, Skipped: 1"))
+}
+
+func TestValidateCmd_Config_CLIOverridesBool(t *testing.T) {
+	g := NewWithT(t)
+	schemaDir := extractWidgetSchema(t)
+	manifestDir := t.TempDir()
+	writeManifest(t, manifestDir, "ok.yaml", validWidget)
+
+	cfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `version: "1"
+validate:
+  verbose: true
+`)
+
+	out, err := executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+		"--config", cfg,
+		"--verbose=false",
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(out).ToNot(ContainSubstring("is valid"))
+	g.Expect(out).To(ContainSubstring("Valid: 1"))
+}
+
+// CLI --skip-kind replaces (does not merge with) the config's skip-kind list.
+func TestValidateCmd_Config_CLIOverridesSlice(t *testing.T) {
+	g := NewWithT(t)
+	schemaDir := extractWidgetSchema(t)
+	manifestDir := t.TempDir()
+	writeManifest(t, manifestDir, "ok.yaml", validWidget)
+
+	cfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `version: "1"
+validate:
+  skip-kind:
+    - Widget
+`)
+
+	out, err := executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+		"--config", cfg,
+		"--skip-kind", "Secret",
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("Valid: 1, Invalid: 0, Skipped: 0"))
+}
+
+// Covers both *int apply paths: absent key preserves the default, explicit
+// value (here 0) is applied and trips the >=1 guard.
+func TestValidateCmd_Config_Concurrent(t *testing.T) {
+	g := NewWithT(t)
+	schemaDir := extractWidgetSchema(t)
+	manifestDir := t.TempDir()
+	writeManifest(t, manifestDir, "ok.yaml", validWidget)
+
+	cfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `version: "1"
+validate:
+  verbose: true
+`)
+	_, err := executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+		"--config", cfg,
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	cfgZero := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `version: "1"
+validate:
+  concurrent: 0
+`)
+	_, err = executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+		"--config", cfgZero,
+	})
+	g.Expect(err).To(MatchError(ContainSubstring("--concurrent must be >= 1")))
+}
+
+func TestValidateCmd_Config_NoValidateSection(t *testing.T) {
+	g := NewWithT(t)
+	schemaDir := extractWidgetSchema(t)
+	manifestDir := t.TempDir()
+	writeManifest(t, manifestDir, "ok.yaml", validWidget)
+
+	cfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `version: "1"
+`)
+	out, err := executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+		"--config", cfg,
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("Valid: 1"))
+}
+
+func TestValidateCmd_Config_VersionMissing(t *testing.T) {
+	g := NewWithT(t)
+	cfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `validate:
+  verbose: true
+`)
+	_, err := executeCommand([]string{"validate", "--config", cfg})
+	g.Expect(err).To(MatchError(ContainSubstring(`unsupported version ""`)))
+}
+
+func TestValidateCmd_Config_VersionUnsupported(t *testing.T) {
+	g := NewWithT(t)
+	cfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `version: "2"
+validate:
+  verbose: true
+`)
+	_, err := executeCommand([]string{"validate", "--config", cfg})
+	g.Expect(err).To(MatchError(ContainSubstring(`unsupported version "2"`)))
+}
+
+func TestValidateCmd_Config_StrictUnknownKey(t *testing.T) {
+	g := NewWithT(t)
+	cfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `version: "1"
+validate:
+  skip_kind:
+    - Secret
+`)
+	_, err := executeCommand([]string{"validate", "--config", cfg})
+	g.Expect(err).To(HaveOccurred())
+	g.Expect(err.Error()).To(ContainSubstring("skip_kind"))
+}
+
+func TestValidateCmd_Config_StrictUnknownSection(t *testing.T) {
+	g := NewWithT(t)
+	cfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `version: "1"
+extracft:
+  verbose: true
+`)
+	_, err := executeCommand([]string{"validate", "--config", cfg})
+	g.Expect(err).To(HaveOccurred())
+	g.Expect(err.Error()).To(ContainSubstring("extracft"))
+}
+
+func TestValidateCmd_Config_FileNotFound(t *testing.T) {
+	g := NewWithT(t)
+	missing := filepath.Join(t.TempDir(), "does-not-exist.yaml")
+	_, err := executeCommand([]string{"validate", "--config", missing})
+	g.Expect(err).To(MatchError(ContainSubstring("read " + missing)))
+}
+
+// FLUX_SCHEMA_CONFIG env var is consulted when --config is not passed.
+func TestValidateCmd_Config_EnvVar(t *testing.T) {
+	g := NewWithT(t)
+	schemaDir := extractWidgetSchema(t)
+	manifestDir := t.TempDir()
+	writeManifest(t, manifestDir, "ok.yaml", validWidget)
+
+	cfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `version: "1"
+validate:
+  skip-kind:
+    - Widget
+`)
+	t.Setenv("FLUX_SCHEMA_CONFIG", cfg)
+
+	out, err := executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("Skipped: 1"))
+}
+
+// --config wins over FLUX_SCHEMA_CONFIG when both are set.
+func TestValidateCmd_Config_FlagBeatsEnvVar(t *testing.T) {
+	g := NewWithT(t)
+	schemaDir := extractWidgetSchema(t)
+	manifestDir := t.TempDir()
+	writeManifest(t, manifestDir, "ok.yaml", validWidget)
+
+	// Env var config has unsupported version — must not be read.
+	envCfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `version: "99"`)
+	t.Setenv("FLUX_SCHEMA_CONFIG", envCfg)
+
+	flagCfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `version: "1"
+validate:
+  skip-kind:
+    - Widget
+`)
+	out, err := executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+		"--config", flagCfg,
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("Skipped: 1"))
+}
+
+func TestValidateCmd_Config_MalformedYAML(t *testing.T) {
+	g := NewWithT(t)
+	cfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml",
+		"version: \"1\"\nvalidate:\n\tverbose: true\n") // tabs are illegal indent
+	_, err := executeCommand([]string{"validate", "--config", cfg})
+	g.Expect(err).To(MatchError(ContainSubstring("parse " + cfg)))
+}
+
 func TestExpandSchemaLocations(t *testing.T) {
 	g := NewWithT(t)
 

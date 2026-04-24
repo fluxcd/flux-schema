@@ -6,6 +6,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 	"slices"
 	"sort"
 	"strings"
@@ -41,7 +42,10 @@ var validateCmd = &cobra.Command{
   # Skip specific kinds by Kind or apiVersion/Kind
   flux-schema validate ./manifests \
     --skip-kind Secret \
-    --skip-kind source.toolkit.fluxcd.io/v1/GitRepository`,
+    --skip-kind source.toolkit.fluxcd.io/v1/GitRepository
+
+  # Load flag defaults from a checked-in YAML config (CLI flags still override)
+  flux-schema validate ./manifests --config .flux-schema.yaml`,
 	RunE: validateCmdRun,
 }
 
@@ -53,6 +57,7 @@ type validateFlags struct {
 	failFast              bool
 	concurrent            int
 	insecureSkipTLSVerify bool
+	configFile            string
 }
 
 var validateArgs = validateFlags{
@@ -74,10 +79,26 @@ func init() {
 		"number of concurrent workers")
 	validateCmd.Flags().BoolVar(&validateArgs.insecureSkipTLSVerify, "insecure-skip-tls-verify", false,
 		"disable TLS certificate verification when fetching schemas over HTTPS")
+	validateCmd.Flags().StringVar(&validateArgs.configFile, "config", "",
+		"path to a YAML file supplying default values for validate flags "+
+			"(env: "+envConfigFile+")")
+	_ = validateCmd.MarkFlagFilename("config", "yaml", "yml")
 	rootCmd.AddCommand(validateCmd)
 }
 
 func validateCmdRun(cmd *cobra.Command, args []string) error {
+	configPath := validateArgs.configFile
+	if configPath == "" {
+		configPath = os.Getenv(envConfigFile)
+	}
+	if configPath != "" {
+		cfg, err := loadConfigFile(configPath)
+		if err != nil {
+			return err
+		}
+		applyValidateConfig(cmd, cfg.Validate, &validateArgs)
+	}
+
 	inputs, err := resolveStdinArgs(args)
 	if err != nil {
 		return err
