@@ -310,6 +310,42 @@ func TestValidateCmd_SkipKind(t *testing.T) {
 	g.Expect(out).To(ContainSubstring(" - HelmRelease/"))
 }
 
+// TestValidateCmd_SkipFile_DefaultHidesDotfiles verifies that without an
+// explicit --skip-file the walker hides dotfiles and dot-directories so a
+// .git/ alongside manifests doesn't trip schema resolution.
+func TestValidateCmd_SkipFile_DefaultHidesDotfiles(t *testing.T) {
+	g := NewWithT(t)
+	schemaDir := extractWidgetSchema(t)
+	manifestDir := t.TempDir()
+	writeManifest(t, manifestDir, "ok.yaml", validWidget)
+	writeManifest(t, manifestDir, ".hidden.yaml", invalidWidget)
+
+	out, err := executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("Summary: 1 resource found in 1 file - Valid: 1, Invalid: 0, Skipped: 0"))
+}
+
+// TestValidateCmd_SkipFile_CustomPattern verifies an explicit --skip-file
+// replaces the default and matches by basename glob.
+func TestValidateCmd_SkipFile_CustomPattern(t *testing.T) {
+	g := NewWithT(t)
+	schemaDir := extractWidgetSchema(t)
+	manifestDir := t.TempDir()
+	writeManifest(t, manifestDir, "ok.yaml", validWidget)
+	writeManifest(t, manifestDir, "kustomization.yaml", invalidWidget)
+
+	out, err := executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+		"--skip-file", "kustomization.yaml",
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("Summary: 1 resource found in 1 file - Valid: 1, Invalid: 0, Skipped: 0"))
+}
+
 // TestValidateCmd_FailFast runs 50 invalid docs with --concurrent 1 so the
 // cut-short count is near-deterministic: at most a handful of invalids,
 // never the full 50.
@@ -579,6 +615,29 @@ validate:
 		"--skip-json-path", "Secret:/does-not-exist",
 	})
 	g.Expect(err).To(HaveOccurred())
+}
+
+// Config file's skip-file entries replace the built-in default and are
+// picked up when the flag is absent on the CLI.
+func TestValidateCmd_Config_SkipFile(t *testing.T) {
+	g := NewWithT(t)
+	schemaDir := extractWidgetSchema(t)
+	manifestDir := t.TempDir()
+	writeManifest(t, manifestDir, "ok.yaml", validWidget)
+	writeManifest(t, manifestDir, "kustomization.yaml", invalidWidget)
+
+	cfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `version: "1"
+validate:
+  skip-file:
+    - kustomization.yaml
+`)
+	out, err := executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+		"--config", cfg,
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("Summary: 1 resource found in 1 file - Valid: 1, Invalid: 0, Skipped: 0"))
 }
 
 // CLI --skip-kind replaces (does not merge with) the config's skip-kind list.

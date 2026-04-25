@@ -103,12 +103,18 @@ type Options struct {
 	SkipMissingSchemas    bool
 	SkipKinds             []string
 	SkipJSONPaths         []string
+	SkipFiles             []string
 	HTTPClient            *retryablehttp.Client
 	HTTPTimeout           time.Duration
 	Workers               int
 	InsecureSkipTLSVerify bool
 	Stdin                 io.Reader
 }
+
+// DefaultSkipFiles is applied when Options.SkipFiles is nil. It hides
+// dotfiles and dot-directories (e.g. .github, .golangci.yml) which are commonly
+// found alongside YAML manifests but never contain Kubernetes resources.
+var DefaultSkipFiles = []string{".*"}
 
 // Validator resolves and applies JSON Schemas to Kubernetes manifests.
 // It is safe for concurrent use by multiple goroutines.
@@ -117,6 +123,7 @@ type Validator struct {
 	loader    *SchemaLoader
 	skipKinds []skipKindMatcher
 	skipPaths []skipPathMatcher
+	skipFiles []string
 }
 
 // skipKindMatcher matches a document by Kind, optionally scoped to an
@@ -297,12 +304,41 @@ func New(opts Options) (*Validator, error) {
 		skipPaths = append(skipPaths, m)
 	}
 
+	skipFiles := opts.SkipFiles
+	if skipFiles == nil {
+		// Clone so DefaultSkipFiles can never be mutated through a
+		// validator's skipFiles slice.
+		skipFiles = slices.Clone(DefaultSkipFiles)
+	}
+	for _, p := range skipFiles {
+		if strings.TrimSpace(p) == "" {
+			return nil, errors.New("skip file pattern must not be empty")
+		}
+		if _, err := filepath.Match(p, "probe"); err != nil {
+			return nil, fmt.Errorf("skip file pattern %q: %w", p, err)
+		}
+	}
+
 	return &Validator{
 		opts:      opts,
 		loader:    NewSchemaLoader(templates, opts.HTTPClient, opts.HTTPTimeout),
 		skipKinds: skipKinds,
 		skipPaths: skipPaths,
+		skipFiles: skipFiles,
 	}, nil
+}
+
+// matchSkipFile reports whether name (a directory or file basename) matches
+// any of the validator's skip-file glob patterns. Matching uses
+// filepath.Match semantics; patterns are validated up-front in New so the
+// match call here cannot return an error.
+func (v *Validator) matchSkipFile(name string) bool {
+	for _, p := range v.skipFiles {
+		if ok, _ := filepath.Match(p, name); ok {
+			return true
+		}
+	}
+	return false
 }
 
 type job struct {
@@ -477,13 +513,16 @@ func (v *Validator) produceFromPath(ctx context.Context, path string, jobs chan<
 				return werr
 			}
 			if d.IsDir() {
-				if p != path && strings.HasPrefix(d.Name(), ".") {
+				if p != path && v.matchSkipFile(d.Name()) {
 					return filepath.SkipDir
 				}
 				return nil
 			}
 			ext := strings.ToLower(filepath.Ext(p))
 			if ext != extYAML && ext != extYML {
+				return nil
+			}
+			if v.matchSkipFile(d.Name()) {
 				return nil
 			}
 			wg := &sync.WaitGroup{}
