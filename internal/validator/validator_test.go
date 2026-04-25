@@ -711,6 +711,185 @@ spec:
 	g.Expect(finals).To(HaveLen(2))
 }
 
+// TestValidateSources_SkipFilesDefault verifies the implicit ".*" pattern
+// hides dotfiles and dot-directories during a walk, while still walking the
+// root path itself even when the user explicitly points at a hidden dir.
+func TestValidateSources_SkipFilesDefault(t *testing.T) {
+	g := NewWithT(t)
+	dir := t.TempDir()
+	writeWidgetSchema(t, dir)
+
+	manifestsDir := t.TempDir()
+	const widget = `apiVersion: example.com/v1
+kind: Widget
+metadata:
+  name: w
+spec:
+  name: ok
+`
+	g.Expect(os.WriteFile(filepath.Join(manifestsDir, "a.yaml"), []byte(widget), 0o644)).To(Succeed())
+	g.Expect(os.WriteFile(filepath.Join(manifestsDir, ".hidden.yaml"), []byte(widget), 0o644)).To(Succeed())
+
+	hiddenDir := filepath.Join(manifestsDir, ".git")
+	g.Expect(os.Mkdir(hiddenDir, 0o755)).To(Succeed())
+	g.Expect(os.WriteFile(filepath.Join(hiddenDir, "config.yaml"), []byte(widget), 0o644)).To(Succeed())
+
+	v := newLocalValidator(t, dir, false)
+	ch := v.ValidateSources(context.Background(), []string{manifestsDir})
+	var sources []string
+	for r := range ch {
+		if r.Final {
+			continue
+		}
+		sources = append(sources, r.Source)
+	}
+	g.Expect(sources).To(ConsistOf(filepath.Join(manifestsDir, "a.yaml")))
+}
+
+// TestValidateSources_SkipFilesCustom verifies user-supplied patterns
+// override the default and apply to both files and directories by basename.
+func TestValidateSources_SkipFilesCustom(t *testing.T) {
+	g := NewWithT(t)
+	dir := t.TempDir()
+	writeWidgetSchema(t, dir)
+
+	manifestsDir := t.TempDir()
+	const widget = `apiVersion: example.com/v1
+kind: Widget
+metadata:
+  name: w
+spec:
+  name: ok
+`
+	g.Expect(os.WriteFile(filepath.Join(manifestsDir, "kustomization.yaml"), []byte(widget), 0o644)).To(Succeed())
+	g.Expect(os.WriteFile(filepath.Join(manifestsDir, "app.yaml"), []byte(widget), 0o644)).To(Succeed())
+	skipDir := filepath.Join(manifestsDir, "vendor")
+	g.Expect(os.Mkdir(skipDir, 0o755)).To(Succeed())
+	g.Expect(os.WriteFile(filepath.Join(skipDir, "x.yaml"), []byte(widget), 0o644)).To(Succeed())
+
+	v, err := New(Options{
+		SchemaLocations: []string{filepath.Join(dir, "{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json")},
+		SkipFiles:       []string{"kustomization.yaml", "vendor"},
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	ch := v.ValidateSources(context.Background(), []string{manifestsDir})
+	var sources []string
+	for r := range ch {
+		if r.Final {
+			continue
+		}
+		sources = append(sources, r.Source)
+	}
+	g.Expect(sources).To(ConsistOf(filepath.Join(manifestsDir, "app.yaml")))
+}
+
+// TestValidateSources_SkipFilesRootWalked pins the WalkDir `p != path`
+// guard: when the user explicitly points the validator at a directory whose
+// own basename matches the skip pattern (e.g. `validate .secrets/`), the
+// walk still descends into it — only its descendants are filtered.
+func TestValidateSources_SkipFilesRootWalked(t *testing.T) {
+	g := NewWithT(t)
+	dir := t.TempDir()
+	writeWidgetSchema(t, dir)
+
+	// Root directory whose basename matches the default ".*" pattern.
+	parent := t.TempDir()
+	rootDir := filepath.Join(parent, ".secrets")
+	g.Expect(os.Mkdir(rootDir, 0o755)).To(Succeed())
+	const widget = `apiVersion: example.com/v1
+kind: Widget
+metadata:
+  name: w
+spec:
+  name: ok
+`
+	g.Expect(os.WriteFile(filepath.Join(rootDir, "a.yaml"), []byte(widget), 0o644)).To(Succeed())
+	g.Expect(os.WriteFile(filepath.Join(rootDir, ".hidden.yaml"), []byte(widget), 0o644)).To(Succeed())
+
+	v := newLocalValidator(t, dir, false)
+	ch := v.ValidateSources(context.Background(), []string{rootDir})
+	var sources []string
+	for r := range ch {
+		if r.Final {
+			continue
+		}
+		sources = append(sources, r.Source)
+	}
+	g.Expect(sources).To(ConsistOf(filepath.Join(rootDir, "a.yaml")))
+}
+
+// TestValidateSources_SkipFilesExplicitFile pins that a file passed
+// directly as a CLI argument bypasses the skip-file filter, even when its
+// basename matches the default pattern. produceFromPath only consults the
+// skip patterns inside its WalkDir branch — the file branch streams the
+// caller-named path verbatim.
+func TestValidateSources_SkipFilesExplicitFile(t *testing.T) {
+	g := NewWithT(t)
+	dir := t.TempDir()
+	writeWidgetSchema(t, dir)
+
+	manifestsDir := t.TempDir()
+	const widget = `apiVersion: example.com/v1
+kind: Widget
+metadata:
+  name: w
+spec:
+  name: ok
+`
+	hidden := filepath.Join(manifestsDir, ".hidden.yaml")
+	g.Expect(os.WriteFile(hidden, []byte(widget), 0o644)).To(Succeed())
+
+	v := newLocalValidator(t, dir, false)
+	ch := v.ValidateSources(context.Background(), []string{hidden})
+	var sources []string
+	for r := range ch {
+		if r.Final {
+			continue
+		}
+		sources = append(sources, r.Source)
+	}
+	g.Expect(sources).To(ConsistOf(hidden))
+}
+
+// TestValidateSources_SkipFilesEmpty verifies an explicit empty slice
+// disables the default and walks every YAML, including dotfiles.
+func TestValidateSources_SkipFilesEmpty(t *testing.T) {
+	g := NewWithT(t)
+	dir := t.TempDir()
+	writeWidgetSchema(t, dir)
+
+	manifestsDir := t.TempDir()
+	const widget = `apiVersion: example.com/v1
+kind: Widget
+metadata:
+  name: w
+spec:
+  name: ok
+`
+	g.Expect(os.WriteFile(filepath.Join(manifestsDir, "a.yaml"), []byte(widget), 0o644)).To(Succeed())
+	g.Expect(os.WriteFile(filepath.Join(manifestsDir, ".hidden.yaml"), []byte(widget), 0o644)).To(Succeed())
+
+	v, err := New(Options{
+		SchemaLocations: []string{filepath.Join(dir, "{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json")},
+		SkipFiles:       []string{},
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	ch := v.ValidateSources(context.Background(), []string{manifestsDir})
+	var sources []string
+	for r := range ch {
+		if r.Final {
+			continue
+		}
+		sources = append(sources, r.Source)
+	}
+	g.Expect(sources).To(ConsistOf(
+		filepath.Join(manifestsDir, "a.yaml"),
+		filepath.Join(manifestsDir, ".hidden.yaml"),
+	))
+}
+
 // TestValidateSources_FinalSentinelOrdering pins the streaming protocol:
 // every real Result for a source arrives strictly before that source's
 // Final sentinel. Consumers rely on this to advance per-source streaming
@@ -1151,6 +1330,24 @@ func TestNew_RejectsBadSkipJSONPath(t *testing.T) {
 		SkipJSONPaths:   []string{"no-leading-slash"},
 	})
 	g.Expect(err).To(HaveOccurred())
+}
+
+func TestNew_RejectsBadSkipFile(t *testing.T) {
+	g := NewWithT(t)
+	cases := map[string]string{
+		"empty":      "",
+		"whitespace": "   ",
+		"bad-glob":   "[invalid",
+	}
+	for name, pattern := range cases {
+		t.Run(name, func(t *testing.T) {
+			_, err := New(Options{
+				SchemaLocations: []string{"./{{ .Kind }}.json"},
+				SkipFiles:       []string{pattern},
+			})
+			g.Expect(err).To(HaveOccurred())
+		})
+	}
 }
 
 func TestNew_RejectsBadTemplate(t *testing.T) {

@@ -53,6 +53,12 @@ var validateCmd = &cobra.Command{
   flux-schema validate ./manifests \
     --skip-json-path v1/Secret:/sops
 
+  # Skip files and directories by basename glob
+  # default skips dotfiles and dot-directories e.g. '.git'
+  flux-schema validate ./manifests \
+    --skip-file '.*' \
+    --skip-file 'kustomization.yaml'
+
   # Load flag defaults from a checked-in YAML config (CLI flags still override)
   flux-schema validate ./manifests --config .flux-schema.yaml`,
 	RunE: validateCmdRun,
@@ -63,6 +69,7 @@ type validateFlags struct {
 	skipMissingSchemas    bool
 	skipKinds             []string
 	skipJSONPaths         []string
+	skipFiles             []string
 	verbose               bool
 	failFast              bool
 	concurrent            int
@@ -85,6 +92,9 @@ func init() {
 		"skip documents matching kind or apiVersion/kind e.g. 'v1/Secret' (repeatable)")
 	validateCmd.Flags().StringArrayVar(&validateArgs.skipJSONPaths, "skip-json-path", nil,
 		"strip a JSON Pointer field, optionally scoped e.g. 'v1/Secret:/sops' (repeatable)")
+	validateCmd.Flags().StringArrayVar(&validateArgs.skipFiles, "skip-file", nil,
+		"glob pattern matched against files and dirs "+
+			"defaults to skipping dotfiles and dot-dirs (repeatable)")
 	validateCmd.Flags().BoolVarP(&validateArgs.verbose, "verbose", "v", false,
 		"print a line for every document, including valid and skipped")
 	validateCmd.Flags().BoolVar(&validateArgs.failFast, "fail-fast", false,
@@ -431,6 +441,7 @@ func buildValidatorOptions(inputs []string) (validator.Options, error) {
 		SkipMissingSchemas:    validateArgs.skipMissingSchemas,
 		SkipKinds:             validateArgs.skipKinds,
 		SkipJSONPaths:         validateArgs.skipJSONPaths,
+		SkipFiles:             validateArgs.skipFiles,
 		HTTPTimeout:           rootArgs.timeout,
 		Workers:               validateArgs.concurrent,
 		InsecureSkipTLSVerify: validateArgs.insecureSkipTLSVerify,

@@ -20,6 +20,7 @@ Flux CLI plugin for Kubernetes schema extraction and manifests validation.
     - `--skip-missing-schemas`: Skip documents for which no schema can be found
     - `--skip-kind`: Skip documents matching `kind` or `apiVersion/kind` (repeatable)
     - `--skip-json-path`: Strip a JSON Pointer field before validation, optionally scoped: `[apiVersion/kind:]/path` (repeatable)
+    - `--skip-file`: Glob pattern matched against files and dirs; defaults to skipping dotfiles and dot-dirs (repeatable)
     - `--fail-fast`: Exit after the first invalid document
     - `--concurrent`: Number of concurrent workers (default 8)
     - `--insecure-skip-tls-verify`: Disable TLS certificate verification when fetching schemas over HTTPS
@@ -160,6 +161,9 @@ validate:
     - source.toolkit.fluxcd.io/v1/ExternalArtifact
   skip-json-path:
     - Secret:/sops
+  skip-file:
+    - '.*'
+    - kustomization.yaml
   skip-missing-schemas: false
   verbose: true
   fail-fast: false
