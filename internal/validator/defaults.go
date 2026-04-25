@@ -14,8 +14,6 @@ const DefaultSchemaLocation = "https://raw.githubusercontent.com/fluxcd/flux-sch
 // "./my-schemas" expands to "./my-schemas/{{.Group}}/{{.Kind}}_{{.Version}}.json".
 const DefaultSchemaLayout = "{{.Group}}/{{.Kind}}_{{.Version}}.json"
 
-// DefaultWorkers is the fallback concurrency level used
-// by ValidateSources when Options.Workers is left at 0.
 const DefaultWorkers = 8
 
 // StdinSource is the canonical source label for documents read from an

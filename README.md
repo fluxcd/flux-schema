@@ -131,6 +131,8 @@ type. The report is versioned by a published
 - YAML documents with duplicate keys are rejected matching Flux behavior.
 - Documents missing both `metadata.name` and `metadata.generateName` are flagged as invalid
   matching Kubernetes API behavior.
+- `metadata.name`, `generateName`, `namespace`, and `labels`/`annotations` keys and values
+  are checked against the Kubernetes API server's ObjectMeta rules (DNS-1123, qualified names).
 - Schemas produced by `flux-schema extract crd` close objects with `additionalProperties: false`,
   so undocumented fields under `spec` fail validation.
 - String formats `duration`, `date`, `datetime`/`date-time`, and `time` are validated

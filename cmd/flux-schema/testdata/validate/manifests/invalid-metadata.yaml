@@ -3,6 +3,20 @@
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
 metadata:
+  name: invalid-labels-and-annotations
+  namespace: apps.default
+  labels:
+    app.kubernetes.io/name: app_
+    app.kubernetes.io/instance:
+  annotations:
+    _app.kubernetes.io/name: app_
+spec:
+  interval: 5m0s
+  url: oci://ghcr.io/stefanprodan/manifests/podinfo
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
   name: duplicate-labels
   namespace: default
   labels:

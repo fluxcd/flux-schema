@@ -237,8 +237,10 @@ func TestValidateCmd_InvalidFluxManifestsFixtures(t *testing.T) {
 }
 
 // TestValidateCmd_InvalidMetadataFixtures covers admission short-circuits
-// (duplicate keys, missing metadata.name) and the lenient re-parse that
-// recovers Kind/Namespace/Name when strict decode fails.
+// (duplicate keys, missing metadata.name), the lenient re-parse that
+// recovers Kind/Namespace/Name when strict decode fails, and the
+// ObjectMeta checks that run alongside schema validation (DNS-1123
+// namespace, label values, annotation keys with JSON Pointer escaping).
 func TestValidateCmd_InvalidMetadataFixtures(t *testing.T) {
 	g := NewWithT(t)
 
@@ -252,15 +254,21 @@ func TestValidateCmd_InvalidMetadataFixtures(t *testing.T) {
 	})
 	g.Expect(err).To(HaveOccurred())
 
+	g.Expect(out).To(ContainSubstring(invalidPath + " - OCIRepository/apps.default/invalid-labels-and-annotations is invalid: schema violation"))
+	g.Expect(out).To(ContainSubstring("  - /metadata/namespace: must not contain dots"))
+	g.Expect(out).To(ContainSubstring("  - /metadata/labels/app.kubernetes.io~1name: must match regex '(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?'"))
+	g.Expect(out).To(ContainSubstring("  - /metadata/labels/app.kubernetes.io~1instance: must be a string, got null"))
+	g.Expect(out).To(ContainSubstring(`  - /metadata/annotations/_app.kubernetes.io~1name: key: must match regex '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*'`))
+
 	g.Expect(out).To(ContainSubstring(invalidPath + " - OCIRepository/default/duplicate-labels is invalid: yaml parse error"))
 	g.Expect(out).To(ContainSubstring(invalidPath + " - OCIRepository/default/duplicate-fields is invalid: yaml parse error"))
 	g.Expect(out).To(MatchRegexp(`(?m)^  - line 8: key "app" already set in map$`))
 	g.Expect(out).To(MatchRegexp(`(?m)^  - line 11: key "tag" already set in map$`))
 
-	g.Expect(out).To(ContainSubstring(invalidPath + " - OCIRepository/default/#3 is invalid: schema violation"))
+	g.Expect(out).To(ContainSubstring(invalidPath + " - OCIRepository/default/#4 is invalid: schema violation"))
 	g.Expect(out).To(MatchRegexp(`(?m)^  - /metadata: missing property 'name' or 'generateName'$`))
 
-	g.Expect(out).To(ContainSubstring("Summary: 3 resources found in 1 file - Valid: 0, Invalid: 3, Skipped: 0"))
+	g.Expect(out).To(ContainSubstring("Summary: 4 resources found in 1 file - Valid: 0, Invalid: 4, Skipped: 0"))
 }
 
 // TestValidateCmd_SchemaLocationShorthand pins that a --schema-location value
