@@ -69,7 +69,7 @@ type Result struct {
 	Namespace  string
 	Name       string
 	Status     Status
-	Message    string
+	Reason     Reason
 	Errors     []ValidationError
 	Final      bool
 }
@@ -308,7 +308,8 @@ func (v *Validator) runJob(ctx context.Context, j job, results chan<- Result) {
 			Source:   j.source,
 			DocIndex: j.docIndex,
 			Status:   StatusInvalid,
-			Message:  j.loadErr.Error(),
+			Reason:   ReasonSourceLoadError,
+			Errors:   []ValidationError{{Msg: j.loadErr.Error()}},
 		}
 	} else {
 		r, emit = v.validateDoc(ctx, j.source, j.docIndex, j.raw)
@@ -440,14 +441,16 @@ func (v *Validator) streamReader(ctx context.Context, source string, r io.Reader
 // intended to validate — a file starting with `# header\n---\n...` is idiomatic.
 func (v *Validator) validateDoc(ctx context.Context, source string, idx int, raw []byte) (Result, bool) {
 	r := Result{Source: source, DocIndex: idx}
-	settle := func(s Status, msg string) (Result, bool) {
+	settle := func(s Status, reason Reason) (Result, bool) {
 		r.Status = s
-		r.Message = msg
+		r.Reason = reason
 		return r, true
 	}
 	// missingSchemaStatus picks between StatusSkipped and StatusInvalid for
-	// "we can't resolve a schema for this document" cases, honoring
-	// Options.SkipMissingSchemas.
+	// the "schema file not found for a resolved GVK" case, honoring
+	// Options.SkipMissingSchemas. The other no-schema case (missing
+	// apiVersion/kind) branches on SkipMissingSchemas directly earlier in
+	// this function, since it maps to different reason codes.
 	missingSchemaStatus := func() Status {
 		if v.opts.SkipMissingSchemas {
 			return StatusSkipped
@@ -468,7 +471,7 @@ func (v *Validator) validateDoc(ctx context.Context, source string, idx int, raw
 			r.Name = fmt.Sprintf("#%d", idx)
 		}
 		r.Errors = splitYAMLError(err)
-		return settle(StatusInvalid, "YAML parse failed")
+		return settle(StatusInvalid, ReasonYAMLParseError)
 	}
 	if doc == nil {
 		// Content-free document (comments or whitespace only). Idiomatic
@@ -486,12 +489,34 @@ func (v *Validator) validateDoc(ctx context.Context, source string, idx int, raw
 	// that would otherwise fail the name/generateName rule.
 	for _, m := range v.skipKinds {
 		if m.matches(r.APIVersion, r.Kind) {
-			return settle(StatusSkipped, "kind skipped")
+			return settle(StatusSkipped, ReasonKindSkipped)
 		}
 	}
 
 	if r.APIVersion == "" || r.Kind == "" {
-		return settle(missingSchemaStatus(), "document missing apiVersion/kind")
+		// With --skip-missing-schemas we can't do anything useful for a doc
+		// with no GVK to look up; treat it as "schema not found" and let the
+		// user's skip policy decide. Otherwise surface path-based errors so
+		// consumers know exactly which top-level fields the doc is missing.
+		if v.opts.SkipMissingSchemas {
+			r.Errors = []ValidationError{{
+				Msg: "no schema: document is missing apiVersion/kind",
+			}}
+			return settle(StatusSkipped, ReasonSchemaNotFound)
+		}
+		if r.APIVersion == "" {
+			r.Errors = append(r.Errors, ValidationError{
+				Path: "/apiVersion",
+				Msg:  "missing required property",
+			})
+		}
+		if r.Kind == "" {
+			r.Errors = append(r.Errors, ValidationError{
+				Path: "/kind",
+				Msg:  "missing required property",
+			})
+		}
+		return settle(StatusInvalid, ReasonSchemaViolation)
 	}
 
 	if !hasIdentity {
@@ -499,7 +524,7 @@ func (v *Validator) validateDoc(ctx context.Context, source string, idx int, raw
 			Path: "/metadata",
 			Msg:  "missing property 'name' or 'generateName'",
 		}}
-		return settle(StatusInvalid, "validation failed")
+		return settle(StatusInvalid, ReasonSchemaViolation)
 	}
 
 	group, version, ok := strings.Cut(r.APIVersion, "/")
@@ -512,18 +537,18 @@ func (v *Validator) validateDoc(ctx context.Context, source string, idx int, raw
 	schema, _, found, err := v.loader.Resolve(ctx, vars)
 	if err != nil {
 		r.Errors = []ValidationError{{Msg: err.Error()}}
-		return settle(StatusInvalid, "schema resolution failed")
+		return settle(StatusInvalid, ReasonSchemaLoadError)
 	}
 	if !found {
 		r.Errors = []ValidationError{{
 			Msg: fmt.Sprintf("no schema for kind %q in version %q", r.Kind, r.APIVersion),
 		}}
-		return settle(missingSchemaStatus(), "schema not found")
+		return settle(missingSchemaStatus(), ReasonSchemaNotFound)
 	}
 
 	if err := schema.Validate(doc); err != nil {
 		r.Errors = flattenErrors(err)
-		return settle(StatusInvalid, "schema validation failed")
+		return settle(StatusInvalid, ReasonSchemaViolation)
 	}
 	r.Status = StatusValid
 	return r, true
