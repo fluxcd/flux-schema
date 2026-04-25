@@ -198,8 +198,8 @@ func TestValidateCmd_FluxManifestsFixtures(t *testing.T) {
 	g.Expect(out).To(ContainSubstring(reconcilersPath + " - HelmRelease/apps/webapp is valid"))
 	g.Expect(out).To(ContainSubstring(sourcesPath + " - Bucket/default/minio-bucket is valid"))
 
-	g.Expect(out).To(ContainSubstring(sourcesPath + " - Secret/default/minio-bucket-secret is skipped: schema not found"))
-	g.Expect(out).To(MatchRegexp(`(?m)^  - no schema for kind "Secret" in version "v1"$`))
+	g.Expect(out).To(ContainSubstring(sourcesPath + " - SealedSecret/default/minio-bucket-secret is skipped: schema not found"))
+	g.Expect(out).To(MatchRegexp(`(?m)^  - no schema for kind "SealedSecret" in version "bitnami.com/v1alpha1"$`))
 
 	// 11 docs in valid-reconcilers.yaml + 8 in valid-sources.yaml = 19; the
 	// Secret is skipped, so the remaining 18 validate cleanly.
@@ -279,7 +279,7 @@ func TestValidateCmd_SchemaLocationShorthand(t *testing.T) {
 	})
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(out).To(ContainSubstring("Bucket/default/minio-bucket is valid"))
-	g.Expect(out).To(ContainSubstring("Secret/default/minio-bucket-secret is skipped"))
+	g.Expect(out).To(ContainSubstring("SealedSecret/default/minio-bucket-secret is skipped"))
 }
 
 // TestValidateCmd_SkipKind exercises all three accepted pattern shapes against
@@ -297,14 +297,14 @@ func TestValidateCmd_SkipKind(t *testing.T) {
 		reconcilersPath,
 		sourcesPath,
 		"--schema-location", "./testdata/validate/schemas/{{ .Group }}/{{ .Kind }}_{{ .Version }}.json",
-		"--skip-kind", "Secret",
+		"--skip-kind", "SealedSecret",
 		"--skip-kind", "source.toolkit.fluxcd.io/v1/GitRepository",
 		"--skip-kind", "helm.toolkit.fluxcd.io/v2/HelmRelease",
 		"--verbose",
 	})
 	g.Expect(err).ToNot(HaveOccurred())
 
-	g.Expect(out).To(ContainSubstring(sourcesPath + " - Secret/default/minio-bucket-secret is skipped: kind skipped"))
+	g.Expect(out).To(ContainSubstring(sourcesPath + " - SealedSecret/default/minio-bucket-secret is skipped: kind skipped"))
 	g.Expect(out).To(ContainSubstring(" - GitRepository/"))
 	g.Expect(out).To(ContainSubstring("is skipped: kind skipped"))
 	g.Expect(out).To(ContainSubstring(" - HelmRelease/"))
@@ -442,6 +442,48 @@ func TestValidateCmd_InsecureSkipTLSVerify(t *testing.T) {
 	g.Expect(out).To(ContainSubstring("Valid: 1"))
 }
 
+// TestValidateCmd_SkipJSONPath strips the SOPS metadata block from the
+// encrypted Secret in the fixture so the strict v1.Secret schema accepts it.
+// The unencrypted Secret in the same file is unaffected.
+func TestValidateCmd_SkipJSONPath(t *testing.T) {
+	g := NewWithT(t)
+
+	secretsPath := "./testdata/validate/manifests/valid-secrets.yaml"
+
+	// Without the strip, the SOPS Secret fails on additionalProperties.
+	out, err := executeCommand([]string{
+		"validate",
+		secretsPath,
+		"--schema-location", "./testdata/validate/schemas/{{ .Group }}/{{ .Kind }}_{{ .Version }}.json",
+	})
+	g.Expect(err).To(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("Secret/default/sops-secret is invalid: schema violation"))
+	g.Expect(out).To(ContainSubstring("additional properties 'sops' not allowed"))
+
+	// With the kind-scoped strip both Secrets validate.
+	out, err = executeCommand([]string{
+		"validate",
+		secretsPath,
+		"--schema-location", "./testdata/validate/schemas/{{ .Group }}/{{ .Kind }}_{{ .Version }}.json",
+		"--skip-json-path", "Secret:/sops",
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("Summary: 2 resources found in 1 file - Valid: 2, Invalid: 0, Skipped: 0"))
+}
+
+func TestValidateCmd_SkipJSONPath_Invalid(t *testing.T) {
+	g := NewWithT(t)
+	manifestDir := t.TempDir()
+	writeManifest(t, manifestDir, "ok.yaml", validWidget)
+
+	_, err := executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", filepath.Join(t.TempDir(), "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+		"--skip-json-path", "no-leading-slash",
+	})
+	g.Expect(err).To(MatchError(ContainSubstring("skip JSON path pattern")))
+}
+
 func TestValidateCmd_SkipKind_Invalid(t *testing.T) {
 	g := NewWithT(t)
 	manifestDir := t.TempDir()
@@ -498,6 +540,45 @@ validate:
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(out).ToNot(ContainSubstring("is valid"))
 	g.Expect(out).To(ContainSubstring("Valid: 1"))
+}
+
+// Config file's skip-json-path entries are picked up when the flag is absent.
+func TestValidateCmd_Config_SkipJSONPath(t *testing.T) {
+	g := NewWithT(t)
+
+	cfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `version: "1"
+validate:
+  skip-json-path:
+    - Secret:/sops
+`)
+	out, err := executeCommand([]string{
+		"validate", "./testdata/validate/manifests/valid-secrets.yaml",
+		"--schema-location", "./testdata/validate/schemas/{{ .Group }}/{{ .Kind }}_{{ .Version }}.json",
+		"--config", cfg,
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("Valid: 2, Invalid: 0, Skipped: 0"))
+}
+
+// CLI --skip-json-path replaces (does not merge with) the config's list.
+// Mirrors TestValidateCmd_Config_CLIOverridesSlice for skip-kind.
+func TestValidateCmd_Config_CLIOverridesSkipJSONPath(t *testing.T) {
+	g := NewWithT(t)
+
+	// Config strips /sops; CLI replaces the list with a different pointer
+	// that doesn't match anything in the doc, so SOPS validation fails.
+	cfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `version: "1"
+validate:
+  skip-json-path:
+    - Secret:/sops
+`)
+	_, err := executeCommand([]string{
+		"validate", "./testdata/validate/manifests/valid-secrets.yaml",
+		"--schema-location", "./testdata/validate/schemas/{{ .Group }}/{{ .Kind }}_{{ .Version }}.json",
+		"--config", cfg,
+		"--skip-json-path", "Secret:/does-not-exist",
+	})
+	g.Expect(err).To(HaveOccurred())
 }
 
 // CLI --skip-kind replaces (does not merge with) the config's skip-kind list.
