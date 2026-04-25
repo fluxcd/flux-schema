@@ -45,8 +45,13 @@ var validateCmd = &cobra.Command{
 
   # Skip specific kinds by Kind or apiVersion/Kind
   flux-schema validate ./manifests \
-    --skip-kind Secret \
+    --skip-kind Service \
     --skip-kind source.toolkit.fluxcd.io/v1/GitRepository
+
+  # Strip non-conformant fields before validation
+  # e.g. SOPS metadata that Flux removes at apply time
+  flux-schema validate ./manifests \
+    --skip-json-path v1/Secret:/sops
 
   # Load flag defaults from a checked-in YAML config (CLI flags still override)
   flux-schema validate ./manifests --config .flux-schema.yaml`,
@@ -57,6 +62,7 @@ type validateFlags struct {
 	schemaLocations       []string
 	skipMissingSchemas    bool
 	skipKinds             []string
+	skipJSONPaths         []string
 	verbose               bool
 	failFast              bool
 	concurrent            int
@@ -76,7 +82,9 @@ func init() {
 	validateCmd.Flags().BoolVar(&validateArgs.skipMissingSchemas, "skip-missing-schemas", false,
 		"skip documents for which no schema can be found instead of failing")
 	validateCmd.Flags().StringArrayVar(&validateArgs.skipKinds, "skip-kind", nil,
-		"skip documents matching Kind or apiVersion/Kind (repeatable)")
+		"skip documents matching kind or apiVersion/kind e.g. 'v1/Secret' (repeatable)")
+	validateCmd.Flags().StringArrayVar(&validateArgs.skipJSONPaths, "skip-json-path", nil,
+		"strip a JSON Pointer field, optionally scoped e.g. 'v1/Secret:/sops' (repeatable)")
 	validateCmd.Flags().BoolVarP(&validateArgs.verbose, "verbose", "v", false,
 		"print a line for every document, including valid and skipped")
 	validateCmd.Flags().BoolVar(&validateArgs.failFast, "fail-fast", false,
@@ -422,6 +430,7 @@ func buildValidatorOptions(inputs []string) (validator.Options, error) {
 		SchemaLocations:       locations,
 		SkipMissingSchemas:    validateArgs.skipMissingSchemas,
 		SkipKinds:             validateArgs.skipKinds,
+		SkipJSONPaths:         validateArgs.skipJSONPaths,
 		HTTPTimeout:           rootArgs.timeout,
 		Workers:               validateArgs.concurrent,
 		InsecureSkipTLSVerify: validateArgs.insecureSkipTLSVerify,

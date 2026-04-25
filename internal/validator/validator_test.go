@@ -956,6 +956,203 @@ func TestNew_RejectsBadSkipKind(t *testing.T) {
 	g.Expect(err).To(HaveOccurred())
 }
 
+func TestParseSkipJSONPath(t *testing.T) {
+	cases := map[string]struct {
+		in           string
+		wantAPIVer   string
+		wantKind     string
+		wantSegments []string
+		wantErr      bool
+	}{
+		"unscoped":             {in: "/sops", wantSegments: []string{"sops"}},
+		"kind-scoped":          {in: "Secret:/sops", wantKind: "Secret", wantSegments: []string{"sops"}},
+		"core gvk-scoped":      {in: "v1/Secret:/sops", wantAPIVer: "v1", wantKind: "Secret", wantSegments: []string{"sops"}},
+		"group gvk-scoped":     {in: "apps/v1/Deployment:/spec/foo", wantAPIVer: "apps/v1", wantKind: "Deployment", wantSegments: []string{"spec", "foo"}},
+		"nested pointer":       {in: "/metadata/annotations/foo.bar~1baz", wantSegments: []string{"metadata", "annotations", "foo.bar/baz"}},
+		"escape literal tilde": {in: "/~0sops", wantSegments: []string{"~sops"}},
+		"escape order":         {in: "/~01", wantSegments: []string{"~1"}},
+		"whitespace trimmed":   {in: "  /sops  ", wantSegments: []string{"sops"}},
+		// Pointer keys may contain ':' — the leading '/' marks the whole input
+		// as a pure pointer, so no selector split happens.
+		"colon in pointer key":           {in: "/metadata/annotations/prometheus.io:port", wantSegments: []string{"metadata", "annotations", "prometheus.io:port"}},
+		"colon in scoped pointer key":    {in: "Secret:/metadata/annotations/prometheus.io:port", wantKind: "Secret", wantSegments: []string{"metadata", "annotations", "prometheus.io:port"}},
+		"empty selector equals no scope": {in: ":/sops", wantSegments: []string{"sops"}},
+		"empty":                          {in: "", wantErr: true},
+		"whitespace only":                {in: "   ", wantErr: true},
+		"missing pointer prefix":         {in: "sops", wantErr: true},
+		"selector without path":          {in: "Secret:", wantErr: true},
+		"root pointer only":              {in: "/", wantErr: true},
+		"empty segment":                  {in: "/foo//bar", wantErr: true},
+		"bad selector":                   {in: "v1/:/foo", wantErr: true},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			g := NewWithT(t)
+			m, err := parseSkipJSONPath(tc.in)
+			if tc.wantErr {
+				g.Expect(err).To(HaveOccurred())
+				return
+			}
+			g.Expect(err).ToNot(HaveOccurred())
+			g.Expect(m.apiVersion).To(Equal(tc.wantAPIVer))
+			g.Expect(m.kind).To(Equal(tc.wantKind))
+			g.Expect(m.segments).To(Equal(tc.wantSegments))
+		})
+	}
+}
+
+func TestSkipPathMatcher_Matches(t *testing.T) {
+	g := NewWithT(t)
+	unscoped, err := parseSkipJSONPath("/sops")
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(unscoped.matches("v1", "Secret")).To(BeTrue())
+	g.Expect(unscoped.matches("apps/v1", "Deployment")).To(BeTrue())
+
+	kindOnly, err := parseSkipJSONPath("Secret:/sops")
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(kindOnly.matches("v1", "Secret")).To(BeTrue())
+	g.Expect(kindOnly.matches("custom.io/v1", "Secret")).To(BeTrue())
+	g.Expect(kindOnly.matches("v1", "ConfigMap")).To(BeFalse())
+
+	gvk, err := parseSkipJSONPath("v1/Secret:/sops")
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(gvk.matches("v1", "Secret")).To(BeTrue())
+	g.Expect(gvk.matches("custom.io/v1", "Secret")).To(BeFalse())
+}
+
+func TestSkipPathMatcher_StripPath(t *testing.T) {
+	g := NewWithT(t)
+
+	doc := map[string]any{
+		"sops": map[string]any{"version": "3.10"},
+		"spec": map[string]any{"foo": "bar", "baz": "qux"},
+	}
+	mustParse := func(s string) skipPathMatcher {
+		m, err := parseSkipJSONPath(s)
+		g.Expect(err).ToNot(HaveOccurred())
+		return m
+	}
+
+	// Top-level strip removes the entire subtree.
+	mustParse("/sops").stripPath(doc)
+	g.Expect(doc).ToNot(HaveKey("sops"))
+	g.Expect(doc).To(HaveKey("spec"))
+
+	// Nested strip removes only the named property.
+	mustParse("/spec/foo").stripPath(doc)
+	g.Expect(doc["spec"]).To(Equal(map[string]any{"baz": "qux"}))
+
+	// Missing intermediate is a silent no-op.
+	mustParse("/missing/child").stripPath(doc)
+	mustParse("/spec/missing").stripPath(doc)
+	g.Expect(doc["spec"]).To(Equal(map[string]any{"baz": "qux"}))
+
+	// Non-object container along the path is a silent no-op
+	// (e.g. trying to descend through a scalar).
+	doc["scalar"] = "hello"
+	mustParse("/scalar/child").stripPath(doc)
+	g.Expect(doc["scalar"]).To(Equal("hello"))
+
+	// Array containers are also a silent no-op — descent is map-only by design.
+	// Pinning this prevents a future map-only → array-aware change from
+	// silently breaking patterns like '/spec/containers/0/image'.
+	doc["containers"] = []any{
+		map[string]any{"image": "nginx"},
+	}
+	mustParse("/containers/0/image").stripPath(doc)
+	g.Expect(doc["containers"]).To(Equal([]any{
+		map[string]any{"image": "nginx"},
+	}))
+}
+
+func TestValidateBytes_SkipJSONPath_StripsBeforeValidation(t *testing.T) {
+	g := NewWithT(t)
+	dir := t.TempDir()
+	writeWidgetSchema(t, dir)
+	v, err := New(Options{
+		SchemaLocations: []string{filepath.Join(dir, "{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json")},
+		SkipJSONPaths:   []string{"Widget:/spec/extra"},
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	// /spec/extra would trip additionalProperties: false on widget.spec; the
+	// strip removes it before schema.Validate runs.
+	doc := []byte(`apiVersion: example.com/v1
+kind: Widget
+metadata:
+  name: w1
+spec:
+  name: hello
+  extra: injected-by-tooling
+`)
+	results := v.ValidateBytes(context.Background(), "test.yaml", doc)
+	g.Expect(results).To(HaveLen(1))
+	g.Expect(results[0].Status).To(Equal(StatusValid))
+	g.Expect(results[0].Errors).To(BeEmpty())
+}
+
+func TestValidateBytes_SkipJSONPath_KindScopeBlocksUnrelatedDocs(t *testing.T) {
+	g := NewWithT(t)
+	dir := t.TempDir()
+	writeWidgetSchema(t, dir)
+	v, err := New(Options{
+		SchemaLocations: []string{filepath.Join(dir, "{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json")},
+		// Pattern targets a different Kind — must not strip on Widget.
+		SkipJSONPaths: []string{"Secret:/spec/extra"},
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	doc := []byte(`apiVersion: example.com/v1
+kind: Widget
+metadata:
+  name: w1
+spec:
+  name: hello
+  extra: tooling-injected
+`)
+	results := v.ValidateBytes(context.Background(), "test.yaml", doc)
+	g.Expect(results).To(HaveLen(1))
+	g.Expect(results[0].Status).To(Equal(StatusInvalid))
+}
+
+func TestValidateBytes_SkipJSONPath_MultiplePatterns(t *testing.T) {
+	// Two patterns target different fields on the same doc; both must apply
+	// in order, regardless of declaration order.
+	g := NewWithT(t)
+	dir := t.TempDir()
+	writeWidgetSchema(t, dir)
+	v, err := New(Options{
+		SchemaLocations: []string{filepath.Join(dir, "{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json")},
+		SkipJSONPaths: []string{
+			"Widget:/spec/extraOne",
+			"Widget:/spec/extraTwo",
+		},
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	doc := []byte(`apiVersion: example.com/v1
+kind: Widget
+metadata:
+  name: w1
+spec:
+  name: hello
+  extraOne: a
+  extraTwo: b
+`)
+	results := v.ValidateBytes(context.Background(), "test.yaml", doc)
+	g.Expect(results).To(HaveLen(1))
+	g.Expect(results[0].Status).To(Equal(StatusValid))
+}
+
+func TestNew_RejectsBadSkipJSONPath(t *testing.T) {
+	g := NewWithT(t)
+	_, err := New(Options{
+		SchemaLocations: []string{"./{{ .Kind }}.json"},
+		SkipJSONPaths:   []string{"no-leading-slash"},
+	})
+	g.Expect(err).To(HaveOccurred())
+}
+
 func TestNew_RejectsBadTemplate(t *testing.T) {
 	g := NewWithT(t)
 	_, err := New(Options{SchemaLocations: []string{"{{ .Unknown }}"}})

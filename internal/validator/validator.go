@@ -102,6 +102,7 @@ type Options struct {
 	SchemaLocations       []string
 	SkipMissingSchemas    bool
 	SkipKinds             []string
+	SkipJSONPaths         []string
 	HTTPClient            *retryablehttp.Client
 	HTTPTimeout           time.Duration
 	Workers               int
@@ -115,6 +116,7 @@ type Validator struct {
 	opts      Options
 	loader    *SchemaLoader
 	skipKinds []skipKindMatcher
+	skipPaths []skipPathMatcher
 }
 
 // skipKindMatcher matches a document by Kind, optionally scoped to an
@@ -150,6 +152,99 @@ func (m skipKindMatcher) matches(apiVersion, kind string) bool {
 		return false
 	}
 	return m.apiVersion == "" || m.apiVersion == apiVersion
+}
+
+// skipPathMatcher targets a JSON Pointer for deletion before schema.Validate
+// runs, optionally scoped to a Kind / apiVersion-Kind via the same selector
+// rules as skipKindMatcher. An empty kind matches any Kind.
+type skipPathMatcher struct {
+	apiVersion string
+	kind       string
+	segments   []string
+}
+
+// parseSkipJSONPath parses a SkipJSONPaths pattern. Accepted shapes:
+//
+//	/foo/bar                          strip on every doc
+//	Kind:/foo/bar                     scope by Kind
+//	apiVersion/Kind:/foo/bar          scope by apiVersion+Kind
+//	group/version/Kind:/foo/bar       scope by full GVK
+//
+// A leading '/' marks the input as a pure pointer with no selector, so
+// pointer keys may freely contain ':' (e.g. '/metadata/annotations/foo:bar').
+// Otherwise the first ':' separates the selector half (parsed by parseSkipKind)
+// from the pointer half, which follows RFC 6901; '~1' decodes to '/' and '~0'
+// to '~'. Pointer descent through arrays is a silent no-op (map keys only).
+func parseSkipJSONPath(s string) (skipPathMatcher, error) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return skipPathMatcher{}, errors.New("skip JSON path pattern must not be empty")
+	}
+	var selector, pointer string
+	switch {
+	case strings.HasPrefix(s, "/"):
+		// Pure pointer; preserves any ':' inside keys.
+		pointer = s
+	default:
+		left, right, hasSelector := strings.Cut(s, ":")
+		if !hasSelector {
+			return skipPathMatcher{}, fmt.Errorf("skip JSON path pattern %q: pointer must start with '/'", s)
+		}
+		selector, pointer = left, right
+	}
+	if !strings.HasPrefix(pointer, "/") {
+		return skipPathMatcher{}, fmt.Errorf("skip JSON path pattern %q: pointer must start with '/'", s)
+	}
+	if pointer == "/" {
+		return skipPathMatcher{}, fmt.Errorf("skip JSON path pattern %q: pointer must target a property", s)
+	}
+	var apiVersion, kind string
+	if selector != "" {
+		m, err := parseSkipKind(selector)
+		if err != nil {
+			return skipPathMatcher{}, fmt.Errorf("skip JSON path pattern %q: %w", s, err)
+		}
+		apiVersion, kind = m.apiVersion, m.kind
+	}
+	rawSegments := strings.Split(strings.TrimPrefix(pointer, "/"), "/")
+	segments := make([]string, len(rawSegments))
+	for i, seg := range rawSegments {
+		if seg == "" {
+			return skipPathMatcher{}, fmt.Errorf("skip JSON path pattern %q: empty segment in pointer", s)
+		}
+		// RFC 6901: decode '~1' before '~0' so '~01' decodes to literal '~1'
+		// rather than collapsing into '/'.
+		seg = strings.ReplaceAll(seg, "~1", "/")
+		seg = strings.ReplaceAll(seg, "~0", "~")
+		segments[i] = seg
+	}
+	return skipPathMatcher{apiVersion: apiVersion, kind: kind, segments: segments}, nil
+}
+
+func (m skipPathMatcher) matches(apiVersion, kind string) bool {
+	if m.kind != "" && m.kind != kind {
+		return false
+	}
+	return m.apiVersion == "" || m.apiVersion == apiVersion
+}
+
+// stripPath deletes the field referenced by m.segments from doc when present.
+// Missing keys and non-object containers along the path are silent no-ops, so
+// a single unscoped pattern (e.g. '/sops') can be left on across a mixed tree
+// without falsely modifying unrelated kinds.
+func (m skipPathMatcher) stripPath(doc map[string]any) {
+	parent := doc
+	for i, seg := range m.segments {
+		if i == len(m.segments)-1 {
+			delete(parent, seg)
+			return
+		}
+		next, ok := parent[seg].(map[string]any)
+		if !ok {
+			return
+		}
+		parent = next
+	}
 }
 
 // New returns a Validator configured from opts. Each location template is
@@ -193,10 +288,20 @@ func New(opts Options) (*Validator, error) {
 		skipKinds = append(skipKinds, m)
 	}
 
+	skipPaths := make([]skipPathMatcher, 0, len(opts.SkipJSONPaths))
+	for _, s := range opts.SkipJSONPaths {
+		m, err := parseSkipJSONPath(s)
+		if err != nil {
+			return nil, err
+		}
+		skipPaths = append(skipPaths, m)
+	}
+
 	return &Validator{
 		opts:      opts,
 		loader:    NewSchemaLoader(templates, opts.HTTPClient, opts.HTTPTimeout),
 		skipKinds: skipKinds,
+		skipPaths: skipPaths,
 	}, nil
 }
 
@@ -544,6 +649,12 @@ func (v *Validator) validateDoc(ctx context.Context, source string, idx int, raw
 			Msg: fmt.Sprintf("no schema for kind %q in version %q", r.Kind, r.APIVersion),
 		}}
 		return settle(missingSchemaStatus(), ReasonSchemaNotFound)
+	}
+
+	for _, m := range v.skipPaths {
+		if m.matches(r.APIVersion, r.Kind) {
+			m.stripPath(doc)
+		}
 	}
 
 	if err := schema.Validate(doc); err != nil {

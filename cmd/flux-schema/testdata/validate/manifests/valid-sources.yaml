@@ -14,15 +14,15 @@ spec:
     name: minio-bucket-secret
   bucketName: example
 ---
-apiVersion: v1
-kind: Secret
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
 metadata:
   name: minio-bucket-secret
   namespace: default
 type: Opaque
-stringData:
-  accesskey: "access-key"
-  secretkey: "secret-key"
+encryptedData:
+  accesskey: "ewogICJjcmVk..."
+  secretkey: "42010aac003e..."
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository

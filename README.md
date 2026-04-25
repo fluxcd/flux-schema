@@ -18,7 +18,8 @@ Flux CLI plugin for Kubernetes schema extraction and manifests validation.
 - `flux-schema validate [paths...]`: Validate Kubernetes manifests against JSON Schemas
     - `--schema-location`: URL or file path for schemas (repeatable, tried in order); `default` points at the built-in catalog
     - `--skip-missing-schemas`: Skip documents for which no schema can be found
-    - `--skip-kind`: Skip documents matching `Kind` or `apiVersion/Kind` (repeatable)
+    - `--skip-kind`: Skip documents matching `kind` or `apiVersion/kind` (repeatable)
+    - `--skip-json-path`: Strip a JSON Pointer field before validation, optionally scoped: `[apiVersion/kind:]/path` (repeatable)
     - `--fail-fast`: Exit after the first invalid document
     - `--concurrent`: Number of concurrent workers (default 8)
     - `--insecure-skip-tls-verify`: Disable TLS certificate verification when fetching schemas over HTTPS
@@ -79,8 +80,18 @@ Manifests can also be piped in and certain documents skipped with `--skip-kind`:
 
 ```shell
 kustomize build . | flux-schema validate \
-  --skip-kind 'v1/Secret' \
+  --skip-kind 'v1/Service' \
   --skip-kind 'source.toolkit.fluxcd.io/v1/ExternalArtifact'
+```
+
+Some manifests carry tooling-injected fields that are stripped at apply time by Flux
+(e.g. SOPS-encrypted Secrets). Use `--skip-json-path` to remove those fields from
+validation so the rest of the document is still checked.
+
+```shell
+flux-schema validate ./manifests \
+  --skip-json-path 'v1/Secret:/sops' \
+  --skip-json-path 'Deployment:/sops'
 ```
 
 Output example with validation errors:
@@ -145,8 +156,10 @@ validate:
     - default
     - https://raw.githubusercontent.com/datreeio/CRDs-catalog/main
   skip-kind:
-    - v1/Secret
+    - v1/ServiceAccont
     - source.toolkit.fluxcd.io/v1/ExternalArtifact
+  skip-json-path:
+    - Secret:/sops
   skip-missing-schemas: false
   verbose: true
   fail-fast: false
