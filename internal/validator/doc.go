@@ -41,6 +41,11 @@
 //  5. JSON Schema validation — the compiled schema is run against the
 //     decoded document; per-field violations are returned as a flat list
 //     of ValidationError with JSON Pointer paths.
+//  6. ObjectMeta validation — DNS-1123 name/generateName/namespace and
+//     qualified-name label/annotation key+value rules apply to every
+//     doc, since CRDs and native Kubernetes schemas leave metadata
+//     effectively unconstrained. Violations merge into the schema
+//     error list under ReasonSchemaViolation.
 //
 // Schemas produced by the extractor package close objects with
 // additionalProperties: false, so undocumented fields under spec fail

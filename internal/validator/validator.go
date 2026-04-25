@@ -696,8 +696,13 @@ func (v *Validator) validateDoc(ctx context.Context, source string, idx int, raw
 		}
 	}
 
+	var errs []ValidationError
 	if err := schema.Validate(doc); err != nil {
-		r.Errors = flattenErrors(err)
+		errs = flattenErrors(err)
+	}
+	errs = append(errs, validateMetadata(doc)...)
+	if len(errs) > 0 {
+		r.Errors = errs
 		return settle(StatusInvalid, ReasonSchemaViolation)
 	}
 	r.Status = StatusValid
@@ -770,9 +775,11 @@ func isContentFree(raw []byte) bool {
 }
 
 // computeName derives the document identity per the Kubernetes admission
-// rule: metadata.name wins, falling back to "{generateName}{{ generateName }}"
-// if set, otherwise "#{docIndex}" paired with hasIdentity=false so the
-// caller emits StatusInvalid.
+// rule: metadata.name wins, otherwise metadata.generateName plus the
+// literal "{{ generateName }}" suffix so the rendered name signals to
+// readers that the API server will fill in the random tail. With neither
+// set, returns "#{docIndex}" and hasIdentity=false so the caller emits
+// StatusInvalid.
 func computeName(metadata map[string]any, docIndex int) (string, bool) {
 	name, _ := metadata["name"].(string)
 	if name != "" {
