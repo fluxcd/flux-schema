@@ -41,6 +41,37 @@ func TestExtractKubernetes_NonObjectRoot(t *testing.T) {
 	g.Expect(errs[0].Error()).To(ContainSubstring("not a JSON object"))
 }
 
+func TestExtractKubernetes_SkipsWatchEventAndOptions(t *testing.T) {
+	g := NewWithT(t)
+	doc := map[string]any{
+		"definitions": map[string]any{
+			"io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent": map[string]any{
+				"type": "object",
+				"x-kubernetes-group-version-kind": []any{
+					map[string]any{"group": "", "version": "v1", "kind": "WatchEvent"},
+					map[string]any{"group": "apps", "version": "v1", "kind": "WatchEvent"},
+				},
+			},
+			"io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions": map[string]any{
+				"type": "object",
+				"x-kubernetes-group-version-kind": []any{
+					map[string]any{"group": "", "version": "v1", "kind": "DeleteOptions"},
+				},
+			},
+			"io.k8s.api.core.v1.Pod": map[string]any{
+				"type": "object",
+				"x-kubernetes-group-version-kind": []any{
+					map[string]any{"group": "", "version": "v1", "kind": "Pod"},
+				},
+			},
+		},
+	}
+	out, errs := ExtractKubernetes(mustMarshal(t, doc))
+	g.Expect(errs).To(BeEmpty())
+	g.Expect(out).To(HaveLen(1))
+	g.Expect(out[0].Kind).To(Equal("Pod"))
+}
+
 func TestExtractKubernetes_SkipsDefinitionsWithoutGVK(t *testing.T) {
 	g := NewWithT(t)
 	doc := map[string]any{
