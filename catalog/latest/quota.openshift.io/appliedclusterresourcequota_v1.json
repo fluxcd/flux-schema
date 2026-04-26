@@ -1,0 +1,482 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": {
+      "type": "string"
+    },
+    "kind": {
+      "type": "string"
+    },
+    "metadata": {
+      "additionalProperties": false,
+      "default": {},
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "default": "",
+            "type": "string"
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "creationTimestamp": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "deletionGracePeriodSeconds": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "deletionTimestamp": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "finalizers": {
+          "items": {
+            "default": "",
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "generateName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "generation": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "labels": {
+          "additionalProperties": {
+            "default": "",
+            "type": "string"
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "managedFields": {
+          "items": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "apiVersion": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "fieldsType": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "fieldsV1": {
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "manager": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "operation": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "subresource": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "time": {
+                "format": "date-time",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "namespace": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ownerReferences": {
+          "items": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "apiVersion": {
+                "default": "",
+                "type": "string"
+              },
+              "blockOwnerDeletion": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "controller": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "kind": {
+                "default": "",
+                "type": "string"
+              },
+              "name": {
+                "default": "",
+                "type": "string"
+              },
+              "uid": {
+                "default": "",
+                "type": "string"
+              }
+            },
+            "required": [
+              "apiVersion",
+              "kind",
+              "name",
+              "uid"
+            ],
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "resourceVersion": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "selfLink": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "uid": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "spec": {
+      "additionalProperties": false,
+      "default": {},
+      "properties": {
+        "quota": {
+          "additionalProperties": false,
+          "default": {},
+          "properties": {
+            "hard": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "scopeSelector": {
+              "additionalProperties": false,
+              "properties": {
+                "matchExpressions": {
+                  "items": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "operator": {
+                        "default": "",
+                        "enum": [
+                          "DoesNotExist",
+                          "Exists",
+                          "In",
+                          "NotIn"
+                        ],
+                        "type": "string"
+                      },
+                      "scopeName": {
+                        "default": "",
+                        "enum": [
+                          "BestEffort",
+                          "CrossNamespacePodAffinity",
+                          "NotBestEffort",
+                          "NotTerminating",
+                          "PriorityClass",
+                          "Terminating",
+                          "VolumeAttributesClass"
+                        ],
+                        "type": "string"
+                      },
+                      "values": {
+                        "items": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "scopeName",
+                      "operator"
+                    ],
+                    "type": "object"
+                  },
+                  "type": [
+                    "array",
+                    "null"
+                  ]
+                }
+              },
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "scopes": {
+              "items": {
+                "default": "",
+                "enum": [
+                  "BestEffort",
+                  "CrossNamespacePodAffinity",
+                  "NotBestEffort",
+                  "NotTerminating",
+                  "PriorityClass",
+                  "Terminating",
+                  "VolumeAttributesClass"
+                ],
+                "type": "string"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            }
+          },
+          "type": "object"
+        },
+        "selector": {
+          "additionalProperties": false,
+          "default": {},
+          "properties": {
+            "annotations": {
+              "additionalProperties": {
+                "default": "",
+                "type": "string"
+              },
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "labels": {
+              "additionalProperties": false,
+              "properties": {
+                "matchExpressions": {
+                  "items": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "key": {
+                        "default": "",
+                        "type": "string"
+                      },
+                      "operator": {
+                        "default": "",
+                        "type": "string"
+                      },
+                      "values": {
+                        "items": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "key",
+                      "operator"
+                    ],
+                    "type": "object"
+                  },
+                  "type": [
+                    "array",
+                    "null"
+                  ]
+                },
+                "matchLabels": {
+                  "additionalProperties": {
+                    "default": "",
+                    "type": "string"
+                  },
+                  "type": [
+                    "object",
+                    "null"
+                  ]
+                }
+              },
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "selector",
+        "quota"
+      ],
+      "type": "object"
+    },
+    "status": {
+      "additionalProperties": false,
+      "default": {},
+      "properties": {
+        "namespaces": {
+          "items": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "namespace": {
+                "default": "",
+                "type": "string"
+              },
+              "status": {
+                "additionalProperties": false,
+                "default": {},
+                "properties": {
+                  "hard": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "used": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "namespace",
+              "status"
+            ],
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "total": {
+          "additionalProperties": false,
+          "default": {},
+          "properties": {
+            "hard": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "used": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "total"
+      ],
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "metadata",
+    "spec",
+    "apiVersion",
+    "kind"
+  ],
+  "type": "object"
+}

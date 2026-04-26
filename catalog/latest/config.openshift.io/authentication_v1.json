@@ -1,0 +1,733 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": {
+      "type": "string"
+    },
+    "kind": {
+      "type": "string"
+    },
+    "metadata": {
+      "additionalProperties": false,
+      "default": {},
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "default": "",
+            "type": "string"
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "creationTimestamp": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "deletionGracePeriodSeconds": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "deletionTimestamp": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "finalizers": {
+          "items": {
+            "default": "",
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "generateName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "generation": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "labels": {
+          "additionalProperties": {
+            "default": "",
+            "type": "string"
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "managedFields": {
+          "items": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "apiVersion": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "fieldsType": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "fieldsV1": {
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "manager": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "operation": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "subresource": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "time": {
+                "format": "date-time",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "namespace": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ownerReferences": {
+          "items": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "apiVersion": {
+                "default": "",
+                "type": "string"
+              },
+              "blockOwnerDeletion": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "controller": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "kind": {
+                "default": "",
+                "type": "string"
+              },
+              "name": {
+                "default": "",
+                "type": "string"
+              },
+              "uid": {
+                "default": "",
+                "type": "string"
+              }
+            },
+            "required": [
+              "apiVersion",
+              "kind",
+              "name",
+              "uid"
+            ],
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "resourceVersion": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "selfLink": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "uid": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "spec": {
+      "additionalProperties": false,
+      "default": {},
+      "properties": {
+        "oauthMetadata": {
+          "additionalProperties": false,
+          "default": {},
+          "properties": {
+            "name": {
+              "default": "",
+              "type": "string"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "oidcProviders": {
+          "items": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "claimMappings": {
+                "additionalProperties": false,
+                "default": {},
+                "properties": {
+                  "extra": {
+                    "items": {
+                      "additionalProperties": false,
+                      "default": {},
+                      "properties": {
+                        "key": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "valueExpression": {
+                          "default": "",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "key",
+                        "valueExpression"
+                      ],
+                      "type": "object"
+                    },
+                    "type": [
+                      "array",
+                      "null"
+                    ]
+                  },
+                  "groups": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "claim": {
+                        "default": "",
+                        "type": "string"
+                      },
+                      "prefix": {
+                        "default": "",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "claim"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "uid": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "claim": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "expression": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "username": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "claim": {
+                        "default": "",
+                        "type": "string"
+                      },
+                      "prefix": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "prefixString": {
+                            "default": "",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "prefixString"
+                        ],
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      },
+                      "prefixPolicy": {
+                        "default": "",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "claim"
+                    ],
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "username"
+                ],
+                "type": "object"
+              },
+              "claimValidationRules": {
+                "items": {
+                  "additionalProperties": false,
+                  "default": {},
+                  "properties": {
+                    "requiredClaim": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "claim": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "requiredValue": {
+                          "default": "",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "claim",
+                        "requiredValue"
+                      ],
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
+                    "type": {
+                      "default": "",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type"
+                  ],
+                  "type": "object"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ]
+              },
+              "issuer": {
+                "additionalProperties": false,
+                "default": {},
+                "properties": {
+                  "audiences": {
+                    "items": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "issuerCertificateAuthority": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "name": {
+                        "default": "",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "issuerURL": {
+                    "default": "",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "issuerURL",
+                  "audiences"
+                ],
+                "type": "object"
+              },
+              "name": {
+                "default": "",
+                "type": "string"
+              },
+              "oidcClients": {
+                "items": {
+                  "additionalProperties": false,
+                  "default": {},
+                  "properties": {
+                    "clientID": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "clientSecret": {
+                      "additionalProperties": false,
+                      "default": {},
+                      "properties": {
+                        "name": {
+                          "default": "",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "name"
+                      ],
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
+                    "componentName": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "componentNamespace": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "extraScopes": {
+                      "items": {
+                        "default": "",
+                        "type": "string"
+                      },
+                      "type": [
+                        "array",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "componentName",
+                    "componentNamespace",
+                    "clientID"
+                  ],
+                  "type": "object"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "name",
+              "issuer",
+              "claimMappings"
+            ],
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "serviceAccountIssuer": {
+          "default": "",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "default": "",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "webhookTokenAuthenticator": {
+          "additionalProperties": false,
+          "properties": {
+            "kubeConfig": {
+              "additionalProperties": false,
+              "default": {},
+              "properties": {
+                "name": {
+                  "default": "",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "kubeConfig"
+          ],
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "webhookTokenAuthenticators": {
+          "items": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "kubeConfig": {
+                "additionalProperties": false,
+                "default": {},
+                "properties": {
+                  "name": {
+                    "default": "",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "kubeConfig"
+            ],
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "status": {
+      "additionalProperties": false,
+      "default": {},
+      "properties": {
+        "integratedOAuthMetadata": {
+          "additionalProperties": false,
+          "default": {},
+          "properties": {
+            "name": {
+              "default": "",
+              "type": "string"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "oidcClients": {
+          "items": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "componentName": {
+                "default": "",
+                "type": "string"
+              },
+              "componentNamespace": {
+                "default": "",
+                "type": "string"
+              },
+              "conditions": {
+                "items": {
+                  "additionalProperties": false,
+                  "default": {},
+                  "properties": {
+                    "lastTransitionTime": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "message": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "observedGeneration": {
+                      "format": "int64",
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "reason": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "status": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "type": {
+                      "default": "",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "status",
+                    "lastTransitionTime",
+                    "reason",
+                    "message"
+                  ],
+                  "type": "object"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ]
+              },
+              "consumingUsers": {
+                "items": {
+                  "default": "",
+                  "type": "string"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ]
+              },
+              "currentOIDCClients": {
+                "items": {
+                  "additionalProperties": false,
+                  "default": {},
+                  "properties": {
+                    "clientID": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "issuerURL": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "oidcProviderName": {
+                      "default": "",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "oidcProviderName",
+                    "issuerURL",
+                    "clientID"
+                  ],
+                  "type": "object"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "componentName",
+              "componentNamespace"
+            ],
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        }
+      },
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "spec",
+    "apiVersion",
+    "kind"
+  ],
+  "type": "object"
+}

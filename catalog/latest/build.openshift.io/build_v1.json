@@ -1,0 +1,3086 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": {
+      "type": "string"
+    },
+    "kind": {
+      "type": "string"
+    },
+    "metadata": {
+      "additionalProperties": false,
+      "default": {},
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "default": "",
+            "type": "string"
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "creationTimestamp": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "deletionGracePeriodSeconds": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "deletionTimestamp": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "finalizers": {
+          "items": {
+            "default": "",
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "generateName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "generation": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "labels": {
+          "additionalProperties": {
+            "default": "",
+            "type": "string"
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "managedFields": {
+          "items": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "apiVersion": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "fieldsType": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "fieldsV1": {
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "manager": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "operation": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "subresource": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "time": {
+                "format": "date-time",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "namespace": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ownerReferences": {
+          "items": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "apiVersion": {
+                "default": "",
+                "type": "string"
+              },
+              "blockOwnerDeletion": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "controller": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "kind": {
+                "default": "",
+                "type": "string"
+              },
+              "name": {
+                "default": "",
+                "type": "string"
+              },
+              "uid": {
+                "default": "",
+                "type": "string"
+              }
+            },
+            "required": [
+              "apiVersion",
+              "kind",
+              "name",
+              "uid"
+            ],
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "resourceVersion": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "selfLink": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "uid": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "spec": {
+      "additionalProperties": false,
+      "default": {},
+      "properties": {
+        "completionDeadlineSeconds": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "mountTrustedCA": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "nodeSelector": {
+          "additionalProperties": {
+            "default": "",
+            "type": "string"
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "output": {
+          "additionalProperties": false,
+          "default": {},
+          "properties": {
+            "imageLabels": {
+              "items": {
+                "additionalProperties": false,
+                "default": {},
+                "properties": {
+                  "name": {
+                    "default": "",
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "type": "object"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            "pushSecret": {
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "default": "",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "to": {
+              "additionalProperties": false,
+              "properties": {
+                "apiVersion": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "fieldPath": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "kind": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "namespace": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "resourceVersion": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "uid": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "postCommit": {
+          "additionalProperties": false,
+          "default": {},
+          "properties": {
+            "args": {
+              "items": {
+                "default": "",
+                "type": "string"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            "command": {
+              "items": {
+                "default": "",
+                "type": "string"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            "script": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "resources": {
+          "additionalProperties": false,
+          "default": {},
+          "properties": {
+            "claims": {
+              "items": {
+                "additionalProperties": false,
+                "default": {},
+                "properties": {
+                  "name": {
+                    "default": "",
+                    "type": "string"
+                  },
+                  "request": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "type": "object"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            "limits": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "requests": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "revision": {
+          "additionalProperties": false,
+          "properties": {
+            "git": {
+              "additionalProperties": false,
+              "properties": {
+                "author": {
+                  "additionalProperties": false,
+                  "default": {},
+                  "properties": {
+                    "email": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "type": [
+                    "object",
+                    "null"
+                  ]
+                },
+                "commit": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "committer": {
+                  "additionalProperties": false,
+                  "default": {},
+                  "properties": {
+                    "email": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "type": [
+                    "object",
+                    "null"
+                  ]
+                },
+                "message": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "type": {
+              "default": "",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "serviceAccount": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source": {
+          "additionalProperties": false,
+          "default": {},
+          "properties": {
+            "binary": {
+              "additionalProperties": false,
+              "properties": {
+                "asFile": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "configMaps": {
+              "items": {
+                "additionalProperties": false,
+                "default": {},
+                "properties": {
+                  "configMap": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "name": {
+                        "default": "",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "destinationDir": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "configMap"
+                ],
+                "type": "object"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            "contextDir": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "dockerfile": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "git": {
+              "additionalProperties": false,
+              "properties": {
+                "httpProxy": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "httpsProxy": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "noProxy": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "uri": {
+                  "default": "",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "uri"
+              ],
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "images": {
+              "items": {
+                "additionalProperties": false,
+                "default": {},
+                "properties": {
+                  "as": {
+                    "items": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "type": [
+                      "array",
+                      "null"
+                    ]
+                  },
+                  "from": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "apiVersion": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "fieldPath": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "kind": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "name": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "namespace": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "resourceVersion": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "uid": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "paths": {
+                    "items": {
+                      "additionalProperties": false,
+                      "default": {},
+                      "properties": {
+                        "destinationDir": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "sourcePath": {
+                          "default": "",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "sourcePath",
+                        "destinationDir"
+                      ],
+                      "type": "object"
+                    },
+                    "type": [
+                      "array",
+                      "null"
+                    ]
+                  },
+                  "pullSecret": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "name": {
+                        "default": "",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "from"
+                ],
+                "type": "object"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            "secrets": {
+              "items": {
+                "additionalProperties": false,
+                "default": {},
+                "properties": {
+                  "destinationDir": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "secret": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "name": {
+                        "default": "",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "secret"
+                ],
+                "type": "object"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            "sourceSecret": {
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "default": "",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "type": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "strategy": {
+          "additionalProperties": false,
+          "default": {},
+          "properties": {
+            "customStrategy": {
+              "additionalProperties": false,
+              "properties": {
+                "buildAPIVersion": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "env": {
+                  "items": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "name": {
+                        "default": "",
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "valueFrom": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "configMapKeyRef": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "key": {
+                                "default": "",
+                                "type": "string"
+                              },
+                              "name": {
+                                "default": "",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "optional": {
+                                "type": [
+                                  "boolean",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "key"
+                            ],
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "fieldRef": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "apiVersion": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "fieldPath": {
+                                "default": "",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "fieldPath"
+                            ],
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "resourceFieldRef": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "containerName": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "divisor": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "resource": {
+                                "default": "",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "resource"
+                            ],
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "secretKeyRef": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "key": {
+                                "default": "",
+                                "type": "string"
+                              },
+                              "name": {
+                                "default": "",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "optional": {
+                                "type": [
+                                  "boolean",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "key"
+                            ],
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          }
+                        },
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "type": "object"
+                  },
+                  "type": [
+                    "array",
+                    "null"
+                  ]
+                },
+                "exposeDockerSocket": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ]
+                },
+                "forcePull": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ]
+                },
+                "from": {
+                  "additionalProperties": false,
+                  "default": {},
+                  "properties": {
+                    "apiVersion": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "fieldPath": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "kind": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "namespace": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "resourceVersion": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "uid": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "type": "object"
+                },
+                "pullSecret": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "name": {
+                      "default": "",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "type": [
+                    "object",
+                    "null"
+                  ]
+                },
+                "secrets": {
+                  "items": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "mountPath": {
+                        "default": "",
+                        "type": "string"
+                      },
+                      "secretSource": {
+                        "additionalProperties": false,
+                        "default": {},
+                        "properties": {
+                          "name": {
+                            "default": "",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "type": "object"
+                      }
+                    },
+                    "required": [
+                      "secretSource",
+                      "mountPath"
+                    ],
+                    "type": "object"
+                  },
+                  "type": [
+                    "array",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "from"
+              ],
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "dockerStrategy": {
+              "additionalProperties": false,
+              "properties": {
+                "buildArgs": {
+                  "items": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "name": {
+                        "default": "",
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "valueFrom": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "configMapKeyRef": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "key": {
+                                "default": "",
+                                "type": "string"
+                              },
+                              "name": {
+                                "default": "",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "optional": {
+                                "type": [
+                                  "boolean",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "key"
+                            ],
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "fieldRef": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "apiVersion": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "fieldPath": {
+                                "default": "",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "fieldPath"
+                            ],
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "resourceFieldRef": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "containerName": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "divisor": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "resource": {
+                                "default": "",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "resource"
+                            ],
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "secretKeyRef": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "key": {
+                                "default": "",
+                                "type": "string"
+                              },
+                              "name": {
+                                "default": "",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "optional": {
+                                "type": [
+                                  "boolean",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "key"
+                            ],
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          }
+                        },
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "type": "object"
+                  },
+                  "type": [
+                    "array",
+                    "null"
+                  ]
+                },
+                "dockerfilePath": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "env": {
+                  "items": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "name": {
+                        "default": "",
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "valueFrom": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "configMapKeyRef": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "key": {
+                                "default": "",
+                                "type": "string"
+                              },
+                              "name": {
+                                "default": "",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "optional": {
+                                "type": [
+                                  "boolean",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "key"
+                            ],
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "fieldRef": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "apiVersion": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "fieldPath": {
+                                "default": "",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "fieldPath"
+                            ],
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "resourceFieldRef": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "containerName": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "divisor": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "resource": {
+                                "default": "",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "resource"
+                            ],
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "secretKeyRef": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "key": {
+                                "default": "",
+                                "type": "string"
+                              },
+                              "name": {
+                                "default": "",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "optional": {
+                                "type": [
+                                  "boolean",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "key"
+                            ],
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          }
+                        },
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "type": "object"
+                  },
+                  "type": [
+                    "array",
+                    "null"
+                  ]
+                },
+                "forcePull": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ]
+                },
+                "from": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "apiVersion": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "fieldPath": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "kind": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "namespace": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "resourceVersion": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "uid": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "type": [
+                    "object",
+                    "null"
+                  ]
+                },
+                "imageOptimizationPolicy": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "noCache": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ]
+                },
+                "pullSecret": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "name": {
+                      "default": "",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "type": [
+                    "object",
+                    "null"
+                  ]
+                },
+                "volumes": {
+                  "items": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "mounts": {
+                        "items": {
+                          "additionalProperties": false,
+                          "default": {},
+                          "properties": {
+                            "destinationPath": {
+                              "default": "",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "destinationPath"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "name": {
+                        "default": "",
+                        "type": "string"
+                      },
+                      "source": {
+                        "additionalProperties": false,
+                        "default": {},
+                        "properties": {
+                          "configMap": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "defaultMode": {
+                                "format": "int32",
+                                "type": [
+                                  "integer",
+                                  "null"
+                                ]
+                              },
+                              "items": {
+                                "items": {
+                                  "additionalProperties": false,
+                                  "default": {},
+                                  "properties": {
+                                    "key": {
+                                      "default": "",
+                                      "type": "string"
+                                    },
+                                    "mode": {
+                                      "format": "int32",
+                                      "type": [
+                                        "integer",
+                                        "null"
+                                      ]
+                                    },
+                                    "path": {
+                                      "default": "",
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "key",
+                                    "path"
+                                  ],
+                                  "type": "object"
+                                },
+                                "type": [
+                                  "array",
+                                  "null"
+                                ]
+                              },
+                              "name": {
+                                "default": "",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "optional": {
+                                "type": [
+                                  "boolean",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "csi": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "driver": {
+                                "default": "",
+                                "type": "string"
+                              },
+                              "fsType": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "nodePublishSecretRef": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "name": {
+                                    "default": "",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "type": [
+                                  "object",
+                                  "null"
+                                ]
+                              },
+                              "readOnly": {
+                                "type": [
+                                  "boolean",
+                                  "null"
+                                ]
+                              },
+                              "volumeAttributes": {
+                                "additionalProperties": {
+                                  "default": "",
+                                  "type": "string"
+                                },
+                                "type": [
+                                  "object",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "driver"
+                            ],
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "secret": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "defaultMode": {
+                                "format": "int32",
+                                "type": [
+                                  "integer",
+                                  "null"
+                                ]
+                              },
+                              "items": {
+                                "items": {
+                                  "additionalProperties": false,
+                                  "default": {},
+                                  "properties": {
+                                    "key": {
+                                      "default": "",
+                                      "type": "string"
+                                    },
+                                    "mode": {
+                                      "format": "int32",
+                                      "type": [
+                                        "integer",
+                                        "null"
+                                      ]
+                                    },
+                                    "path": {
+                                      "default": "",
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "key",
+                                    "path"
+                                  ],
+                                  "type": "object"
+                                },
+                                "type": [
+                                  "array",
+                                  "null"
+                                ]
+                              },
+                              "optional": {
+                                "type": [
+                                  "boolean",
+                                  "null"
+                                ]
+                              },
+                              "secretName": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "type": {
+                            "default": "",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "type"
+                        ],
+                        "type": "object"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "source",
+                      "mounts"
+                    ],
+                    "type": "object"
+                  },
+                  "type": [
+                    "array",
+                    "null"
+                  ]
+                }
+              },
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "jenkinsPipelineStrategy": {
+              "additionalProperties": false,
+              "properties": {
+                "env": {
+                  "items": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "name": {
+                        "default": "",
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "valueFrom": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "configMapKeyRef": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "key": {
+                                "default": "",
+                                "type": "string"
+                              },
+                              "name": {
+                                "default": "",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "optional": {
+                                "type": [
+                                  "boolean",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "key"
+                            ],
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "fieldRef": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "apiVersion": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "fieldPath": {
+                                "default": "",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "fieldPath"
+                            ],
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "resourceFieldRef": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "containerName": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "divisor": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "resource": {
+                                "default": "",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "resource"
+                            ],
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "secretKeyRef": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "key": {
+                                "default": "",
+                                "type": "string"
+                              },
+                              "name": {
+                                "default": "",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "optional": {
+                                "type": [
+                                  "boolean",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "key"
+                            ],
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          }
+                        },
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "type": "object"
+                  },
+                  "type": [
+                    "array",
+                    "null"
+                  ]
+                },
+                "jenkinsfile": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "jenkinsfilePath": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "sourceStrategy": {
+              "additionalProperties": false,
+              "properties": {
+                "env": {
+                  "items": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "name": {
+                        "default": "",
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "valueFrom": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "configMapKeyRef": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "key": {
+                                "default": "",
+                                "type": "string"
+                              },
+                              "name": {
+                                "default": "",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "optional": {
+                                "type": [
+                                  "boolean",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "key"
+                            ],
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "fieldRef": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "apiVersion": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "fieldPath": {
+                                "default": "",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "fieldPath"
+                            ],
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "resourceFieldRef": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "containerName": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "divisor": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "resource": {
+                                "default": "",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "resource"
+                            ],
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "secretKeyRef": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "key": {
+                                "default": "",
+                                "type": "string"
+                              },
+                              "name": {
+                                "default": "",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "optional": {
+                                "type": [
+                                  "boolean",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "key"
+                            ],
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          }
+                        },
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "type": "object"
+                  },
+                  "type": [
+                    "array",
+                    "null"
+                  ]
+                },
+                "forcePull": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ]
+                },
+                "from": {
+                  "additionalProperties": false,
+                  "default": {},
+                  "properties": {
+                    "apiVersion": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "fieldPath": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "kind": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "namespace": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "resourceVersion": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "uid": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "type": "object"
+                },
+                "incremental": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ]
+                },
+                "pullSecret": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "name": {
+                      "default": "",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "type": [
+                    "object",
+                    "null"
+                  ]
+                },
+                "scripts": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "volumes": {
+                  "items": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "mounts": {
+                        "items": {
+                          "additionalProperties": false,
+                          "default": {},
+                          "properties": {
+                            "destinationPath": {
+                              "default": "",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "destinationPath"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "name": {
+                        "default": "",
+                        "type": "string"
+                      },
+                      "source": {
+                        "additionalProperties": false,
+                        "default": {},
+                        "properties": {
+                          "configMap": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "defaultMode": {
+                                "format": "int32",
+                                "type": [
+                                  "integer",
+                                  "null"
+                                ]
+                              },
+                              "items": {
+                                "items": {
+                                  "additionalProperties": false,
+                                  "default": {},
+                                  "properties": {
+                                    "key": {
+                                      "default": "",
+                                      "type": "string"
+                                    },
+                                    "mode": {
+                                      "format": "int32",
+                                      "type": [
+                                        "integer",
+                                        "null"
+                                      ]
+                                    },
+                                    "path": {
+                                      "default": "",
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "key",
+                                    "path"
+                                  ],
+                                  "type": "object"
+                                },
+                                "type": [
+                                  "array",
+                                  "null"
+                                ]
+                              },
+                              "name": {
+                                "default": "",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "optional": {
+                                "type": [
+                                  "boolean",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "csi": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "driver": {
+                                "default": "",
+                                "type": "string"
+                              },
+                              "fsType": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "nodePublishSecretRef": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "name": {
+                                    "default": "",
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "type": [
+                                  "object",
+                                  "null"
+                                ]
+                              },
+                              "readOnly": {
+                                "type": [
+                                  "boolean",
+                                  "null"
+                                ]
+                              },
+                              "volumeAttributes": {
+                                "additionalProperties": {
+                                  "default": "",
+                                  "type": "string"
+                                },
+                                "type": [
+                                  "object",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "driver"
+                            ],
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "secret": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "defaultMode": {
+                                "format": "int32",
+                                "type": [
+                                  "integer",
+                                  "null"
+                                ]
+                              },
+                              "items": {
+                                "items": {
+                                  "additionalProperties": false,
+                                  "default": {},
+                                  "properties": {
+                                    "key": {
+                                      "default": "",
+                                      "type": "string"
+                                    },
+                                    "mode": {
+                                      "format": "int32",
+                                      "type": [
+                                        "integer",
+                                        "null"
+                                      ]
+                                    },
+                                    "path": {
+                                      "default": "",
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "key",
+                                    "path"
+                                  ],
+                                  "type": "object"
+                                },
+                                "type": [
+                                  "array",
+                                  "null"
+                                ]
+                              },
+                              "optional": {
+                                "type": [
+                                  "boolean",
+                                  "null"
+                                ]
+                              },
+                              "secretName": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "type": {
+                            "default": "",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "type"
+                        ],
+                        "type": "object"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "source",
+                      "mounts"
+                    ],
+                    "type": "object"
+                  },
+                  "type": [
+                    "array",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "from"
+              ],
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "type": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "type": "object"
+        },
+        "triggeredBy": {
+          "items": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "bitbucketWebHook": {
+                "additionalProperties": false,
+                "properties": {
+                  "revision": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "git": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "author": {
+                            "additionalProperties": false,
+                            "default": {},
+                            "properties": {
+                              "email": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "name": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "commit": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "committer": {
+                            "additionalProperties": false,
+                            "default": {},
+                            "properties": {
+                              "email": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "name": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "message": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      },
+                      "type": {
+                        "default": "",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "type"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "secret": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "genericWebHook": {
+                "additionalProperties": false,
+                "properties": {
+                  "revision": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "git": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "author": {
+                            "additionalProperties": false,
+                            "default": {},
+                            "properties": {
+                              "email": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "name": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "commit": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "committer": {
+                            "additionalProperties": false,
+                            "default": {},
+                            "properties": {
+                              "email": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "name": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "message": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      },
+                      "type": {
+                        "default": "",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "type"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "secret": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "githubWebHook": {
+                "additionalProperties": false,
+                "properties": {
+                  "revision": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "git": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "author": {
+                            "additionalProperties": false,
+                            "default": {},
+                            "properties": {
+                              "email": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "name": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "commit": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "committer": {
+                            "additionalProperties": false,
+                            "default": {},
+                            "properties": {
+                              "email": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "name": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "message": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      },
+                      "type": {
+                        "default": "",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "type"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "secret": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "gitlabWebHook": {
+                "additionalProperties": false,
+                "properties": {
+                  "revision": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "git": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "author": {
+                            "additionalProperties": false,
+                            "default": {},
+                            "properties": {
+                              "email": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "name": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "commit": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "committer": {
+                            "additionalProperties": false,
+                            "default": {},
+                            "properties": {
+                              "email": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "name": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "message": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      },
+                      "type": {
+                        "default": "",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "type"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "secret": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "imageChangeBuild": {
+                "additionalProperties": false,
+                "properties": {
+                  "fromRef": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "apiVersion": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "fieldPath": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "kind": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "name": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "namespace": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "resourceVersion": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "uid": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "imageID": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "message": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "strategy"
+      ],
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "status": {
+      "additionalProperties": false,
+      "default": {},
+      "properties": {
+        "cancelled": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "completionTimestamp": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "conditions": {
+          "items": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "lastTransitionTime": {
+                "format": "date-time",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "lastUpdateTime": {
+                "format": "date-time",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "message": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "reason": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "status": {
+                "default": "",
+                "type": "string"
+              },
+              "type": {
+                "default": "",
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "status"
+            ],
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "config": {
+          "additionalProperties": false,
+          "properties": {
+            "apiVersion": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "fieldPath": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "kind": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "namespace": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "resourceVersion": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "uid": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "duration": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "logSnippet": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "message": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "output": {
+          "additionalProperties": false,
+          "default": {},
+          "properties": {
+            "to": {
+              "additionalProperties": false,
+              "properties": {
+                "imageDigest": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "outputDockerImageReference": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "phase": {
+          "default": "",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "stages": {
+          "items": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "durationMilliseconds": {
+                "format": "int64",
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "startTime": {
+                "format": "date-time",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "steps": {
+                "items": {
+                  "additionalProperties": false,
+                  "default": {},
+                  "properties": {
+                    "durationMilliseconds": {
+                      "format": "int64",
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "startTime": {
+                      "format": "date-time",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "type": "object"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ]
+              }
+            },
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "startTimestamp": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "apiVersion",
+    "kind"
+  ],
+  "type": "object"
+}

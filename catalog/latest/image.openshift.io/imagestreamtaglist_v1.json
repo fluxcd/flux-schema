@@ -1,0 +1,1205 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": {
+      "type": "string"
+    },
+    "items": {
+      "items": {
+        "additionalProperties": false,
+        "default": {},
+        "properties": {
+          "apiVersion": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "conditions": {
+            "items": {
+              "additionalProperties": false,
+              "default": {},
+              "properties": {
+                "generation": {
+                  "default": 0,
+                  "format": "int64",
+                  "type": "integer"
+                },
+                "lastTransitionTime": {
+                  "format": "date-time",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "message": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "reason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "status": {
+                  "default": "",
+                  "type": "string"
+                },
+                "type": {
+                  "default": "",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type",
+                "status",
+                "generation"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "generation": {
+            "default": 0,
+            "format": "int64",
+            "type": "integer"
+          },
+          "image": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "apiVersion": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "dockerImageConfig": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "dockerImageLayers": {
+                "items": {
+                  "additionalProperties": false,
+                  "default": {},
+                  "properties": {
+                    "mediaType": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "name": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "size": {
+                      "default": 0,
+                      "format": "int64",
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "size",
+                    "mediaType"
+                  ],
+                  "type": "object"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ]
+              },
+              "dockerImageManifest": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "dockerImageManifestMediaType": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "dockerImageManifests": {
+                "items": {
+                  "additionalProperties": false,
+                  "default": {},
+                  "properties": {
+                    "architecture": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "digest": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "manifestSize": {
+                      "default": 0,
+                      "format": "int64",
+                      "type": "integer"
+                    },
+                    "mediaType": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "os": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "variant": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "digest",
+                    "mediaType",
+                    "manifestSize",
+                    "architecture",
+                    "os"
+                  ],
+                  "type": "object"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ]
+              },
+              "dockerImageMetadata": {
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "dockerImageMetadataVersion": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "dockerImageReference": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "dockerImageSignatures": {
+                "items": {
+                  "format": "byte",
+                  "type": "string"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ]
+              },
+              "kind": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "metadata": {
+                "additionalProperties": false,
+                "default": {},
+                "properties": {
+                  "annotations": {
+                    "additionalProperties": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "creationTimestamp": {
+                    "format": "date-time",
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "deletionGracePeriodSeconds": {
+                    "format": "int64",
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "deletionTimestamp": {
+                    "format": "date-time",
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "finalizers": {
+                    "items": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "type": [
+                      "array",
+                      "null"
+                    ]
+                  },
+                  "generateName": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "generation": {
+                    "format": "int64",
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "labels": {
+                    "additionalProperties": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "managedFields": {
+                    "items": {
+                      "additionalProperties": false,
+                      "default": {},
+                      "properties": {
+                        "apiVersion": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "fieldsType": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "fieldsV1": {
+                          "type": [
+                            "object",
+                            "null"
+                          ]
+                        },
+                        "manager": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "operation": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "subresource": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "time": {
+                          "format": "date-time",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "type": [
+                      "array",
+                      "null"
+                    ]
+                  },
+                  "name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "namespace": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "ownerReferences": {
+                    "items": {
+                      "additionalProperties": false,
+                      "default": {},
+                      "properties": {
+                        "apiVersion": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "blockOwnerDeletion": {
+                          "type": [
+                            "boolean",
+                            "null"
+                          ]
+                        },
+                        "controller": {
+                          "type": [
+                            "boolean",
+                            "null"
+                          ]
+                        },
+                        "kind": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "name": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "uid": {
+                          "default": "",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "apiVersion",
+                        "kind",
+                        "name",
+                        "uid"
+                      ],
+                      "type": "object"
+                    },
+                    "type": [
+                      "array",
+                      "null"
+                    ]
+                  },
+                  "resourceVersion": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "selfLink": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "uid": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "signatures": {
+                "items": {
+                  "additionalProperties": false,
+                  "default": {},
+                  "properties": {
+                    "apiVersion": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "conditions": {
+                      "items": {
+                        "additionalProperties": false,
+                        "default": {},
+                        "properties": {
+                          "lastProbeTime": {
+                            "format": "date-time",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "lastTransitionTime": {
+                            "format": "date-time",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "message": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "reason": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "status": {
+                            "default": "",
+                            "type": "string"
+                          },
+                          "type": {
+                            "default": "",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "status"
+                        ],
+                        "type": "object"
+                      },
+                      "type": [
+                        "array",
+                        "null"
+                      ]
+                    },
+                    "content": {
+                      "format": "byte",
+                      "type": "string"
+                    },
+                    "created": {
+                      "format": "date-time",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "imageIdentity": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "issuedBy": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "commonName": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "organization": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
+                    "issuedTo": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "commonName": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "organization": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "publicKeyID": {
+                          "default": "",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "publicKeyID"
+                      ],
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
+                    "kind": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "metadata": {
+                      "additionalProperties": false,
+                      "default": {},
+                      "properties": {
+                        "annotations": {
+                          "additionalProperties": {
+                            "default": "",
+                            "type": "string"
+                          },
+                          "type": [
+                            "object",
+                            "null"
+                          ]
+                        },
+                        "creationTimestamp": {
+                          "format": "date-time",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "deletionGracePeriodSeconds": {
+                          "format": "int64",
+                          "type": [
+                            "integer",
+                            "null"
+                          ]
+                        },
+                        "deletionTimestamp": {
+                          "format": "date-time",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "finalizers": {
+                          "items": {
+                            "default": "",
+                            "type": "string"
+                          },
+                          "type": [
+                            "array",
+                            "null"
+                          ]
+                        },
+                        "generateName": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "generation": {
+                          "format": "int64",
+                          "type": [
+                            "integer",
+                            "null"
+                          ]
+                        },
+                        "labels": {
+                          "additionalProperties": {
+                            "default": "",
+                            "type": "string"
+                          },
+                          "type": [
+                            "object",
+                            "null"
+                          ]
+                        },
+                        "managedFields": {
+                          "items": {
+                            "additionalProperties": false,
+                            "default": {},
+                            "properties": {
+                              "apiVersion": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "fieldsType": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "fieldsV1": {
+                                "type": [
+                                  "object",
+                                  "null"
+                                ]
+                              },
+                              "manager": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "operation": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "subresource": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "time": {
+                                "format": "date-time",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "type": "object"
+                          },
+                          "type": [
+                            "array",
+                            "null"
+                          ]
+                        },
+                        "name": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "namespace": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "ownerReferences": {
+                          "items": {
+                            "additionalProperties": false,
+                            "default": {},
+                            "properties": {
+                              "apiVersion": {
+                                "default": "",
+                                "type": "string"
+                              },
+                              "blockOwnerDeletion": {
+                                "type": [
+                                  "boolean",
+                                  "null"
+                                ]
+                              },
+                              "controller": {
+                                "type": [
+                                  "boolean",
+                                  "null"
+                                ]
+                              },
+                              "kind": {
+                                "default": "",
+                                "type": "string"
+                              },
+                              "name": {
+                                "default": "",
+                                "type": "string"
+                              },
+                              "uid": {
+                                "default": "",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "apiVersion",
+                              "kind",
+                              "name",
+                              "uid"
+                            ],
+                            "type": "object"
+                          },
+                          "type": [
+                            "array",
+                            "null"
+                          ]
+                        },
+                        "resourceVersion": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "selfLink": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "uid": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
+                    "signedClaims": {
+                      "additionalProperties": {
+                        "default": "",
+                        "type": "string"
+                      },
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
+                    "type": {
+                      "default": "",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "content"
+                  ],
+                  "type": "object"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ]
+              }
+            },
+            "type": "object"
+          },
+          "kind": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lookupPolicy": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "local": {
+                "default": false,
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "local"
+            ],
+            "type": "object"
+          },
+          "metadata": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "annotations": {
+                "additionalProperties": {
+                  "default": "",
+                  "type": "string"
+                },
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "creationTimestamp": {
+                "format": "date-time",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "deletionGracePeriodSeconds": {
+                "format": "int64",
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "deletionTimestamp": {
+                "format": "date-time",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "finalizers": {
+                "items": {
+                  "default": "",
+                  "type": "string"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ]
+              },
+              "generateName": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "generation": {
+                "format": "int64",
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "labels": {
+                "additionalProperties": {
+                  "default": "",
+                  "type": "string"
+                },
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "managedFields": {
+                "items": {
+                  "additionalProperties": false,
+                  "default": {},
+                  "properties": {
+                    "apiVersion": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "fieldsType": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "fieldsV1": {
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
+                    "manager": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "operation": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "subresource": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "time": {
+                      "format": "date-time",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "type": "object"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "namespace": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "ownerReferences": {
+                "items": {
+                  "additionalProperties": false,
+                  "default": {},
+                  "properties": {
+                    "apiVersion": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "blockOwnerDeletion": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    },
+                    "controller": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    },
+                    "kind": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "name": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "uid": {
+                      "default": "",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "apiVersion",
+                    "kind",
+                    "name",
+                    "uid"
+                  ],
+                  "type": "object"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ]
+              },
+              "resourceVersion": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "selfLink": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "uid": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "tag": {
+            "additionalProperties": false,
+            "properties": {
+              "annotations": {
+                "additionalProperties": {
+                  "default": "",
+                  "type": "string"
+                },
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "from": {
+                "additionalProperties": false,
+                "properties": {
+                  "apiVersion": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "fieldPath": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "kind": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "namespace": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "resourceVersion": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "uid": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "generation": {
+                "format": "int64",
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "importPolicy": {
+                "additionalProperties": false,
+                "default": {},
+                "properties": {
+                  "importMode": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "insecure": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "scheduled": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  }
+                },
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "name": {
+                "default": "",
+                "type": "string"
+              },
+              "reference": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "referencePolicy": {
+                "additionalProperties": false,
+                "default": {},
+                "properties": {
+                  "type": {
+                    "default": "",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "type"
+                ],
+                "type": [
+                  "object",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "tag",
+          "generation",
+          "lookupPolicy",
+          "image"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "kind": {
+      "type": "string"
+    },
+    "metadata": {
+      "additionalProperties": false,
+      "default": {},
+      "properties": {
+        "continue": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "remainingItemCount": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "resourceVersion": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "selfLink": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "items",
+    "apiVersion",
+    "kind"
+  ],
+  "type": "object"
+}

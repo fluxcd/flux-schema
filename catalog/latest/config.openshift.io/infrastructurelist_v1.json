@@ -1,0 +1,2091 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": {
+      "type": "string"
+    },
+    "items": {
+      "items": {
+        "additionalProperties": false,
+        "default": {},
+        "properties": {
+          "apiVersion": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "kind": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "metadata": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "annotations": {
+                "additionalProperties": {
+                  "default": "",
+                  "type": "string"
+                },
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "creationTimestamp": {
+                "format": "date-time",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "deletionGracePeriodSeconds": {
+                "format": "int64",
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "deletionTimestamp": {
+                "format": "date-time",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "finalizers": {
+                "items": {
+                  "default": "",
+                  "type": "string"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ]
+              },
+              "generateName": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "generation": {
+                "format": "int64",
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "labels": {
+                "additionalProperties": {
+                  "default": "",
+                  "type": "string"
+                },
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "managedFields": {
+                "items": {
+                  "additionalProperties": false,
+                  "default": {},
+                  "properties": {
+                    "apiVersion": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "fieldsType": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "fieldsV1": {
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
+                    "manager": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "operation": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "subresource": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "time": {
+                      "format": "date-time",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "type": "object"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "namespace": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "ownerReferences": {
+                "items": {
+                  "additionalProperties": false,
+                  "default": {},
+                  "properties": {
+                    "apiVersion": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "blockOwnerDeletion": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    },
+                    "controller": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    },
+                    "kind": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "name": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "uid": {
+                      "default": "",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "apiVersion",
+                    "kind",
+                    "name",
+                    "uid"
+                  ],
+                  "type": "object"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ]
+              },
+              "resourceVersion": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "selfLink": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "uid": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "spec": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "cloudConfig": {
+                "additionalProperties": false,
+                "default": {},
+                "properties": {
+                  "key": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "name": {
+                    "default": "",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "platformSpec": {
+                "additionalProperties": false,
+                "default": {},
+                "properties": {
+                  "alibabaCloud": {
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "aws": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "serviceEndpoints": {
+                        "items": {
+                          "additionalProperties": false,
+                          "default": {},
+                          "properties": {
+                            "name": {
+                              "default": "",
+                              "type": "string"
+                            },
+                            "url": {
+                              "default": "",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "url"
+                          ],
+                          "type": "object"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      }
+                    },
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "azure": {
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "baremetal": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "apiServerInternalIPs": {
+                        "items": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      },
+                      "ingressIPs": {
+                        "items": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      },
+                      "machineNetworks": {
+                        "items": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      }
+                    },
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "equinixMetal": {
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "external": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "platformName": {
+                        "default": "Unknown",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "gcp": {
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "ibmcloud": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "serviceEndpoints": {
+                        "items": {
+                          "additionalProperties": false,
+                          "default": {},
+                          "properties": {
+                            "name": {
+                              "default": "",
+                              "type": "string"
+                            },
+                            "url": {
+                              "default": "",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "url"
+                          ],
+                          "type": "object"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      }
+                    },
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "kubevirt": {
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "nutanix": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "failureDomains": {
+                        "items": {
+                          "additionalProperties": false,
+                          "default": {},
+                          "properties": {
+                            "cluster": {
+                              "additionalProperties": false,
+                              "default": {},
+                              "properties": {
+                                "name": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "type": {
+                                  "default": "",
+                                  "type": "string"
+                                },
+                                "uuid": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "type"
+                              ],
+                              "type": "object"
+                            },
+                            "name": {
+                              "default": "",
+                              "type": "string"
+                            },
+                            "subnets": {
+                              "items": {
+                                "additionalProperties": false,
+                                "default": {},
+                                "properties": {
+                                  "name": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "type": {
+                                    "default": "",
+                                    "type": "string"
+                                  },
+                                  "uuid": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "type"
+                                ],
+                                "type": "object"
+                              },
+                              "type": "array"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "cluster",
+                            "subnets"
+                          ],
+                          "type": "object"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      },
+                      "prismCentral": {
+                        "additionalProperties": false,
+                        "default": {},
+                        "properties": {
+                          "address": {
+                            "default": "",
+                            "type": "string"
+                          },
+                          "port": {
+                            "default": 0,
+                            "format": "int32",
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "address",
+                          "port"
+                        ],
+                        "type": "object"
+                      },
+                      "prismElements": {
+                        "items": {
+                          "additionalProperties": false,
+                          "default": {},
+                          "properties": {
+                            "endpoint": {
+                              "additionalProperties": false,
+                              "default": {},
+                              "properties": {
+                                "address": {
+                                  "default": "",
+                                  "type": "string"
+                                },
+                                "port": {
+                                  "default": 0,
+                                  "format": "int32",
+                                  "type": "integer"
+                                }
+                              },
+                              "required": [
+                                "address",
+                                "port"
+                              ],
+                              "type": "object"
+                            },
+                            "name": {
+                              "default": "",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "endpoint"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      }
+                    },
+                    "required": [
+                      "prismCentral",
+                      "prismElements"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "openstack": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "apiServerInternalIPs": {
+                        "items": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      },
+                      "ingressIPs": {
+                        "items": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      },
+                      "machineNetworks": {
+                        "items": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      }
+                    },
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "ovirt": {
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "powervs": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "serviceEndpoints": {
+                        "items": {
+                          "additionalProperties": false,
+                          "default": {},
+                          "properties": {
+                            "name": {
+                              "default": "",
+                              "type": "string"
+                            },
+                            "url": {
+                              "default": "",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "url"
+                          ],
+                          "type": "object"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      }
+                    },
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "type": {
+                    "default": "",
+                    "type": "string"
+                  },
+                  "vsphere": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "apiServerInternalIPs": {
+                        "items": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      },
+                      "failureDomains": {
+                        "items": {
+                          "additionalProperties": false,
+                          "default": {},
+                          "properties": {
+                            "name": {
+                              "default": "",
+                              "type": "string"
+                            },
+                            "region": {
+                              "default": "",
+                              "type": "string"
+                            },
+                            "regionAffinity": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "type": {
+                                  "default": "",
+                                  "enum": [
+                                    "ComputeCluster",
+                                    "Datacenter"
+                                  ],
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "type"
+                              ],
+                              "type": [
+                                "object",
+                                "null"
+                              ]
+                            },
+                            "server": {
+                              "default": "",
+                              "type": "string"
+                            },
+                            "topology": {
+                              "additionalProperties": false,
+                              "default": {},
+                              "properties": {
+                                "computeCluster": {
+                                  "default": "",
+                                  "type": "string"
+                                },
+                                "datacenter": {
+                                  "default": "",
+                                  "type": "string"
+                                },
+                                "datastore": {
+                                  "default": "",
+                                  "type": "string"
+                                },
+                                "folder": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "networks": {
+                                  "items": {
+                                    "default": "",
+                                    "type": "string"
+                                  },
+                                  "type": "array"
+                                },
+                                "resourcePool": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "template": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "datacenter",
+                                "computeCluster",
+                                "networks",
+                                "datastore"
+                              ],
+                              "type": "object"
+                            },
+                            "zone": {
+                              "default": "",
+                              "type": "string"
+                            },
+                            "zoneAffinity": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "hostGroup": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "hostGroup": {
+                                      "default": "",
+                                      "type": "string"
+                                    },
+                                    "vmGroup": {
+                                      "default": "",
+                                      "type": "string"
+                                    },
+                                    "vmHostRule": {
+                                      "default": "",
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "vmGroup",
+                                    "hostGroup",
+                                    "vmHostRule"
+                                  ],
+                                  "type": [
+                                    "object",
+                                    "null"
+                                  ]
+                                },
+                                "type": {
+                                  "default": "",
+                                  "enum": [
+                                    "ComputeCluster",
+                                    "HostGroup"
+                                  ],
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "type"
+                              ],
+                              "type": [
+                                "object",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "region",
+                            "zone",
+                            "server",
+                            "topology"
+                          ],
+                          "type": "object"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      },
+                      "ingressIPs": {
+                        "items": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      },
+                      "machineNetworks": {
+                        "items": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      },
+                      "nodeNetworking": {
+                        "additionalProperties": false,
+                        "default": {},
+                        "properties": {
+                          "external": {
+                            "additionalProperties": false,
+                            "default": {},
+                            "properties": {
+                              "excludeNetworkSubnetCidr": {
+                                "items": {
+                                  "default": "",
+                                  "type": "string"
+                                },
+                                "type": [
+                                  "array",
+                                  "null"
+                                ]
+                              },
+                              "network": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "networkSubnetCidr": {
+                                "items": {
+                                  "default": "",
+                                  "type": "string"
+                                },
+                                "type": [
+                                  "array",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "internal": {
+                            "additionalProperties": false,
+                            "default": {},
+                            "properties": {
+                              "excludeNetworkSubnetCidr": {
+                                "items": {
+                                  "default": "",
+                                  "type": "string"
+                                },
+                                "type": [
+                                  "array",
+                                  "null"
+                                ]
+                              },
+                              "network": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "networkSubnetCidr": {
+                                "items": {
+                                  "default": "",
+                                  "type": "string"
+                                },
+                                "type": [
+                                  "array",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          }
+                        },
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      },
+                      "vcenters": {
+                        "items": {
+                          "additionalProperties": false,
+                          "default": {},
+                          "properties": {
+                            "datacenters": {
+                              "items": {
+                                "default": "",
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
+                            "port": {
+                              "format": "int32",
+                              "type": [
+                                "integer",
+                                "null"
+                              ]
+                            },
+                            "server": {
+                              "default": "",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "server",
+                            "datacenters"
+                          ],
+                          "type": "object"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      }
+                    },
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "type"
+                ],
+                "type": [
+                  "object",
+                  "null"
+                ]
+              }
+            },
+            "type": "object"
+          },
+          "status": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "apiServerInternalURI": {
+                "default": "",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "apiServerURL": {
+                "default": "",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "controlPlaneTopology": {
+                "default": "",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "cpuPartitioning": {
+                "default": "None",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "etcdDiscoveryDomain": {
+                "default": "",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "infrastructureName": {
+                "default": "",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "infrastructureTopology": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "platform": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "platformStatus": {
+                "additionalProperties": false,
+                "properties": {
+                  "alibabaCloud": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "region": {
+                        "default": "",
+                        "type": "string"
+                      },
+                      "resourceGroupID": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "resourceTags": {
+                        "items": {
+                          "additionalProperties": false,
+                          "default": {},
+                          "properties": {
+                            "key": {
+                              "default": "",
+                              "type": "string"
+                            },
+                            "value": {
+                              "default": "",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "key",
+                            "value"
+                          ],
+                          "type": "object"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "region"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "aws": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "cloudLoadBalancerConfig": {
+                        "additionalProperties": false,
+                        "default": {
+                          "dnsType": "PlatformDefault"
+                        },
+                        "properties": {
+                          "clusterHosted": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "apiIntLoadBalancerIPs": {
+                                "items": {
+                                  "default": "",
+                                  "type": "string"
+                                },
+                                "type": [
+                                  "array",
+                                  "null"
+                                ]
+                              },
+                              "apiLoadBalancerIPs": {
+                                "items": {
+                                  "default": "",
+                                  "type": "string"
+                                },
+                                "type": [
+                                  "array",
+                                  "null"
+                                ]
+                              },
+                              "ingressLoadBalancerIPs": {
+                                "items": {
+                                  "default": "",
+                                  "type": "string"
+                                },
+                                "type": [
+                                  "array",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "dnsType": {
+                            "default": "PlatformDefault",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      },
+                      "region": {
+                        "default": "",
+                        "type": "string"
+                      },
+                      "resourceTags": {
+                        "items": {
+                          "additionalProperties": false,
+                          "default": {},
+                          "properties": {
+                            "key": {
+                              "default": "",
+                              "type": "string"
+                            },
+                            "value": {
+                              "default": "",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "key",
+                            "value"
+                          ],
+                          "type": "object"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      },
+                      "serviceEndpoints": {
+                        "items": {
+                          "additionalProperties": false,
+                          "default": {},
+                          "properties": {
+                            "name": {
+                              "default": "",
+                              "type": "string"
+                            },
+                            "url": {
+                              "default": "",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "url"
+                          ],
+                          "type": "object"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "region"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "azure": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "armEndpoint": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "cloudLoadBalancerConfig": {
+                        "additionalProperties": false,
+                        "default": {
+                          "dnsType": "PlatformDefault"
+                        },
+                        "properties": {
+                          "clusterHosted": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "apiIntLoadBalancerIPs": {
+                                "items": {
+                                  "default": "",
+                                  "type": "string"
+                                },
+                                "type": [
+                                  "array",
+                                  "null"
+                                ]
+                              },
+                              "apiLoadBalancerIPs": {
+                                "items": {
+                                  "default": "",
+                                  "type": "string"
+                                },
+                                "type": [
+                                  "array",
+                                  "null"
+                                ]
+                              },
+                              "ingressLoadBalancerIPs": {
+                                "items": {
+                                  "default": "",
+                                  "type": "string"
+                                },
+                                "type": [
+                                  "array",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "dnsType": {
+                            "default": "PlatformDefault",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      },
+                      "cloudName": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "networkResourceGroupName": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "resourceGroupName": {
+                        "default": "",
+                        "type": "string"
+                      },
+                      "resourceTags": {
+                        "items": {
+                          "additionalProperties": false,
+                          "default": {},
+                          "properties": {
+                            "key": {
+                              "default": "",
+                              "type": "string"
+                            },
+                            "value": {
+                              "default": "",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "key",
+                            "value"
+                          ],
+                          "type": "object"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "resourceGroupName"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "baremetal": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "apiServerInternalIP": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "apiServerInternalIPs": {
+                        "items": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "ingressIP": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "ingressIPs": {
+                        "items": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "loadBalancer": {
+                        "additionalProperties": false,
+                        "default": {
+                          "type": "OpenShiftManagedDefault"
+                        },
+                        "properties": {
+                          "type": {
+                            "default": "OpenShiftManagedDefault",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      },
+                      "machineNetworks": {
+                        "items": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      },
+                      "nodeDNSIP": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "apiServerInternalIPs",
+                      "ingressIPs"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "equinixMetal": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "apiServerInternalIP": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "ingressIP": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "external": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "cloudControllerManager": {
+                        "additionalProperties": false,
+                        "default": {},
+                        "properties": {
+                          "state": {
+                            "default": "",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      }
+                    },
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "gcp": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "cloudLoadBalancerConfig": {
+                        "additionalProperties": false,
+                        "default": {
+                          "dnsType": "PlatformDefault"
+                        },
+                        "properties": {
+                          "clusterHosted": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "apiIntLoadBalancerIPs": {
+                                "items": {
+                                  "default": "",
+                                  "type": "string"
+                                },
+                                "type": [
+                                  "array",
+                                  "null"
+                                ]
+                              },
+                              "apiLoadBalancerIPs": {
+                                "items": {
+                                  "default": "",
+                                  "type": "string"
+                                },
+                                "type": [
+                                  "array",
+                                  "null"
+                                ]
+                              },
+                              "ingressLoadBalancerIPs": {
+                                "items": {
+                                  "default": "",
+                                  "type": "string"
+                                },
+                                "type": [
+                                  "array",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "dnsType": {
+                            "default": "PlatformDefault",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      },
+                      "projectID": {
+                        "default": "",
+                        "type": "string"
+                      },
+                      "region": {
+                        "default": "",
+                        "type": "string"
+                      },
+                      "resourceLabels": {
+                        "items": {
+                          "additionalProperties": false,
+                          "default": {},
+                          "properties": {
+                            "key": {
+                              "default": "",
+                              "type": "string"
+                            },
+                            "value": {
+                              "default": "",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "key",
+                            "value"
+                          ],
+                          "type": "object"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      },
+                      "resourceTags": {
+                        "items": {
+                          "additionalProperties": false,
+                          "default": {},
+                          "properties": {
+                            "key": {
+                              "default": "",
+                              "type": "string"
+                            },
+                            "parentID": {
+                              "default": "",
+                              "type": "string"
+                            },
+                            "value": {
+                              "default": "",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "parentID",
+                            "key",
+                            "value"
+                          ],
+                          "type": "object"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      },
+                      "serviceEndpoints": {
+                        "items": {
+                          "additionalProperties": false,
+                          "default": {},
+                          "properties": {
+                            "name": {
+                              "default": "",
+                              "type": "string"
+                            },
+                            "url": {
+                              "default": "",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "url"
+                          ],
+                          "type": "object"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "projectID",
+                      "region"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "ibmcloud": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "cisInstanceCRN": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "dnsInstanceCRN": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "location": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "providerType": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "resourceGroupName": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "serviceEndpoints": {
+                        "items": {
+                          "additionalProperties": false,
+                          "default": {},
+                          "properties": {
+                            "name": {
+                              "default": "",
+                              "type": "string"
+                            },
+                            "url": {
+                              "default": "",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "url"
+                          ],
+                          "type": "object"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      }
+                    },
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "kubevirt": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "apiServerInternalIP": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "ingressIP": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "nutanix": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "apiServerInternalIP": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "apiServerInternalIPs": {
+                        "items": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "ingressIP": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "ingressIPs": {
+                        "items": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "loadBalancer": {
+                        "additionalProperties": false,
+                        "default": {
+                          "type": "OpenShiftManagedDefault"
+                        },
+                        "properties": {
+                          "type": {
+                            "default": "OpenShiftManagedDefault",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "apiServerInternalIPs",
+                      "ingressIPs"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "openstack": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "apiServerInternalIP": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "apiServerInternalIPs": {
+                        "items": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "cloudName": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "ingressIP": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "ingressIPs": {
+                        "items": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "loadBalancer": {
+                        "additionalProperties": false,
+                        "default": {
+                          "type": "OpenShiftManagedDefault"
+                        },
+                        "properties": {
+                          "type": {
+                            "default": "OpenShiftManagedDefault",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      },
+                      "machineNetworks": {
+                        "items": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      },
+                      "nodeDNSIP": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "apiServerInternalIPs",
+                      "ingressIPs"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "ovirt": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "apiServerInternalIP": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "apiServerInternalIPs": {
+                        "items": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "ingressIP": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "ingressIPs": {
+                        "items": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "loadBalancer": {
+                        "additionalProperties": false,
+                        "default": {
+                          "type": "OpenShiftManagedDefault"
+                        },
+                        "properties": {
+                          "type": {
+                            "default": "OpenShiftManagedDefault",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      },
+                      "nodeDNSIP": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "apiServerInternalIPs",
+                      "ingressIPs"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "powervs": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "cisInstanceCRN": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "dnsInstanceCRN": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "region": {
+                        "default": "",
+                        "type": "string"
+                      },
+                      "resourceGroup": {
+                        "default": "",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "serviceEndpoints": {
+                        "items": {
+                          "additionalProperties": false,
+                          "default": {},
+                          "properties": {
+                            "name": {
+                              "default": "",
+                              "type": "string"
+                            },
+                            "url": {
+                              "default": "",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "url"
+                          ],
+                          "type": "object"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      },
+                      "zone": {
+                        "default": "",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "region",
+                      "zone"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "type": {
+                    "default": "",
+                    "type": "string"
+                  },
+                  "vsphere": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "apiServerInternalIP": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "apiServerInternalIPs": {
+                        "items": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "ingressIP": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "ingressIPs": {
+                        "items": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "loadBalancer": {
+                        "additionalProperties": false,
+                        "default": {
+                          "type": "OpenShiftManagedDefault"
+                        },
+                        "properties": {
+                          "type": {
+                            "default": "OpenShiftManagedDefault",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      },
+                      "machineNetworks": {
+                        "items": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      },
+                      "nodeDNSIP": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "apiServerInternalIPs",
+                      "ingressIPs"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "type"
+                ],
+                "type": [
+                  "object",
+                  "null"
+                ]
+              }
+            },
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "spec"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "kind": {
+      "type": "string"
+    },
+    "metadata": {
+      "additionalProperties": false,
+      "default": {},
+      "properties": {
+        "continue": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "remainingItemCount": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "resourceVersion": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "selfLink": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    }
+  },
+  "required": [
+    "metadata",
+    "items",
+    "apiVersion",
+    "kind"
+  ],
+  "type": "object"
+}
