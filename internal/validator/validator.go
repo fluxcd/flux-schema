@@ -104,6 +104,7 @@ type Options struct {
 	SkipKinds             []string
 	SkipJSONPaths         []string
 	SkipFiles             []string
+	SkipCELRules          bool
 	HTTPClient            *retryablehttp.Client
 	HTTPTimeout           time.Duration
 	Workers               int
@@ -678,7 +679,7 @@ func (v *Validator) validateDoc(ctx context.Context, source string, idx int, raw
 	}
 	vars := tmpl.SchemaVars{Group: group, Kind: r.Kind, Version: version}
 
-	schema, _, found, err := v.loader.Resolve(ctx, vars)
+	resolved, found, err := v.loader.Resolve(ctx, vars)
 	if err != nil {
 		r.Errors = []ValidationError{{Msg: err.Error()}}
 		return settle(StatusInvalid, ReasonSchemaLoadError)
@@ -697,7 +698,7 @@ func (v *Validator) validateDoc(ctx context.Context, source string, idx int, raw
 	}
 
 	var errs []ValidationError
-	if err := schema.Validate(doc); err != nil {
+	if err := resolved.JSON.Validate(doc); err != nil {
 		errs = flattenErrors(err)
 	}
 	errs = append(errs, validateMetadata(doc)...)
@@ -705,6 +706,26 @@ func (v *Validator) validateDoc(ctx context.Context, source string, idx int, raw
 		r.Errors = errs
 		return settle(StatusInvalid, ReasonSchemaViolation)
 	}
+
+	// CEL x-kubernetes-validations evaluation runs only after JSON Schema +
+	// metadata pass. Most CEL rules presume a well-shaped object, so adding
+	// CEL noise on top of a JSON Schema failure rarely helps; the user can
+	// fix the structural problems and re-run.
+	if !v.opts.SkipCELRules {
+		if resolved.CELBuildErr != nil {
+			r.Errors = []ValidationError{{
+				Msg: resolved.CELBuildErr.Error(),
+			}}
+			return settle(StatusInvalid, ReasonCELViolation)
+		}
+		if resolved.CEL != nil {
+			if celErrs := resolved.CEL.Validate(ctx, doc); len(celErrs) > 0 {
+				r.Errors = celErrs
+				return settle(StatusInvalid, ReasonCELViolation)
+			}
+		}
+	}
+
 	r.Status = StatusValid
 	return r, true
 }

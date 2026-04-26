@@ -70,6 +70,7 @@ type validateFlags struct {
 	skipKinds             []string
 	skipJSONPaths         []string
 	skipFiles             []string
+	skipCELRules          bool
 	verbose               bool
 	failFast              bool
 	concurrent            int
@@ -95,6 +96,8 @@ func init() {
 	validateCmd.Flags().StringArrayVar(&validateArgs.skipFiles, "skip-file", nil,
 		"glob pattern matched against files and dirs "+
 			"defaults to skipping dotfiles and dot-dirs (repeatable)")
+	validateCmd.Flags().BoolVar(&validateArgs.skipCELRules, "skip-cel-rules", false,
+		"skip evaluation of x-kubernetes-validations CEL rules")
 	validateCmd.Flags().BoolVarP(&validateArgs.verbose, "verbose", "v", false,
 		"print a line for every document, including valid and skipped")
 	validateCmd.Flags().BoolVar(&validateArgs.failFast, "fail-fast", false,
@@ -442,6 +445,7 @@ func buildValidatorOptions(inputs []string) (validator.Options, error) {
 		SkipKinds:             validateArgs.skipKinds,
 		SkipJSONPaths:         validateArgs.skipJSONPaths,
 		SkipFiles:             validateArgs.skipFiles,
+		SkipCELRules:          validateArgs.skipCELRules,
 		HTTPTimeout:           rootArgs.timeout,
 		Workers:               validateArgs.concurrent,
 		InsecureSkipTLSVerify: validateArgs.insecureSkipTLSVerify,

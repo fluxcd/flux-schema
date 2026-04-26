@@ -6,72 +6,61 @@
 //
 // # Entry points
 //
-// New returns a Validator configured from Options. ValidateSources walks
-// files and directories and streams Results over a channel; ValidateBytes
-// validates an in-memory payload and returns the Results slice.
+// New returns a Validator from Options. ValidateSources walks files and
+// directories and streams Results over a channel; ValidateBytes validates
+// an in-memory payload and returns a Results slice.
 //
 // # YAML handling
 //
-// Multi-document streams are split on "\n---" boundaries. Documents that
-// contain only comments or whitespace are dropped entirely rather than
-// surfaced as skipped, keeping user-visible document numbering aligned
-// with the real resources in each file.
+// Multi-document streams are split on "\n---" boundaries. Documents
+// containing only comments or whitespace are dropped before doc numbering
+// so user-visible indices align with real resources. YAML is decoded in
+// strict mode (duplicate keys fail); a lenient re-parse on failure
+// recovers apiVersion/kind/namespace/name for the Result identifier.
 //
-// YAML is decoded in strict mode, so duplicate keys fail the document.
-// When strict decoding fails, a lenient re-parse recovers apiVersion,
-// kind, namespace, and name for the Result so callers can still render
-// a meaningful identifier for the failing document.
+// # Per-document pipeline
 //
-// # Admission and schema checks
+// For every decoded document, in order:
 //
-// For every decoded document the pipeline runs, in order:
-//
-//  1. SkipKinds matching — a pattern of "Kind" or "apiVersion/Kind"
-//     short-circuits validation with StatusSkipped, before the admission
-//     rule so encrypted or sealed manifests that omit metadata.name are
-//     still skipped cleanly.
-//  2. apiVersion/kind presence — missing either field fails the document;
-//     Options.SkipMissingSchemas downgrades this to StatusSkipped.
-//  3. Admission rule — metadata.name or metadata.generateName must be
-//     set, matching kube-apiserver behavior.
+//  1. SkipKinds — "kind" or "apiVersion/kind" patterns short-circuit to
+//     StatusSkipped before admission and schema checks.
+//  2. apiVersion/kind presence — missing either fails the document
+//     unless SkipMissingSchemas is set.
+//  3. Admission — metadata.name or metadata.generateName must be set.
 //  4. Schema resolution — each location template is rendered with the
-//     document's group/version/kind and the first matching schema is
-//     compiled and cached. 404 / ENOENT on every location fails the
-//     document unless Options.SkipMissingSchemas is set.
-//  5. JSON Schema validation — the compiled schema is run against the
-//     decoded document; per-field violations are returned as a flat list
-//     of ValidationError with JSON Pointer paths.
-//  6. ObjectMeta validation — DNS-1123 name/generateName/namespace and
-//     qualified-name label/annotation key+value rules apply to every
-//     doc, since CRDs and native Kubernetes schemas leave metadata
-//     effectively unconstrained. Violations merge into the schema
-//     error list under ReasonSchemaViolation.
+//     document's GVK; the first hit is compiled and cached. 404 / ENOENT
+//     on every location fails unless SkipMissingSchemas is set.
+//  5. SkipJSONPaths — matching pointers are deleted from the document
+//     before schema validation.
+//  6. JSON Schema + ObjectMeta — the compiled schema runs against the
+//     document; DNS-1123 and qualified-name rules are layered on metadata
+//     since Kubernetes schemas leave it effectively unconstrained.
+//     Violations merge under ReasonSchemaViolation.
+//  7. CEL x-kubernetes-validations — runs only after steps 1-6 pass and
+//     unless Options.SkipCELRules is set. Rule compile errors and runtime
+//     violations both surface as ReasonCELViolation; oldSelf is unbound
+//     (static validator, no transition state).
 //
-// Schemas produced by the extractor package close objects with
-// additionalProperties: false, so undocumented fields under spec fail
-// validation.
+// Schemas produced by the extractor close objects with
+// additionalProperties: false, so undocumented spec fields fail.
 //
 // # Schema resolution and caching
 //
-// SchemaLoader renders each location template with the document's
-// group/version/kind and loads from http(s) URLs (via retryablehttp,
-// honoring Options.HTTPTimeout) or the local filesystem. Each rendered
-// location is fetched, parsed, and compiled at most once per Validator
-// lifetime, and the compiled *jsonschema.Schema is reused across
-// documents. Compilation uses JSON Schema Draft 2020-12 with the
-// Kubernetes string formats (duration, date, datetime/date-time, time)
-// registered on the compiler — including duration units kube-apiserver
+// SchemaLoader renders each location template with the document's GVK
+// and loads from http(s) (via retryablehttp, honoring HTTPTimeout) or
+// the local filesystem. Each rendered location is fetched, parsed, and
+// compiled at most once per Validator lifetime. Compilation uses Draft
+// 2020-12 with Kubernetes string formats registered (duration, date,
+// datetime/date-time, time) — including duration units kube-apiserver
 // accepts but Go's time.ParseDuration rejects (e.g. "2w", "3d").
 //
 // # Concurrency and streaming
 //
-// ValidateSources walks sources sequentially on one producer goroutine
-// and validates documents in parallel on a pool of Options.Workers
-// workers. Results arrive on the returned channel in completion order,
-// which is non-deterministic; each Result carries Source and DocIndex
-// so callers can reorder. After every real Result for a source has been
-// pushed, a synthetic Result with Final=true is emitted for that source
-// so consumers can flush per-source state mid-stream instead of
-// buffering until end-of-stream. The channel is closed once all
-// documents and sentinels have been delivered.
+// ValidateSources walks sources on one producer goroutine and validates
+// documents on a pool of Options.Workers workers. Results arrive in
+// completion order (non-deterministic); each Result carries Source and
+// DocIndex for reordering. After the last real Result for a source, a
+// synthetic Result with Final=true is emitted so consumers can flush
+// per-source state mid-stream. The channel closes once all documents
+// and sentinels have been delivered.
 package validator

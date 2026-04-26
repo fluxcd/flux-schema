@@ -6,7 +6,7 @@
 [![license](https://img.shields.io/github/license/fluxcd/flux-schema.svg)](https://github.com/fluxcd/flux-schema/blob/main/LICENSE)
 [![slsa](https://slsa.dev/images/gh-badge-level2.svg)](https://github.com/fluxcd/flux-schema/attestations)
 
-Flux CLI plugin for Kubernetes schema extraction and manifests validation.
+Flux CLI plugin for Kubernetes schema extraction and manifests validation against JSON Schemas and CEL rules.
 
 > [!NOTE]
 > This repository is in early development and the plugin system is not yet available in a stable release of Flux.
@@ -21,6 +21,7 @@ Flux CLI plugin for Kubernetes schema extraction and manifests validation.
     - `--skip-kind`: Skip documents matching `kind` or `apiVersion/kind` (repeatable)
     - `--skip-json-path`: Strip a JSON Pointer field before validation, optionally scoped: `[apiVersion/kind:]/path` (repeatable)
     - `--skip-file`: Glob pattern matched against files and dirs; defaults to skipping dotfiles and dot-dirs (repeatable)
+    - `--skip-cel-rules`: Skip evaluation of `x-kubernetes-validations` CEL rules
     - `--fail-fast`: Exit after the first invalid document
     - `--concurrent`: Number of concurrent workers (default 8)
     - `--insecure-skip-tls-verify`: Disable TLS certificate verification when fetching schemas over HTTPS
@@ -98,16 +99,18 @@ flux-schema validate ./manifests \
 Output example with validation errors:
 
 ```
-manifests/sources.yaml - Bucket/apps/s3-data is invalid: schema violation
+manifests/releases.yaml - HelmRelease/apps/webapp is invalid: cel violation
+  - /spec: Invalid value: either 'chart' or 'chartRef' must be set
+manifests/sources.yaml - Bucket/apps/webapp-data is invalid: schema violation
   - /spec: missing property 'bucketName'
   - /spec/interval: got number, want string
   - /spec/secretRef/name: got object, want string
   - /spec: additional properties 'force' not allowed
-manifests/sources.yaml - OCIRepository/apps/podinfo is invalid: yaml parse error
+manifests/sources.yaml - OCIRepository/apps/webapp is invalid: yaml parse error
   - line 18: key "app.kubernetes.io/name" already set in map
-manifests/sources.yaml - HelmChart/apps/redis is valid
+manifests/sources.yaml - HelmChart/apps/webapp is valid
 manifests/sources.yaml - Secret/apps/auth-sops is skipped: kind skipped
-Summary: 4 resources found in 1 file - Valid: 1, Invalid: 2, Skipped: 1
+Summary: 5 resources found in 2 files - Valid: 1, Invalid: 3, Skipped: 1
 ```
 
 A non-zero exit code is returned when any document is invalid or errored.
@@ -118,7 +121,7 @@ For CI pipelines and tooling, pass `-o json` (or `-o yaml`) to emit a
 machine-readable report instead of text:
 
 ```shell
-flux-schema validate ./manifests -o json | jq '.report.summary'
+flux-schema validate ./manifests -o json
 ```
 
 See the [validation report reference](docs/report/README.md) for the full
@@ -137,6 +140,19 @@ type. The report is versioned by a published
   so undocumented fields under `spec` fail validation.
 - String formats `duration`, `date`, `datetime`/`date-time`, and `time` are validated
   matching Kubernetes API conventions.
+
+#### CEL validation rules
+
+By default, the validate command extracts the `x-kubernetes-validations`
+rules from the schemas and evaluates them as CEL expressions
+using the same engine as the Kubernetes API.
+
+CEL evaluation runs only after JSON Schema validation passes,
+and any rule violations are reported with the `cel-violation` reason.
+Transition rules referencing `oldSelf` evaluate with no prior state,
+matching the Kubernetes API behavior on `CREATE`.
+
+The CEL validation can be disabled with the `--skip-cel-rules` flag.
 
 #### Config file
 
@@ -166,6 +182,7 @@ validate:
   skip-file:
     - '.*'
     - kustomization.yaml
+  skip-cel-rules: false
   skip-missing-schemas: false
   verbose: true
   fail-fast: false

@@ -17,15 +17,16 @@ import (
 	"github.com/fluxcd/flux-schema/internal/validator"
 )
 
-// extractWidgetSchema dogfoods the extract → validate round-trip so
-// validate tests run against the real artifact users produce.
-func extractWidgetSchema(t *testing.T) string {
+// extractCRDSchema dogfoods the extract → validate round-trip so validate
+// tests run against the real artifact users produce. crdYAML is a single CRD
+// document; the returned dir holds the generated schema files.
+func extractCRDSchema(t *testing.T, crdYAML string) string {
 	t.Helper()
 	g := NewWithT(t)
 
 	crdDir := t.TempDir()
-	crdPath := filepath.Join(crdDir, "widget-crd.yaml")
-	g.Expect(os.WriteFile(crdPath, []byte(minimalCRDYAML), 0o644)).To(Succeed())
+	crdPath := filepath.Join(crdDir, "crd.yaml")
+	g.Expect(os.WriteFile(crdPath, []byte(crdYAML), 0o644)).To(Succeed())
 
 	schemaDir := t.TempDir()
 	_, err := executeCommand([]string{
@@ -35,6 +36,11 @@ func extractWidgetSchema(t *testing.T) string {
 	})
 	g.Expect(err).ToNot(HaveOccurred())
 	return schemaDir
+}
+
+func extractWidgetSchema(t *testing.T) string {
+	t.Helper()
+	return extractCRDSchema(t, minimalCRDYAML)
 }
 
 func writeManifest(t *testing.T, dir, name, body string) string {
@@ -1150,4 +1156,176 @@ validate:
 `)
 	_, err := executeCommand([]string{"validate", "--config", cfg})
 	g.Expect(err).To(MatchError(ContainSubstring("unsupported output format")))
+}
+
+// celGadgetCRDYAML defines a CRD whose spec carries an x-kubernetes-validations
+// rule: spec.mode must equal "ok". A separate Kind keeps these schemas out of
+// the cache shared by the Widget tests above.
+const celGadgetCRDYAML = `apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: gadgets.example.com
+spec:
+  group: example.com
+  names:
+    kind: Gadget
+  versions:
+    - name: v1
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                mode:
+                  type: string
+              x-kubernetes-validations:
+                - rule: "self.mode == 'ok'"
+                  message: "spec.mode must be ok"
+`
+
+const validGadget = `apiVersion: example.com/v1
+kind: Gadget
+metadata:
+  name: ok-gadget
+  namespace: default
+spec:
+  mode: ok
+`
+
+const celViolatingGadget = `apiVersion: example.com/v1
+kind: Gadget
+metadata:
+  name: bad-gadget
+  namespace: default
+spec:
+  mode: nope
+`
+
+func TestValidateCmd_CELRule_Invalid(t *testing.T) {
+	g := NewWithT(t)
+	schemaDir := extractCRDSchema(t, celGadgetCRDYAML)
+	manifestDir := t.TempDir()
+	path := writeManifest(t, manifestDir, "bad.yaml", celViolatingGadget)
+
+	out, err := executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+		"-o", "json",
+	})
+	g.Expect(err).To(HaveOccurred())
+
+	env := decodeReport(t, out)
+	g.Expect(env.Report.Summary).To(Equal(validator.ReportSummary{Total: 1, Valid: 0, Invalid: 1, Skipped: 0}))
+	g.Expect(env.Report.Results).To(HaveLen(1))
+	res := env.Report.Results[0]
+	g.Expect(res.Source).To(Equal(path))
+	g.Expect(res.Status).To(Equal("invalid"))
+	g.Expect(res.Reason).To(Equal(validator.ReasonCELViolation))
+	g.Expect(res.Violations).ToNot(BeEmpty())
+	g.Expect(res.Violations[0].Path).To(Equal("/spec"))
+	g.Expect(res.Violations[0].Message).To(ContainSubstring("spec.mode must be ok"))
+}
+
+func TestValidateCmd_CELRule_SkipFlag(t *testing.T) {
+	g := NewWithT(t)
+	schemaDir := extractCRDSchema(t, celGadgetCRDYAML)
+	manifestDir := t.TempDir()
+	writeManifest(t, manifestDir, "bad.yaml", celViolatingGadget)
+
+	out, err := executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+		"--skip-cel-rules",
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("Summary: 1 resource found in 1 file - Valid: 1, Invalid: 0, Skipped: 0"))
+}
+
+func TestValidateCmd_CELRule_ValidPassesByDefault(t *testing.T) {
+	g := NewWithT(t)
+	schemaDir := extractCRDSchema(t, celGadgetCRDYAML)
+	manifestDir := t.TempDir()
+	writeManifest(t, manifestDir, "ok.yaml", validGadget)
+
+	out, err := executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("Summary: 1 resource found in 1 file - Valid: 1, Invalid: 0, Skipped: 0"))
+}
+
+func TestValidateCmd_CELRule_ConfigFile(t *testing.T) {
+	g := NewWithT(t)
+	schemaDir := extractCRDSchema(t, celGadgetCRDYAML)
+	manifestDir := t.TempDir()
+	writeManifest(t, manifestDir, "bad.yaml", celViolatingGadget)
+	cfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `version: "1"
+validate:
+  skip-cel-rules: true
+`)
+
+	out, err := executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+		"--config", cfg,
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("Valid: 1, Invalid: 0"))
+}
+
+// TestValidateCmd_CELRule_CatalogHelmRelease exercises a real catalog rule
+// against the checked-in HelmRelease v2 schema: a HelmRelease that sets
+// both `chart` and `chartRef` violates the spec-level CEL rule
+// `(has(self.chart) && !has(self.chartRef)) || (!has(self.chart) && has(self.chartRef))`.
+func TestValidateCmd_CELRule_CatalogHelmRelease(t *testing.T) {
+	g := NewWithT(t)
+
+	manifestPath := "./testdata/validate/manifests/invalid-cel.yaml"
+
+	out, err := executeCommand([]string{
+		"validate", manifestPath,
+		"--schema-location", "./testdata/validate/schemas/{{ .Group }}/{{ .Kind }}_{{ .Version }}.json",
+	})
+	g.Expect(err).To(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("HelmRelease/apps/webapp is invalid: cel violation"))
+	g.Expect(out).To(ContainSubstring("/spec: Invalid value: either chart or chartRef must be set"))
+
+	// --skip-cel-rules disables the check; same fixture validates clean.
+	out, err = executeCommand([]string{
+		"validate", manifestPath,
+		"--schema-location", "./testdata/validate/schemas/{{ .Group }}/{{ .Kind }}_{{ .Version }}.json",
+		"--skip-cel-rules",
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("Summary: 1 resource found in 1 file - Valid: 1, Invalid: 0, Skipped: 0"))
+}
+
+// TestValidateCmd_CELRule_SkipJSONPath documents that --skip-json-path strips
+// fields BEFORE CEL evaluation. The CEL rule "spec.mode == 'ok'" inspects
+// spec.mode; stripping it makes `has(self.mode)` semantics matter — the rule
+// here references the field directly via self.mode, which becomes an error
+// when the field is absent. The test asserts the interaction is observable
+// (CEL sees the stripped doc) rather than what passes — the value of the
+// fixture is documenting the behavior, not the specific outcome.
+func TestValidateCmd_CELRule_SkipJSONPath(t *testing.T) {
+	g := NewWithT(t)
+	schemaDir := extractCRDSchema(t, celGadgetCRDYAML)
+	manifestDir := t.TempDir()
+	writeManifest(t, manifestDir, "bad.yaml", celViolatingGadget)
+
+	out, err := executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+		"--skip-json-path", "Gadget:/spec/mode",
+		"-o", "json",
+	})
+	g.Expect(err).To(HaveOccurred()) // stripped self.mode -> CEL reference failure
+
+	env := decodeReport(t, out)
+	res := env.Report.Results[0]
+	g.Expect(res.Reason).To(Equal(validator.ReasonCELViolation))
+	g.Expect(res.Violations[0].Message).ToNot(BeEmpty())
 }

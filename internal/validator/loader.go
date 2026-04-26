@@ -43,11 +43,35 @@ type SchemaLoader struct {
 	cache     sync.Map // map[string]*schemaCacheEntry
 }
 
+// loadResult is the populated outcome of a single loadAndCompile call.
+// celBuildErr is recorded as data, not an error return: it means "this
+// schema's CEL evaluator could not be built" (e.g. apiextensions/v1 cannot
+// decode the shape) and is surfaced per-document by validateDoc, never as a
+// schema-load failure. The hard schema-load error stays on the cache entry.
+type loadResult struct {
+	schema      *jsonschema.Schema
+	cel         *celValidator
+	celBuildErr error
+	found       bool
+}
+
 type schemaCacheEntry struct {
-	once   sync.Once
-	schema *jsonschema.Schema
-	found  bool
-	err    error
+	once sync.Once
+	loadResult
+	err error
+}
+
+// ResolvedSchema is the bundle of artifacts the loader produces for one
+// schema location: the compiled JSON Schema, plus an optional compiled CEL
+// evaluator. Either of the CEL fields may be set independently — the schema
+// may have rules that compiled fine (CEL set, CELBuildErr nil), or rules
+// that failed to set up (CEL nil, CELBuildErr non-nil), or no rules at all
+// (both nil).
+type ResolvedSchema struct {
+	JSON        *jsonschema.Schema
+	CEL         *celValidator
+	CELBuildErr error
+	Location    string
 }
 
 // NewSchemaLoader returns a loader that will try templates in order and
@@ -70,24 +94,29 @@ func NewSchemaLoader(templates []*template.Template, httpClient *retryablehttp.C
 // Resolve renders each template with vars and returns the first schema that
 // exists. found=false means every location responded with 404 / ENOENT;
 // callers decide whether that is an error or a skip.
-func (l *SchemaLoader) Resolve(ctx context.Context, vars tmpl.SchemaVars) (schema *jsonschema.Schema, location string, found bool, err error) {
+func (l *SchemaLoader) Resolve(ctx context.Context, vars tmpl.SchemaVars) (resolved *ResolvedSchema, found bool, err error) {
 	for _, tpl := range l.templates {
 		rendered, rerr := tmpl.Execute(tpl, vars)
 		if rerr != nil {
-			return nil, "", false, rerr
+			return nil, false, rerr
 		}
 		entry := l.cacheEntry(rendered)
 		entry.once.Do(func() {
-			entry.schema, entry.found, entry.err = l.loadAndCompile(ctx, rendered)
+			entry.loadResult, entry.err = l.loadAndCompile(ctx, rendered)
 		})
 		if entry.err != nil {
-			return nil, rendered, false, fmt.Errorf("%s: %w", rendered, entry.err)
+			return nil, false, fmt.Errorf("%s: %w", rendered, entry.err)
 		}
 		if entry.found {
-			return entry.schema, rendered, true, nil
+			return &ResolvedSchema{
+				JSON:        entry.schema,
+				CEL:         entry.cel,
+				CELBuildErr: entry.celBuildErr,
+				Location:    rendered,
+			}, true, nil
 		}
 	}
-	return nil, "", false, nil
+	return nil, false, nil
 }
 
 func (l *SchemaLoader) cacheEntry(location string) *schemaCacheEntry {
@@ -99,40 +128,62 @@ func (l *SchemaLoader) cacheEntry(location string) *schemaCacheEntry {
 }
 
 // loadAndCompile fetches location and compiles its contents as a JSON
-// Schema. Returns (nil, false, nil) when the location responded with
-// "not found" so the caller can fall through to the next template.
-func (l *SchemaLoader) loadAndCompile(ctx context.Context, location string) (*jsonschema.Schema, bool, error) {
+// Schema, then builds a CEL evaluator from the same document. The returned
+// loadResult has found=false when the location responded with "not found",
+// so the caller can fall through to the next template.
+//
+// CEL build is intentionally performed AFTER compileMu is released:
+// compileMu only guards compiler.AddResource/Compile, and holding it across
+// CEL construction would serialize unrelated schemas' CEL builds. A CEL
+// build failure is recorded on the result (celBuildErr) rather than
+// returned, because it must not block JSON Schema validation.
+func (l *SchemaLoader) loadAndCompile(ctx context.Context, location string) (loadResult, error) {
+	var r loadResult
 	body, found, err := l.loadBytes(ctx, location)
-	if err != nil {
-		return nil, false, err
-	}
-	if !found {
-		return nil, false, nil
+	if err != nil || !found {
+		return r, err
 	}
 
 	baseURI, err := baseURIFor(location)
 	if err != nil {
-		return nil, false, err
+		return r, err
 	}
 
 	var doc any
 	if err := yaml.Unmarshal(body, &doc); err != nil {
-		return nil, false, fmt.Errorf("parse schema: %w", err)
+		return r, fmt.Errorf("parse schema: %w", err)
 	}
 
+	r.schema, err = l.compileJSONSchema(baseURI, doc)
+	if err != nil {
+		return loadResult{}, err
+	}
+	r.found = true
+
+	if rootMap, ok := doc.(map[string]any); ok {
+		r.cel, r.celBuildErr = newCELValidator(rootMap)
+	}
+	return r, nil
+}
+
+// compileJSONSchema serializes access to the shared jsonschema.Compiler.
+// jsonschema.Compiler is not safe for concurrent use; the per-entry sync.Once
+// only dedupes work per location, so cross-location calls still need this
+// mutex. Kept narrow so it doesn't serialize unrelated work (e.g. CEL build).
+func (l *SchemaLoader) compileJSONSchema(baseURI string, doc any) (*jsonschema.Schema, error) {
 	l.compileMu.Lock()
 	defer l.compileMu.Unlock()
 
 	if err := l.compiler.AddResource(baseURI, doc); err != nil {
 		if !errors.As(err, new(*jsonschema.ResourceExistsError)) {
-			return nil, false, fmt.Errorf("add schema resource: %w", err)
+			return nil, fmt.Errorf("add schema resource: %w", err)
 		}
 	}
 	schema, err := l.compiler.Compile(baseURI)
 	if err != nil {
-		return nil, false, fmt.Errorf("compile schema: %w", err)
+		return nil, fmt.Errorf("compile schema: %w", err)
 	}
-	return schema, true, nil
+	return schema, nil
 }
 
 // loadBytes fetches a schema from an http(s) URL or the local filesystem.

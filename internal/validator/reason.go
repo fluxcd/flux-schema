@@ -44,6 +44,13 @@ const (
 	// constraints. Errors carries one entry per violation with a JSON Pointer
 	// Path to the offending field.
 	ReasonSchemaViolation Reason = "schema-violation"
+
+	// ReasonCELViolation indicates the document failed one or more CEL rules
+	// declared via x-kubernetes-validations in the schema, or the schema's
+	// CEL evaluator could not be built. Distinct from ReasonSchemaViolation
+	// so report consumers can filter on it; the underlying JSON Schema
+	// constraints all passed.
+	ReasonCELViolation Reason = "cel-violation"
 )
 
 // String returns the human-readable form used in text output: the kebab-case

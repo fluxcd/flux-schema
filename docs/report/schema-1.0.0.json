@@ -72,7 +72,8 @@
             "kind-skipped",
             "schema-load-error",
             "schema-not-found",
-            "schema-violation"
+            "schema-violation",
+            "cel-violation"
           ]
         },
         "violations": {
