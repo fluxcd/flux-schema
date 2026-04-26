@@ -51,6 +51,7 @@ func resetCmdArgs() {
 	versionArgs = versionFlags{output: "text"}
 	extractCRDArgs = extractCRDFlags{ExtractOutput: flags.NewExtractOutput()}
 	extractK8sArgs = extractK8sFlags{ExtractOutput: flags.NewExtractOutput()}
+	extractOpenShiftArgs = extractOpenShiftFlags{ExtractOutput: flags.NewExtractOutput()}
 	validateArgs = validateFlags{concurrent: validator.DefaultWorkers, output: "text"}
 
 	// pflag.Flag.Changed persists across Execute calls on the shared rootCmd,

@@ -36,6 +36,9 @@ Flux CLI plugin for Kubernetes schema extraction and manifests validation agains
 - `flux-schema extract k8s [swagger-file]`: Extract JSON Schema from a Kubernetes OpenAPI v2 swagger document
   - `--version X.Y.Z`: Fetch the swagger from `kubernetes/kubernetes` for the given release tag (mutually exclusive with a swagger file)
   - `-d, --output-dir`, `-f, --output-format`, `--strip-description`: same as `extract crd`
+- `flux-schema extract openshift [swagger-file]`: Extract JSON Schema from an `openshift/api` OpenAPI v2 swagger document
+  - `--ref REF`: Fetch the swagger from `openshift/api` at the given git ref (e.g. `release-4.20`); mutually exclusive with a swagger file
+  - `-d, --output-dir`, `-f, --output-format`, `--strip-description`: same as `extract k8s`
 
 ### Kubernetes Manifests Validation
 
@@ -43,7 +46,7 @@ The validate command reads Kubernetes YAML manifests from one or more files or d
 and validates each document against a JSON Schema resolved from its `apiVersion` and `kind`.
 
 When no `--schema-location` is given, validate uses the [flux-schema catalog](catalog/README.md),
-which covers the latest Kubernetes APIs, the stable channel of Gateway API,
+which covers the latest Kubernetes and OpenShift APIs, the stable channel of Gateway API,
 and the Flux ecosystem CRDs:
 
 ```shell
@@ -284,3 +287,27 @@ The emitted schemas are the standalone-strict variant:
 - Optional fields are marked nullable (`type: [<t>, "null"]`), matching the
   Kubernetes API server's behavior of accepting `null` for unset optional values.
 - `apiVersion` and `kind` are injected into every kind's properties and required list.
+
+### OpenShift OpenAPI Extraction
+
+The `extract openshift` command reads the `openshift/api` OpenAPI v2 swagger document
+and writes one JSON Schema file per OpenShift resource. Only definitions in the
+`openshift` namespace are emitted; the upstream Kubernetes types
+embedded in the same document (e.g. `Pod`) are inlined.
+
+Fetch the swagger from `openshift/api` at a release branch:
+
+```shell
+flux-schema extract openshift --ref release-4.20 -d ./schemas
+```
+
+Supply the swagger file:
+
+```shell
+curl -sL https://raw.githubusercontent.com/openshift/api/release-4.20/openapi/openapi.json \
+  flux-schema extract openshift -d ./schemas
+```
+
+The same `-f, --output-format` template used by `extract k8s` works here, so the
+generated files remain resolvable by `validate` with a single `--schema-location`
+for both Kubernetes and OpenShift resources. 

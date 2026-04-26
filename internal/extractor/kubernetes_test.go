@@ -10,7 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-// mustMarshal serialises v as JSON for ExtractOpenAPI test inputs.
+// mustMarshal serialises v as JSON for ExtractKubernetes test inputs.
 func mustMarshal(t *testing.T, v any) []byte {
 	t.Helper()
 	b, err := json.Marshal(v)
@@ -20,40 +20,40 @@ func mustMarshal(t *testing.T, v any) []byte {
 	return b
 }
 
-func TestExtractOpenAPI_NoDefinitions(t *testing.T) {
+func TestExtractKubernetes_NoDefinitions(t *testing.T) {
 	g := NewWithT(t)
-	_, errs := ExtractOpenAPI([]byte(`{}`))
+	_, errs := ExtractKubernetes([]byte(`{}`))
 	g.Expect(errs).To(HaveLen(1))
 	g.Expect(errs[0].Error()).To(ContainSubstring("no 'definitions'"))
 }
 
-func TestExtractOpenAPI_InvalidJSON(t *testing.T) {
+func TestExtractKubernetes_InvalidJSON(t *testing.T) {
 	g := NewWithT(t)
-	_, errs := ExtractOpenAPI([]byte(`not json`))
+	_, errs := ExtractKubernetes([]byte(`not json`))
 	g.Expect(errs).To(HaveLen(1))
 	g.Expect(errs[0].Error()).To(ContainSubstring("decode swagger"))
 }
 
-func TestExtractOpenAPI_NonObjectRoot(t *testing.T) {
+func TestExtractKubernetes_NonObjectRoot(t *testing.T) {
 	g := NewWithT(t)
-	_, errs := ExtractOpenAPI([]byte(`[]`))
+	_, errs := ExtractKubernetes([]byte(`[]`))
 	g.Expect(errs).To(HaveLen(1))
 	g.Expect(errs[0].Error()).To(ContainSubstring("not a JSON object"))
 }
 
-func TestExtractOpenAPI_SkipsDefinitionsWithoutGVK(t *testing.T) {
+func TestExtractKubernetes_SkipsDefinitionsWithoutGVK(t *testing.T) {
 	g := NewWithT(t)
 	doc := map[string]any{
 		"definitions": map[string]any{
 			"helper": map[string]any{"type": "object"},
 		},
 	}
-	out, errs := ExtractOpenAPI(mustMarshal(t, doc))
+	out, errs := ExtractKubernetes(mustMarshal(t, doc))
 	g.Expect(errs).To(BeEmpty())
 	g.Expect(out).To(BeEmpty())
 }
 
-func TestExtractOpenAPI_InlinesRef(t *testing.T) {
+func TestExtractKubernetes_InlinesRef(t *testing.T) {
 	g := NewWithT(t)
 	doc := map[string]any{
 		"definitions": map[string]any{
@@ -75,7 +75,7 @@ func TestExtractOpenAPI_InlinesRef(t *testing.T) {
 			},
 		},
 	}
-	out, errs := ExtractOpenAPI(mustMarshal(t, doc))
+	out, errs := ExtractKubernetes(mustMarshal(t, doc))
 	g.Expect(errs).To(BeEmpty())
 	g.Expect(out).To(HaveLen(1))
 	widget := out[0]
@@ -89,7 +89,7 @@ func TestExtractOpenAPI_InlinesRef(t *testing.T) {
 	g.Expect(helper).To(HaveKey("properties"))
 }
 
-func TestExtractOpenAPI_CoreGroupKept(t *testing.T) {
+func TestExtractKubernetes_CoreGroupKept(t *testing.T) {
 	g := NewWithT(t)
 	doc := map[string]any{
 		"definitions": map[string]any{
@@ -101,7 +101,7 @@ func TestExtractOpenAPI_CoreGroupKept(t *testing.T) {
 			},
 		},
 	}
-	out, errs := ExtractOpenAPI(mustMarshal(t, doc))
+	out, errs := ExtractKubernetes(mustMarshal(t, doc))
 	g.Expect(errs).To(BeEmpty())
 	g.Expect(out).To(HaveLen(1))
 	// Group left empty here; tmpl.Execute normalizes to "core".
@@ -109,7 +109,7 @@ func TestExtractOpenAPI_CoreGroupKept(t *testing.T) {
 	g.Expect(out[0].Kind).To(Equal("Pod"))
 }
 
-func TestExtractOpenAPI_IntOrString(t *testing.T) {
+func TestExtractKubernetes_IntOrString(t *testing.T) {
 	g := NewWithT(t)
 	doc := map[string]any{
 		"definitions": map[string]any{
@@ -130,7 +130,7 @@ func TestExtractOpenAPI_IntOrString(t *testing.T) {
 			},
 		},
 	}
-	out, errs := ExtractOpenAPI(mustMarshal(t, doc))
+	out, errs := ExtractKubernetes(mustMarshal(t, doc))
 	g.Expect(errs).To(BeEmpty())
 	g.Expect(out).To(HaveLen(1))
 
@@ -143,7 +143,7 @@ func TestExtractOpenAPI_IntOrString(t *testing.T) {
 	g.Expect(port).ToNot(HaveKey("x-kubernetes-int-or-string"))
 }
 
-func TestExtractOpenAPI_PreserveUnknownFields(t *testing.T) {
+func TestExtractKubernetes_PreserveUnknownFields(t *testing.T) {
 	g := NewWithT(t)
 	doc := map[string]any{
 		"definitions": map[string]any{
@@ -165,7 +165,7 @@ func TestExtractOpenAPI_PreserveUnknownFields(t *testing.T) {
 			},
 		},
 	}
-	out, errs := ExtractOpenAPI(mustMarshal(t, doc))
+	out, errs := ExtractKubernetes(mustMarshal(t, doc))
 	g.Expect(errs).To(BeEmpty())
 	g.Expect(out).To(HaveLen(1))
 
@@ -177,7 +177,7 @@ func TestExtractOpenAPI_PreserveUnknownFields(t *testing.T) {
 	g.Expect(hasAP).To(BeFalse(), "preserve-unknown subtree stays open")
 }
 
-func TestExtractOpenAPI_PreserveUnknownFieldsSkipsNullable(t *testing.T) {
+func TestExtractKubernetes_PreserveUnknownFieldsSkipsNullable(t *testing.T) {
 	g := NewWithT(t)
 	doc := map[string]any{
 		"definitions": map[string]any{
@@ -199,7 +199,7 @@ func TestExtractOpenAPI_PreserveUnknownFieldsSkipsNullable(t *testing.T) {
 			},
 		},
 	}
-	out, errs := ExtractOpenAPI(mustMarshal(t, doc))
+	out, errs := ExtractKubernetes(mustMarshal(t, doc))
 	g.Expect(errs).To(BeEmpty())
 
 	values := out[0].JSON["properties"].(map[string]any)["values"].(map[string]any)
@@ -208,7 +208,7 @@ func TestExtractOpenAPI_PreserveUnknownFieldsSkipsNullable(t *testing.T) {
 		"properties inside a preserve-unknown subtree must not be nulled")
 }
 
-func TestExtractOpenAPI_NestedNullableOptional(t *testing.T) {
+func TestExtractKubernetes_NestedNullableOptional(t *testing.T) {
 	g := NewWithT(t)
 	// Each nested object has its own required array; nulling must not
 	// propagate downward.
@@ -233,7 +233,7 @@ func TestExtractOpenAPI_NestedNullableOptional(t *testing.T) {
 			},
 		},
 	}
-	out, errs := ExtractOpenAPI(mustMarshal(t, doc))
+	out, errs := ExtractKubernetes(mustMarshal(t, doc))
 	g.Expect(errs).To(BeEmpty())
 
 	spec := out[0].JSON["properties"].(map[string]any)["spec"].(map[string]any)
@@ -244,7 +244,7 @@ func TestExtractOpenAPI_NestedNullableOptional(t *testing.T) {
 	g.Expect(optional["type"]).To(ConsistOf("integer", "null"), "optional nested field is nulled")
 }
 
-func TestExtractOpenAPI_IndirectCycle(t *testing.T) {
+func TestExtractKubernetes_IndirectCycle(t *testing.T) {
 	g := NewWithT(t)
 	// A refs B, B refs A. This is the real-world shape of JSONSchemaProps /
 	// JSONSchemaPropsOrArray.
@@ -267,7 +267,7 @@ func TestExtractOpenAPI_IndirectCycle(t *testing.T) {
 			},
 		},
 	}
-	out, errs := ExtractOpenAPI(mustMarshal(t, doc))
+	out, errs := ExtractKubernetes(mustMarshal(t, doc))
 	g.Expect(errs).To(BeEmpty())
 	g.Expect(out).To(HaveLen(1))
 
@@ -278,7 +278,7 @@ func TestExtractOpenAPI_IndirectCycle(t *testing.T) {
 	g.Expect(a["x-kubernetes-preserve-unknown-fields"]).To(BeTrue())
 }
 
-func TestExtractOpenAPI_NullableOptional(t *testing.T) {
+func TestExtractKubernetes_NullableOptional(t *testing.T) {
 	g := NewWithT(t)
 	doc := map[string]any{
 		"definitions": map[string]any{
@@ -295,7 +295,7 @@ func TestExtractOpenAPI_NullableOptional(t *testing.T) {
 			},
 		},
 	}
-	out, errs := ExtractOpenAPI(mustMarshal(t, doc))
+	out, errs := ExtractKubernetes(mustMarshal(t, doc))
 	g.Expect(errs).To(BeEmpty())
 
 	props := out[0].JSON["properties"].(map[string]any)
@@ -306,7 +306,7 @@ func TestExtractOpenAPI_NullableOptional(t *testing.T) {
 	g.Expect(optional["type"]).To(ConsistOf("integer", "null"))
 }
 
-func TestExtractOpenAPI_NullableIdempotent(t *testing.T) {
+func TestExtractKubernetes_NullableIdempotent(t *testing.T) {
 	g := NewWithT(t)
 	// Optional field already typed as a list containing null — should not double-add.
 	doc := map[string]any{
@@ -322,7 +322,7 @@ func TestExtractOpenAPI_NullableIdempotent(t *testing.T) {
 			},
 		},
 	}
-	out, errs := ExtractOpenAPI(mustMarshal(t, doc))
+	out, errs := ExtractKubernetes(mustMarshal(t, doc))
 	g.Expect(errs).To(BeEmpty())
 
 	props := out[0].JSON["properties"].(map[string]any)
@@ -330,7 +330,7 @@ func TestExtractOpenAPI_NullableIdempotent(t *testing.T) {
 	g.Expect(already["type"]).To(ConsistOf("string", "null"))
 }
 
-func TestExtractOpenAPI_OneOfGetsNullBranch(t *testing.T) {
+func TestExtractKubernetes_OneOfGetsNullBranch(t *testing.T) {
 	g := NewWithT(t)
 	doc := map[string]any{
 		"definitions": map[string]any{
@@ -350,7 +350,7 @@ func TestExtractOpenAPI_OneOfGetsNullBranch(t *testing.T) {
 			},
 		},
 	}
-	out, errs := ExtractOpenAPI(mustMarshal(t, doc))
+	out, errs := ExtractKubernetes(mustMarshal(t, doc))
 	g.Expect(errs).To(BeEmpty())
 
 	props := out[0].JSON["properties"].(map[string]any)
@@ -360,7 +360,7 @@ func TestExtractOpenAPI_OneOfGetsNullBranch(t *testing.T) {
 	g.Expect(oneOf[2]).To(Equal(map[string]any{"type": "null"}))
 }
 
-func TestExtractOpenAPI_OneOfWithExistingNullBranch(t *testing.T) {
+func TestExtractKubernetes_OneOfWithExistingNullBranch(t *testing.T) {
 	g := NewWithT(t)
 	doc := map[string]any{
 		"definitions": map[string]any{
@@ -380,7 +380,7 @@ func TestExtractOpenAPI_OneOfWithExistingNullBranch(t *testing.T) {
 			},
 		},
 	}
-	out, errs := ExtractOpenAPI(mustMarshal(t, doc))
+	out, errs := ExtractKubernetes(mustMarshal(t, doc))
 	g.Expect(errs).To(BeEmpty())
 
 	props := out[0].JSON["properties"].(map[string]any)
@@ -389,7 +389,7 @@ func TestExtractOpenAPI_OneOfWithExistingNullBranch(t *testing.T) {
 	g.Expect(oneOf).To(HaveLen(2), "existing null branch prevents a duplicate")
 }
 
-func TestExtractOpenAPI_ObjectWithEmptyRequired(t *testing.T) {
+func TestExtractKubernetes_ObjectWithEmptyRequired(t *testing.T) {
 	g := NewWithT(t)
 	// required: [] means every property is optional.
 	doc := map[string]any{
@@ -406,7 +406,7 @@ func TestExtractOpenAPI_ObjectWithEmptyRequired(t *testing.T) {
 			},
 		},
 	}
-	out, errs := ExtractOpenAPI(mustMarshal(t, doc))
+	out, errs := ExtractKubernetes(mustMarshal(t, doc))
 	g.Expect(errs).To(BeEmpty())
 
 	props := out[0].JSON["properties"].(map[string]any)
@@ -414,7 +414,7 @@ func TestExtractOpenAPI_ObjectWithEmptyRequired(t *testing.T) {
 	g.Expect(a["type"]).To(ConsistOf("string", "null"))
 }
 
-func TestExtractOpenAPI_GVKInjection(t *testing.T) {
+func TestExtractKubernetes_GVKInjection(t *testing.T) {
 	g := NewWithT(t)
 	doc := map[string]any{
 		"definitions": map[string]any{
@@ -426,7 +426,7 @@ func TestExtractOpenAPI_GVKInjection(t *testing.T) {
 			},
 		},
 	}
-	out, errs := ExtractOpenAPI(mustMarshal(t, doc))
+	out, errs := ExtractKubernetes(mustMarshal(t, doc))
 	g.Expect(errs).To(BeEmpty())
 
 	schema := out[0].JSON
@@ -442,7 +442,7 @@ func TestExtractOpenAPI_GVKInjection(t *testing.T) {
 	g.Expect(required).To(ContainElement("kind"))
 }
 
-func TestExtractOpenAPI_GVKInjectionIdempotent(t *testing.T) {
+func TestExtractKubernetes_GVKInjectionIdempotent(t *testing.T) {
 	g := NewWithT(t)
 	// Existing apiVersion / kind properties are left untouched.
 	doc := map[string]any{
@@ -459,7 +459,7 @@ func TestExtractOpenAPI_GVKInjectionIdempotent(t *testing.T) {
 			},
 		},
 	}
-	out, errs := ExtractOpenAPI(mustMarshal(t, doc))
+	out, errs := ExtractKubernetes(mustMarshal(t, doc))
 	g.Expect(errs).To(BeEmpty())
 
 	props := out[0].JSON["properties"].(map[string]any)
@@ -469,7 +469,7 @@ func TestExtractOpenAPI_GVKInjectionIdempotent(t *testing.T) {
 	g.Expect(kind["default"]).To(Equal("Widget"))
 }
 
-func TestExtractOpenAPI_NoMetadataForBinding(t *testing.T) {
+func TestExtractKubernetes_NoMetadataForBinding(t *testing.T) {
 	g := NewWithT(t)
 	// A kind without metadata (e.g. Binding-shaped) must not gain a metadata
 	// property and must not require metadata.
@@ -483,7 +483,7 @@ func TestExtractOpenAPI_NoMetadataForBinding(t *testing.T) {
 			},
 		},
 	}
-	out, errs := ExtractOpenAPI(mustMarshal(t, doc))
+	out, errs := ExtractKubernetes(mustMarshal(t, doc))
 	g.Expect(errs).To(BeEmpty())
 
 	props := out[0].JSON["properties"].(map[string]any)
@@ -492,7 +492,7 @@ func TestExtractOpenAPI_NoMetadataForBinding(t *testing.T) {
 	g.Expect(required).ToNot(ContainElement("metadata"))
 }
 
-func TestExtractOpenAPI_RefSiblingMetadataWins(t *testing.T) {
+func TestExtractKubernetes_RefSiblingMetadataWins(t *testing.T) {
 	g := NewWithT(t)
 	doc := map[string]any{
 		"definitions": map[string]any{
@@ -515,14 +515,14 @@ func TestExtractOpenAPI_RefSiblingMetadataWins(t *testing.T) {
 			},
 		},
 	}
-	out, errs := ExtractOpenAPI(mustMarshal(t, doc))
+	out, errs := ExtractKubernetes(mustMarshal(t, doc))
 	g.Expect(errs).To(BeEmpty())
 
 	helper := out[0].JSON["properties"].(map[string]any)["helper"].(map[string]any)
 	g.Expect(helper["default"]).To(Equal("contextual"))
 }
 
-func TestExtractOpenAPI_RefSiblingTypeLoses(t *testing.T) {
+func TestExtractKubernetes_RefSiblingTypeLoses(t *testing.T) {
 	g := NewWithT(t)
 	doc := map[string]any{
 		"definitions": map[string]any{
@@ -547,14 +547,14 @@ func TestExtractOpenAPI_RefSiblingTypeLoses(t *testing.T) {
 			},
 		},
 	}
-	out, errs := ExtractOpenAPI(mustMarshal(t, doc))
+	out, errs := ExtractKubernetes(mustMarshal(t, doc))
 	g.Expect(errs).To(BeEmpty())
 
 	helper := out[0].JSON["properties"].(map[string]any)["helper"].(map[string]any)
 	g.Expect(helper["type"]).To(Equal("object"), "structural type from the inlined definition wins")
 }
 
-func TestExtractOpenAPI_RefCycleBailsOut(t *testing.T) {
+func TestExtractKubernetes_RefCycleBailsOut(t *testing.T) {
 	g := NewWithT(t)
 	doc := map[string]any{
 		"definitions": map[string]any{
@@ -569,14 +569,14 @@ func TestExtractOpenAPI_RefCycleBailsOut(t *testing.T) {
 			},
 		},
 	}
-	out, errs := ExtractOpenAPI(mustMarshal(t, doc))
+	out, errs := ExtractKubernetes(mustMarshal(t, doc))
 	g.Expect(errs).To(BeEmpty())
 
 	self := out[0].JSON["properties"].(map[string]any)["self"].(map[string]any)
 	g.Expect(self["x-kubernetes-preserve-unknown-fields"]).To(BeTrue())
 }
 
-func TestExtractOpenAPI_MultipleGVK(t *testing.T) {
+func TestExtractKubernetes_MultipleGVK(t *testing.T) {
 	g := NewWithT(t)
 	doc := map[string]any{
 		"definitions": map[string]any{
@@ -589,12 +589,12 @@ func TestExtractOpenAPI_MultipleGVK(t *testing.T) {
 			},
 		},
 	}
-	out, errs := ExtractOpenAPI(mustMarshal(t, doc))
+	out, errs := ExtractKubernetes(mustMarshal(t, doc))
 	g.Expect(errs).To(BeEmpty())
 	g.Expect(out).To(HaveLen(2))
 }
 
-func TestExtractOpenAPI_MissingRefIsError(t *testing.T) {
+func TestExtractKubernetes_MissingRefIsError(t *testing.T) {
 	g := NewWithT(t)
 	doc := map[string]any{
 		"definitions": map[string]any{
@@ -610,7 +610,7 @@ func TestExtractOpenAPI_MissingRefIsError(t *testing.T) {
 			},
 		},
 	}
-	out, errs := ExtractOpenAPI(mustMarshal(t, doc))
+	out, errs := ExtractKubernetes(mustMarshal(t, doc))
 	// Processing continues; a placeholder is emitted.
 	g.Expect(errs).To(BeEmpty())
 	g.Expect(out).To(HaveLen(1))
@@ -620,7 +620,7 @@ func TestExtractOpenAPI_MissingRefIsError(t *testing.T) {
 	g.Expect(broken["description"]).To(ContainSubstring("unresolved $ref"))
 }
 
-func TestExtractOpenAPI_StripsVendorExtensions(t *testing.T) {
+func TestExtractKubernetes_StripsVendorExtensions(t *testing.T) {
 	g := NewWithT(t)
 	doc := map[string]any{
 		"definitions": map[string]any{
@@ -648,7 +648,7 @@ func TestExtractOpenAPI_StripsVendorExtensions(t *testing.T) {
 			},
 		},
 	}
-	out, errs := ExtractOpenAPI(mustMarshal(t, doc))
+	out, errs := ExtractKubernetes(mustMarshal(t, doc))
 	g.Expect(errs).To(BeEmpty())
 
 	g.Expect(out[0].JSON).ToNot(HaveKey("x-kubernetes-group-version-kind"))
@@ -665,7 +665,7 @@ func TestExtractOpenAPI_StripsVendorExtensions(t *testing.T) {
 	g.Expect(count).To(HaveKey("x-kubernetes-validations"))
 }
 
-func TestExtractOpenAPI_PreservesDescriptions(t *testing.T) {
+func TestExtractKubernetes_PreservesDescriptions(t *testing.T) {
 	g := NewWithT(t)
 	doc := map[string]any{
 		"definitions": map[string]any{
@@ -684,7 +684,7 @@ func TestExtractOpenAPI_PreservesDescriptions(t *testing.T) {
 			},
 		},
 	}
-	out, errs := ExtractOpenAPI(mustMarshal(t, doc))
+	out, errs := ExtractKubernetes(mustMarshal(t, doc))
 	g.Expect(errs).To(BeEmpty())
 
 	g.Expect(out[0].JSON["description"]).To(Equal("top-level description"))
@@ -692,7 +692,7 @@ func TestExtractOpenAPI_PreservesDescriptions(t *testing.T) {
 	g.Expect(name["description"]).To(Equal("property description"))
 }
 
-func TestExtractOpenAPI_SortedOutput(t *testing.T) {
+func TestExtractKubernetes_SortedOutput(t *testing.T) {
 	g := NewWithT(t)
 	doc := map[string]any{
 		"definitions": map[string]any{
@@ -710,14 +710,14 @@ func TestExtractOpenAPI_SortedOutput(t *testing.T) {
 			},
 		},
 	}
-	out, errs := ExtractOpenAPI(mustMarshal(t, doc))
+	out, errs := ExtractKubernetes(mustMarshal(t, doc))
 	g.Expect(errs).To(BeEmpty())
 	g.Expect(out).To(HaveLen(2))
 	g.Expect(out[0].Group).To(Equal("a.example.com"))
 	g.Expect(out[1].Group).To(Equal("b.example.com"))
 }
 
-func TestExtractOpenAPI_PreservesJSONNumber(t *testing.T) {
+func TestExtractKubernetes_PreservesJSONNumber(t *testing.T) {
 	g := NewWithT(t)
 	// Use raw JSON so the integer literal stays exact through UseNumber.
 	raw := []byte(`{
@@ -734,7 +734,7 @@ func TestExtractOpenAPI_PreservesJSONNumber(t *testing.T) {
     }
   }
 }`)
-	out, errs := ExtractOpenAPI(raw)
+	out, errs := ExtractKubernetes(raw)
 	g.Expect(errs).To(BeEmpty())
 
 	count := out[0].JSON["properties"].(map[string]any)["count"].(map[string]any)
@@ -742,7 +742,7 @@ func TestExtractOpenAPI_PreservesJSONNumber(t *testing.T) {
 	g.Expect(count["minimum"].(json.Number).String()).To(Equal("1"))
 }
 
-func TestExtractOpenAPI_RootIsClosed(t *testing.T) {
+func TestExtractKubernetes_RootIsClosed(t *testing.T) {
 	g := NewWithT(t)
 	doc := map[string]any{
 		"definitions": map[string]any{
@@ -757,13 +757,13 @@ func TestExtractOpenAPI_RootIsClosed(t *testing.T) {
 			},
 		},
 	}
-	out, errs := ExtractOpenAPI(mustMarshal(t, doc))
+	out, errs := ExtractKubernetes(mustMarshal(t, doc))
 	g.Expect(errs).To(BeEmpty())
 	g.Expect(out[0].JSON["additionalProperties"]).To(BeFalse(),
 		"root must reject undocumented top-level keys")
 }
 
-func TestExtractOpenAPI_DoesNotOverwriteExistingAdditionalProperties(t *testing.T) {
+func TestExtractKubernetes_DoesNotOverwriteExistingAdditionalProperties(t *testing.T) {
 	g := NewWithT(t)
 	doc := map[string]any{
 		"definitions": map[string]any{
@@ -782,7 +782,7 @@ func TestExtractOpenAPI_DoesNotOverwriteExistingAdditionalProperties(t *testing.
 			},
 		},
 	}
-	out, errs := ExtractOpenAPI(mustMarshal(t, doc))
+	out, errs := ExtractKubernetes(mustMarshal(t, doc))
 	g.Expect(errs).To(BeEmpty())
 
 	labels := out[0].JSON["properties"].(map[string]any)["labels"].(map[string]any)
