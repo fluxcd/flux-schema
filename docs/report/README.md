@@ -48,6 +48,7 @@ Every report is wrapped in a top-level envelope:
 | `schema-load-error` | Schema loader failure (HTTP fetch, file read, or JSON Schema compile).                                 | `invalid` / `invalid`                            |
 | `schema-not-found`  | No schema applicable — either no schema file matches the GVK, or the document has no GVK to look up.   | `invalid` / `skipped`                            |
 | `schema-violation`  | Document fails one or more schema constraints. `violations[]` carries a JSON Pointer `path` per entry. | `invalid` / `invalid`                            |
+| `cel-violation`     | Document fails one or more `x-kubernetes-validations` CEL rules, or the schema's CEL evaluator could not be built. JSON Schema constraints all passed. | `invalid` / `invalid`                            |
 | `kind-skipped`      | Matched a `--skip-kind` pattern.                                                                       | `skipped` / `skipped`                            |
 
 ## Example

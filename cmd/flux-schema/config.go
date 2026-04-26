@@ -28,6 +28,7 @@ type validateConfig struct {
 	SkipKinds             []string `json:"skip-kind,omitempty"`
 	SkipJSONPaths         []string `json:"skip-json-path,omitempty"`
 	SkipFiles             []string `json:"skip-file,omitempty"`
+	SkipCELRules          bool     `json:"skip-cel-rules,omitempty"`
 	Verbose               bool     `json:"verbose,omitempty"`
 	FailFast              bool     `json:"fail-fast,omitempty"`
 	Concurrent            *int     `json:"concurrent,omitempty"`
@@ -77,6 +78,9 @@ func applyValidateConfig(cmd *cobra.Command, cfg *validateConfig, args *validate
 	}
 	if cfg.SkipFiles != nil && !flags.Changed("skip-file") {
 		args.skipFiles = cfg.SkipFiles
+	}
+	if !flags.Changed("skip-cel-rules") {
+		args.skipCELRules = cfg.SkipCELRules
 	}
 	if !flags.Changed("verbose") {
 		args.verbose = cfg.Verbose

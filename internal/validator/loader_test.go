@@ -48,11 +48,12 @@ func TestSchemaLoader_Resolve_LocalFile(t *testing.T) {
 	writeWidgetSchema(t, dir)
 	l := newTestLoader(t, filepath.Join(dir, "{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json"))
 
-	schema, location, found, err := l.Resolve(context.Background(), widgetVars)
+	resolved, found, err := l.Resolve(context.Background(), widgetVars)
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(found).To(BeTrue())
-	g.Expect(schema).ToNot(BeNil())
-	g.Expect(location).To(Equal(filepath.Join(dir, "widget-example-v1.json")))
+	g.Expect(resolved).ToNot(BeNil())
+	g.Expect(resolved.JSON).ToNot(BeNil())
+	g.Expect(resolved.Location).To(Equal(filepath.Join(dir, "widget-example-v1.json")))
 }
 
 func TestSchemaLoader_Resolve_FileNotFoundReturnsNotFound(t *testing.T) {
@@ -60,7 +61,7 @@ func TestSchemaLoader_Resolve_FileNotFoundReturnsNotFound(t *testing.T) {
 	dir := t.TempDir()
 	l := newTestLoader(t, filepath.Join(dir, "{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json"))
 
-	_, _, found, err := l.Resolve(context.Background(), widgetVars)
+	_, found, err := l.Resolve(context.Background(), widgetVars)
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(found).To(BeFalse())
 }
@@ -69,7 +70,7 @@ func TestSchemaLoader_Resolve_NoLocationConfigured(t *testing.T) {
 	g := NewWithT(t)
 	l := newTestLoader(t) // zero locations
 
-	_, _, found, err := l.Resolve(context.Background(), widgetVars)
+	_, found, err := l.Resolve(context.Background(), widgetVars)
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(found).To(BeFalse())
 }
@@ -85,10 +86,10 @@ func TestSchemaLoader_Resolve_MultipleLocationsFallthrough(t *testing.T) {
 		filepath.Join(realDir, "{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json"),
 	)
 
-	_, location, found, err := l.Resolve(context.Background(), widgetVars)
+	resolved, found, err := l.Resolve(context.Background(), widgetVars)
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(found).To(BeTrue())
-	g.Expect(location).To(HavePrefix(realDir))
+	g.Expect(resolved.Location).To(HavePrefix(realDir))
 }
 
 func TestSchemaLoader_Resolve_HTTP200(t *testing.T) {
@@ -100,12 +101,12 @@ func TestSchemaLoader_Resolve_HTTP200(t *testing.T) {
 	t.Cleanup(srv.Close)
 
 	l := newTestLoader(t, srv.URL+"/{{ .Kind }}_{{ .Version }}.json")
-	schema, location, found, err := l.Resolve(context.Background(), widgetVars)
+	resolved, found, err := l.Resolve(context.Background(), widgetVars)
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(found).To(BeTrue())
-	g.Expect(schema).ToNot(BeNil())
+	g.Expect(resolved.JSON).ToNot(BeNil())
 	// tmpl.Execute lowercases the Kind variable before rendering.
-	g.Expect(location).To(Equal(srv.URL + "/widget_v1.json"))
+	g.Expect(resolved.Location).To(Equal(srv.URL + "/widget_v1.json"))
 }
 
 func TestSchemaLoader_Resolve_HTTP404Fallthrough(t *testing.T) {
@@ -125,7 +126,7 @@ func TestSchemaLoader_Resolve_HTTP404Fallthrough(t *testing.T) {
 		filepath.Join(realDir, "{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json"),
 	)
 
-	_, _, found, err := l.Resolve(context.Background(), widgetVars)
+	_, found, err := l.Resolve(context.Background(), widgetVars)
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(found).To(BeTrue())
 	g.Expect(requestCount.Load()).To(Equal(int32(1)))
@@ -139,7 +140,7 @@ func TestSchemaLoader_Resolve_HTTP500ReturnsError(t *testing.T) {
 	t.Cleanup(srv.Close)
 
 	l := newTestLoader(t, srv.URL+"/{{ .Kind }}_{{ .Version }}.json")
-	_, _, _, err := l.Resolve(context.Background(), widgetVars)
+	_, _, err := l.Resolve(context.Background(), widgetVars)
 	// retryablehttp classifies 5xx as retryable; with RetryMax=0 it returns
 	// "giving up after 1 attempt(s)". Either wording satisfies "it errored".
 	g.Expect(err).To(HaveOccurred())
@@ -152,7 +153,7 @@ func TestSchemaLoader_Resolve_InvalidSchemaBodyReturnsCompileError(t *testing.T)
 	g.Expect(os.WriteFile(filepath.Join(dir, "widget-example-v1.json"), bad, 0o644)).To(Succeed())
 	l := newTestLoader(t, filepath.Join(dir, "{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json"))
 
-	_, _, _, err := l.Resolve(context.Background(), widgetVars)
+	_, _, err := l.Resolve(context.Background(), widgetVars)
 	g.Expect(err).To(HaveOccurred())
 }
 
@@ -178,10 +179,10 @@ func TestSchemaLoader_Resolve_WithInternalRef(t *testing.T) {
 	g.Expect(os.WriteFile(filepath.Join(dir, "widget-example-v1.json"), b, 0o644)).To(Succeed())
 
 	l := newTestLoader(t, filepath.Join(dir, "{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json"))
-	s, _, found, err := l.Resolve(context.Background(), widgetVars)
+	resolved, found, err := l.Resolve(context.Background(), widgetVars)
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(found).To(BeTrue())
-	g.Expect(s.Validate(map[string]any{"metadata": map[string]any{"name": "r1"}})).To(Succeed())
+	g.Expect(resolved.JSON.Validate(map[string]any{"metadata": map[string]any{"name": "r1"}})).To(Succeed())
 }
 
 func TestSchemaLoader_Resolve_CachesAcrossCalls(t *testing.T) {
@@ -196,7 +197,7 @@ func TestSchemaLoader_Resolve_CachesAcrossCalls(t *testing.T) {
 
 	l := newTestLoader(t, srv.URL+"/{{ .Kind }}_{{ .Version }}.json")
 	for range 5 {
-		_, _, found, err := l.Resolve(context.Background(), widgetVars)
+		_, found, err := l.Resolve(context.Background(), widgetVars)
 		g.Expect(err).ToNot(HaveOccurred())
 		g.Expect(found).To(BeTrue())
 	}
@@ -222,7 +223,7 @@ func TestSchemaLoader_Resolve_ConcurrentDedup(t *testing.T) {
 	errs := make([]error, N)
 	for i := range N {
 		wg.Go(func() {
-			_, _, _, errs[i] = l.Resolve(context.Background(), widgetVars)
+			_, _, errs[i] = l.Resolve(context.Background(), widgetVars)
 		})
 	}
 	wg.Wait()
@@ -238,7 +239,7 @@ func TestSchemaLoader_Resolve_TemplateExecuteError(t *testing.T) {
 	// but references an unknown var must surface the error from Resolve
 	// rather than being suppressed.
 	l := newTestLoader(t, "{{ .Unknown }}")
-	_, _, _, err := l.Resolve(context.Background(), widgetVars)
+	_, _, err := l.Resolve(context.Background(), widgetVars)
 	g.Expect(err).To(HaveOccurred())
 }
 

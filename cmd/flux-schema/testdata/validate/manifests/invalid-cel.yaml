@@ -1,0 +1,17 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: webapp
+  namespace: apps
+spec:
+  releaseName: webapp
+  interval: 30m
+  chartRef:
+    kind: OCIRepository
+    name: webapp-chart
+  chart:
+    spec:
+      chart: webapp
+      sourceRef:
+        kind: HelmRepository
+        name: webapp-charts
