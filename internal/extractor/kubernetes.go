@@ -10,42 +10,19 @@ import (
 	"sort"
 )
 
-// ExtractOpenAPI walks a Kubernetes OpenAPI v2 swagger document and returns
+// ExtractKubernetes walks a Kubernetes OpenAPI v2 swagger document and returns
 // one Schema per x-kubernetes-group-version-kind entry with all $refs inlined
 // and the standalone-strict transforms applied. The returned slice is sorted
 // by (Group, Version, Kind) so golden tests and archive listings are stable
 // across runs. Errors are aggregated: a malformed definition does not stop
 // extraction of the rest.
-func ExtractOpenAPI(data []byte) ([]Schema, []error) {
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-
-	var doc any
-	if err := dec.Decode(&doc); err != nil {
-		return nil, []error{fmt.Errorf("decode swagger: %w", err)}
+func ExtractKubernetes(data []byte) ([]Schema, []error) {
+	definitions, names, errs := parseSwaggerDefinitions(data)
+	if errs != nil {
+		return nil, errs
 	}
 
-	root, ok := doc.(map[string]any)
-	if !ok {
-		return nil, []error{fmt.Errorf("swagger document is not a JSON object")}
-	}
-
-	definitions, ok := root["definitions"].(map[string]any)
-	if !ok {
-		return nil, []error{fmt.Errorf("swagger document has no 'definitions'")}
-	}
-
-	// Visit definitions in name order so log/error ordering is stable.
-	names := make([]string, 0, len(definitions))
-	for name := range definitions {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-
-	var (
-		out  []Schema
-		errs []error
-	)
+	var out []Schema
 	for _, name := range names {
 		def, ok := definitions[name].(map[string]any)
 		if !ok {
@@ -70,6 +47,44 @@ func ExtractOpenAPI(data []byte) ([]Schema, []error) {
 		}
 	}
 
+	sortSchemasByGVK(out)
+	return out, errs
+}
+
+// parseSwaggerDefinitions decodes a swagger document and returns its
+// definitions map together with the definition names sorted alphabetically.
+// Number-preserving decode (UseNumber) lets integer literals round-trip
+// through downstream transforms unchanged.
+func parseSwaggerDefinitions(data []byte) (map[string]any, []string, []error) {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.UseNumber()
+
+	var doc any
+	if err := dec.Decode(&doc); err != nil {
+		return nil, nil, []error{fmt.Errorf("decode swagger: %w", err)}
+	}
+
+	root, ok := doc.(map[string]any)
+	if !ok {
+		return nil, nil, []error{fmt.Errorf("swagger document is not a JSON object")}
+	}
+
+	definitions, ok := root["definitions"].(map[string]any)
+	if !ok {
+		return nil, nil, []error{fmt.Errorf("swagger document has no 'definitions'")}
+	}
+
+	names := make([]string, 0, len(definitions))
+	for name := range definitions {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return definitions, names, nil
+}
+
+// sortSchemasByGVK orders schemas by (Group, Version, Kind) so output is
+// deterministic across runs.
+func sortSchemasByGVK(out []Schema) {
 	sort.SliceStable(out, func(i, j int) bool {
 		if out[i].Group != out[j].Group {
 			return out[i].Group < out[j].Group
@@ -79,8 +94,6 @@ func ExtractOpenAPI(data []byte) ([]Schema, []error) {
 		}
 		return out[i].Kind < out[j].Kind
 	})
-
-	return out, errs
 }
 
 func readGVKs(def map[string]any) []GVK {

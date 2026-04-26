@@ -35,6 +35,8 @@ jobs:
         run: ./scripts/gen-crd-schemas.sh -r fluxcd/flagger -p kustomize/kubernetes -d ./catalog/latest
       - name: Update Flux Operator schemas
         run: ./scripts/gen-crd-schemas.sh -r controlplaneio-fluxcd/flux-operator -d ./catalog/latest
+      - name: Update OpenShift schemas
+        run: ./scripts/gen-openshift-schemas.sh -d ./catalog/latest
       - name: Update README versions
         run: ./scripts/update-catalog-readme.sh -f ./catalog/README.md
       - name: Create Pull Request
@@ -55,6 +57,7 @@ jobs:
             - Flux: ${{ env.FLUX_VERSION }}
             - Flagger: ${{ env.FLAGGER_VERSION }}
             - Flux Operator: ${{ env.FLUX_OPERATOR_VERSION }}
+            - OpenShift: ${{ env.OPENSHIFT_REF }}
           labels: |
             area/catalog
           add-paths: |

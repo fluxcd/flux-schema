@@ -25,8 +25,9 @@ import (
 const defaultK8sSwaggerURL = "https://raw.githubusercontent.com/kubernetes/kubernetes/%s/api/openapi-spec/swagger.json"
 
 var extractK8sCmd = &cobra.Command{
-	Use:   "k8s [swagger-file]",
-	Short: "Extract JSON Schemas from a Kubernetes OpenAPI v2 swagger document",
+	Use:     "k8s [swagger-file]",
+	Aliases: []string{"kubernetes"},
+	Short:   "Extract JSON Schemas from a Kubernetes OpenAPI v2 swagger document",
 	Example: `  # Fetch upstream swagger for a release version
   flux-schema extract k8s --version 1.35.0 -d ./schemas
 
@@ -103,7 +104,7 @@ func extractK8sCmdRun(cmd *cobra.Command, args []string) error {
 
 	cmd.Printf("reading %s\n", source)
 
-	schemas, errs := extractor.ExtractOpenAPI(data)
+	schemas, errs := extractor.ExtractKubernetes(data)
 
 	if extractK8sArgs.StripDescription {
 		for _, s := range schemas {
@@ -118,7 +119,7 @@ func extractK8sCmdRun(cmd *cobra.Command, args []string) error {
 
 	written := 0
 	for _, schema := range schemas {
-		relPath, err := writeK8sSchema(schema, destDir)
+		relPath, err := writeSwaggerSchema(schema, destDir, extractK8sArgs.Format)
 		if err != nil {
 			failures = append(failures, err)
 			continue
@@ -138,8 +139,12 @@ func extractK8sCmdRun(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func writeK8sSchema(schema extractor.Schema, destDir string) (string, error) {
-	rendered, err := tmpl.Render(extractK8sArgs.Format, tmpl.SchemaVars{
+// writeSwaggerSchema renders the output template, writes the schema as
+// pretty-printed JSON under destDir, and returns the path relative to
+// destDir. Shared by `extract k8s` and `extract openshift` since their
+// per-schema write loops are otherwise identical.
+func writeSwaggerSchema(schema extractor.Schema, destDir, format string) (string, error) {
+	rendered, err := tmpl.Render(format, tmpl.SchemaVars{
 		Group:   schema.Group,
 		Kind:    schema.Kind,
 		Version: schema.Version,
@@ -198,10 +203,19 @@ func fetchK8sSwagger(ctx context.Context, client *retryablehttp.Client,
 		return "", nil, err
 	}
 	url := fmt.Sprintf(urlTemplate, normalized)
+	body, err := fetchURL(ctx, client, url, timeout)
+	return url, body, err
+}
 
+// fetchURL performs a GET against url and returns the response body. Non-2xx
+// responses are hard errors; callers that want to interpret a 404 as a soft
+// miss should use a different code path.
+func fetchURL(ctx context.Context, client *retryablehttp.Client,
+	url string, timeout time.Duration,
+) ([]byte, error) {
 	req, err := retryablehttp.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return url, nil, err
+		return nil, err
 	}
 	if timeout > 0 {
 		reqCtx, cancel := context.WithTimeout(ctx, timeout)
@@ -210,18 +224,18 @@ func fetchK8sSwagger(ctx context.Context, client *retryablehttp.Client,
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return url, nil, fmt.Errorf("fetch %s: %w", url, err)
+		return nil, fmt.Errorf("fetch %s: %w", url, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
-		return url, nil, fmt.Errorf("fetch %s: %s", url, resp.Status)
+		return nil, fmt.Errorf("fetch %s: %s", url, resp.Status)
 	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return url, nil, fmt.Errorf("read %s: %w", url, err)
+		return nil, fmt.Errorf("read %s: %w", url, err)
 	}
-	return url, body, nil
+	return body, nil
 }
 
 func normalizeK8sVersion(version string) (string, error) {
