@@ -1,0 +1,1081 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": {
+      "type": "string"
+    },
+    "items": {
+      "items": {
+        "additionalProperties": false,
+        "default": {},
+        "properties": {
+          "apiVersion": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "kind": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "metadata": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "annotations": {
+                "additionalProperties": {
+                  "default": "",
+                  "type": "string"
+                },
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "creationTimestamp": {
+                "format": "date-time",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "deletionGracePeriodSeconds": {
+                "format": "int64",
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "deletionTimestamp": {
+                "format": "date-time",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "finalizers": {
+                "items": {
+                  "default": "",
+                  "type": "string"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ]
+              },
+              "generateName": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "generation": {
+                "format": "int64",
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "labels": {
+                "additionalProperties": {
+                  "default": "",
+                  "type": "string"
+                },
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "managedFields": {
+                "items": {
+                  "additionalProperties": false,
+                  "default": {},
+                  "properties": {
+                    "apiVersion": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "fieldsType": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "fieldsV1": {
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
+                    "manager": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "operation": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "subresource": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "time": {
+                      "format": "date-time",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "type": "object"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "namespace": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "ownerReferences": {
+                "items": {
+                  "additionalProperties": false,
+                  "default": {},
+                  "properties": {
+                    "apiVersion": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "blockOwnerDeletion": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    },
+                    "controller": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    },
+                    "kind": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "name": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "uid": {
+                      "default": "",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "apiVersion",
+                    "kind",
+                    "name",
+                    "uid"
+                  ],
+                  "type": "object"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ]
+              },
+              "resourceVersion": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "selfLink": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "uid": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "type": "object"
+          },
+          "spec": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "failedRevisionLimit": {
+                "format": "int32",
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "forceRedeploymentReason": {
+                "default": "",
+                "type": "string"
+              },
+              "irreconcilableValidationOverrides": {
+                "additionalProperties": false,
+                "default": {},
+                "properties": {
+                  "storage": {
+                    "items": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "type": [
+                      "array",
+                      "null"
+                    ]
+                  }
+                },
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "logLevel": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "managedBootImages": {
+                "additionalProperties": false,
+                "default": {},
+                "properties": {
+                  "machineManagers": {
+                    "items": {
+                      "additionalProperties": false,
+                      "default": {},
+                      "properties": {
+                        "apiGroup": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "resource": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "selection": {
+                          "additionalProperties": false,
+                          "default": {},
+                          "properties": {
+                            "mode": {
+                              "default": "",
+                              "type": "string"
+                            },
+                            "partial": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "machineResourceSelector": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "matchExpressions": {
+                                      "items": {
+                                        "additionalProperties": false,
+                                        "default": {},
+                                        "properties": {
+                                          "key": {
+                                            "default": "",
+                                            "type": "string"
+                                          },
+                                          "operator": {
+                                            "default": "",
+                                            "type": "string"
+                                          },
+                                          "values": {
+                                            "items": {
+                                              "default": "",
+                                              "type": "string"
+                                            },
+                                            "type": [
+                                              "array",
+                                              "null"
+                                            ]
+                                          }
+                                        },
+                                        "required": [
+                                          "key",
+                                          "operator"
+                                        ],
+                                        "type": "object"
+                                      },
+                                      "type": [
+                                        "array",
+                                        "null"
+                                      ]
+                                    },
+                                    "matchLabels": {
+                                      "additionalProperties": {
+                                        "default": "",
+                                        "type": "string"
+                                      },
+                                      "type": [
+                                        "object",
+                                        "null"
+                                      ]
+                                    }
+                                  },
+                                  "type": "object"
+                                }
+                              },
+                              "required": [
+                                "machineResourceSelector"
+                              ],
+                              "type": [
+                                "object",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "mode"
+                          ],
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "resource",
+                        "apiGroup",
+                        "selection"
+                      ],
+                      "type": "object"
+                    },
+                    "type": [
+                      "array",
+                      "null"
+                    ]
+                  }
+                },
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "managementState": {
+                "default": "",
+                "type": "string"
+              },
+              "nodeDisruptionPolicy": {
+                "additionalProperties": false,
+                "default": {},
+                "properties": {
+                  "files": {
+                    "items": {
+                      "additionalProperties": false,
+                      "default": {},
+                      "properties": {
+                        "actions": {
+                          "items": {
+                            "additionalProperties": false,
+                            "default": {},
+                            "properties": {
+                              "reload": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "serviceName": {
+                                    "default": "",
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "serviceName"
+                                ],
+                                "type": [
+                                  "object",
+                                  "null"
+                                ]
+                              },
+                              "restart": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "serviceName": {
+                                    "default": "",
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "serviceName"
+                                ],
+                                "type": [
+                                  "object",
+                                  "null"
+                                ]
+                              },
+                              "type": {
+                                "default": "",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "type"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "path": {
+                          "default": "",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "path",
+                        "actions"
+                      ],
+                      "type": "object"
+                    },
+                    "type": [
+                      "array",
+                      "null"
+                    ]
+                  },
+                  "sshkey": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "actions": {
+                        "items": {
+                          "additionalProperties": false,
+                          "default": {},
+                          "properties": {
+                            "reload": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "serviceName": {
+                                  "default": "",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "serviceName"
+                              ],
+                              "type": [
+                                "object",
+                                "null"
+                              ]
+                            },
+                            "restart": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "serviceName": {
+                                  "default": "",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "serviceName"
+                              ],
+                              "type": [
+                                "object",
+                                "null"
+                              ]
+                            },
+                            "type": {
+                              "default": "",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "type"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      }
+                    },
+                    "required": [
+                      "actions"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "units": {
+                    "items": {
+                      "additionalProperties": false,
+                      "default": {},
+                      "properties": {
+                        "actions": {
+                          "items": {
+                            "additionalProperties": false,
+                            "default": {},
+                            "properties": {
+                              "reload": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "serviceName": {
+                                    "default": "",
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "serviceName"
+                                ],
+                                "type": [
+                                  "object",
+                                  "null"
+                                ]
+                              },
+                              "restart": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "serviceName": {
+                                    "default": "",
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "serviceName"
+                                ],
+                                "type": [
+                                  "object",
+                                  "null"
+                                ]
+                              },
+                              "type": {
+                                "default": "",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "type"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "name": {
+                          "default": "",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "actions"
+                      ],
+                      "type": "object"
+                    },
+                    "type": [
+                      "array",
+                      "null"
+                    ]
+                  }
+                },
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "observedConfig": {
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "operatorLogLevel": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "succeededRevisionLimit": {
+                "format": "int32",
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "unsupportedConfigOverrides": {
+                "type": [
+                  "object",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "managementState",
+              "forceRedeploymentReason"
+            ],
+            "type": "object"
+          },
+          "status": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "conditions": {
+                "items": {
+                  "additionalProperties": false,
+                  "default": {},
+                  "properties": {
+                    "lastTransitionTime": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "message": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "observedGeneration": {
+                      "format": "int64",
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "reason": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "status": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "type": {
+                      "default": "",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "status",
+                    "lastTransitionTime",
+                    "reason",
+                    "message"
+                  ],
+                  "type": "object"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ]
+              },
+              "managedBootImagesStatus": {
+                "additionalProperties": false,
+                "default": {},
+                "properties": {
+                  "machineManagers": {
+                    "items": {
+                      "additionalProperties": false,
+                      "default": {},
+                      "properties": {
+                        "apiGroup": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "resource": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "selection": {
+                          "additionalProperties": false,
+                          "default": {},
+                          "properties": {
+                            "mode": {
+                              "default": "",
+                              "type": "string"
+                            },
+                            "partial": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "machineResourceSelector": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "matchExpressions": {
+                                      "items": {
+                                        "additionalProperties": false,
+                                        "default": {},
+                                        "properties": {
+                                          "key": {
+                                            "default": "",
+                                            "type": "string"
+                                          },
+                                          "operator": {
+                                            "default": "",
+                                            "type": "string"
+                                          },
+                                          "values": {
+                                            "items": {
+                                              "default": "",
+                                              "type": "string"
+                                            },
+                                            "type": [
+                                              "array",
+                                              "null"
+                                            ]
+                                          }
+                                        },
+                                        "required": [
+                                          "key",
+                                          "operator"
+                                        ],
+                                        "type": "object"
+                                      },
+                                      "type": [
+                                        "array",
+                                        "null"
+                                      ]
+                                    },
+                                    "matchLabels": {
+                                      "additionalProperties": {
+                                        "default": "",
+                                        "type": "string"
+                                      },
+                                      "type": [
+                                        "object",
+                                        "null"
+                                      ]
+                                    }
+                                  },
+                                  "type": "object"
+                                }
+                              },
+                              "required": [
+                                "machineResourceSelector"
+                              ],
+                              "type": [
+                                "object",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "mode"
+                          ],
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "resource",
+                        "apiGroup",
+                        "selection"
+                      ],
+                      "type": "object"
+                    },
+                    "type": [
+                      "array",
+                      "null"
+                    ]
+                  }
+                },
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "nodeDisruptionPolicyStatus": {
+                "additionalProperties": false,
+                "default": {},
+                "properties": {
+                  "clusterPolicies": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "files": {
+                        "items": {
+                          "additionalProperties": false,
+                          "default": {},
+                          "properties": {
+                            "actions": {
+                              "items": {
+                                "additionalProperties": false,
+                                "default": {},
+                                "properties": {
+                                  "reload": {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "serviceName": {
+                                        "default": "",
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "serviceName"
+                                    ],
+                                    "type": [
+                                      "object",
+                                      "null"
+                                    ]
+                                  },
+                                  "restart": {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "serviceName": {
+                                        "default": "",
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "serviceName"
+                                    ],
+                                    "type": [
+                                      "object",
+                                      "null"
+                                    ]
+                                  },
+                                  "type": {
+                                    "default": "",
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "type"
+                                ],
+                                "type": "object"
+                              },
+                              "type": "array"
+                            },
+                            "path": {
+                              "default": "",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "path",
+                            "actions"
+                          ],
+                          "type": "object"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      },
+                      "sshkey": {
+                        "additionalProperties": false,
+                        "default": {},
+                        "properties": {
+                          "actions": {
+                            "items": {
+                              "additionalProperties": false,
+                              "default": {},
+                              "properties": {
+                                "reload": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "serviceName": {
+                                      "default": "",
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "serviceName"
+                                  ],
+                                  "type": [
+                                    "object",
+                                    "null"
+                                  ]
+                                },
+                                "restart": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "serviceName": {
+                                      "default": "",
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "serviceName"
+                                  ],
+                                  "type": [
+                                    "object",
+                                    "null"
+                                  ]
+                                },
+                                "type": {
+                                  "default": "",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "type"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          }
+                        },
+                        "required": [
+                          "actions"
+                        ],
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      },
+                      "units": {
+                        "items": {
+                          "additionalProperties": false,
+                          "default": {},
+                          "properties": {
+                            "actions": {
+                              "items": {
+                                "additionalProperties": false,
+                                "default": {},
+                                "properties": {
+                                  "reload": {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "serviceName": {
+                                        "default": "",
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "serviceName"
+                                    ],
+                                    "type": [
+                                      "object",
+                                      "null"
+                                    ]
+                                  },
+                                  "restart": {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "serviceName": {
+                                        "default": "",
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "serviceName"
+                                    ],
+                                    "type": [
+                                      "object",
+                                      "null"
+                                    ]
+                                  },
+                                  "type": {
+                                    "default": "",
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "type"
+                                ],
+                                "type": "object"
+                              },
+                              "type": "array"
+                            },
+                            "name": {
+                              "default": "",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "actions"
+                          ],
+                          "type": "object"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      }
+                    },
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  }
+                },
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "observedGeneration": {
+                "format": "int64",
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              }
+            },
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "metadata",
+          "spec"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "kind": {
+      "type": "string"
+    },
+    "metadata": {
+      "additionalProperties": false,
+      "default": {},
+      "properties": {
+        "continue": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "remainingItemCount": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "resourceVersion": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "selfLink": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    }
+  },
+  "required": [
+    "metadata",
+    "items",
+    "apiVersion",
+    "kind"
+  ],
+  "type": "object"
+}

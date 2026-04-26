@@ -57,7 +57,7 @@ jobs:
             - Flux: ${{ env.FLUX_VERSION }}
             - Flagger: ${{ env.FLAGGER_VERSION }}
             - Flux Operator: ${{ env.FLUX_OPERATOR_VERSION }}
-            - OpenShift: ${{ env.OPENSHIFT_REF }}
+            - OpenShift: ${{ env.OPENSHIFT_VERSION }}
           labels: |
             area/catalog
           add-paths: |

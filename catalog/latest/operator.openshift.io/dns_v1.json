@@ -1,0 +1,623 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": {
+      "type": "string"
+    },
+    "kind": {
+      "type": "string"
+    },
+    "metadata": {
+      "additionalProperties": false,
+      "default": {},
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "default": "",
+            "type": "string"
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "creationTimestamp": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "deletionGracePeriodSeconds": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "deletionTimestamp": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "finalizers": {
+          "items": {
+            "default": "",
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "generateName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "generation": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "labels": {
+          "additionalProperties": {
+            "default": "",
+            "type": "string"
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "managedFields": {
+          "items": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "apiVersion": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "fieldsType": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "fieldsV1": {
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "manager": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "operation": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "subresource": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "time": {
+                "format": "date-time",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "namespace": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ownerReferences": {
+          "items": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "apiVersion": {
+                "default": "",
+                "type": "string"
+              },
+              "blockOwnerDeletion": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "controller": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "kind": {
+                "default": "",
+                "type": "string"
+              },
+              "name": {
+                "default": "",
+                "type": "string"
+              },
+              "uid": {
+                "default": "",
+                "type": "string"
+              }
+            },
+            "required": [
+              "apiVersion",
+              "kind",
+              "name",
+              "uid"
+            ],
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "resourceVersion": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "selfLink": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "uid": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "spec": {
+      "additionalProperties": false,
+      "default": {},
+      "properties": {
+        "cache": {
+          "additionalProperties": false,
+          "default": {},
+          "properties": {
+            "negativeTTL": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "positiveTTL": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "logLevel": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "managementState": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "nodePlacement": {
+          "additionalProperties": false,
+          "default": {},
+          "properties": {
+            "nodeSelector": {
+              "additionalProperties": {
+                "default": "",
+                "type": "string"
+              },
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "tolerations": {
+              "items": {
+                "additionalProperties": false,
+                "default": {},
+                "properties": {
+                  "effect": {
+                    "enum": [
+                      "NoExecute",
+                      "NoSchedule",
+                      "PreferNoSchedule"
+                    ],
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "key": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "operator": {
+                    "enum": [
+                      "Equal",
+                      "Exists"
+                    ],
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "tolerationSeconds": {
+                    "format": "int64",
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "value": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "type": "object"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            }
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "operatorLogLevel": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "servers": {
+          "items": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "forwardPlugin": {
+                "additionalProperties": false,
+                "default": {},
+                "properties": {
+                  "policy": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "protocolStrategy": {
+                    "default": "",
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "transportConfig": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "tls": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "caBundle": {
+                            "additionalProperties": false,
+                            "default": {},
+                            "properties": {
+                              "name": {
+                                "default": "",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "name"
+                            ],
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "serverName": {
+                            "default": "",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "serverName"
+                        ],
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      },
+                      "transport": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "upstreams": {
+                    "items": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "upstreams"
+                ],
+                "type": "object"
+              },
+              "name": {
+                "default": "",
+                "type": "string"
+              },
+              "zones": {
+                "items": {
+                  "default": "",
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "name",
+              "zones",
+              "forwardPlugin"
+            ],
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "upstreamResolvers": {
+          "additionalProperties": false,
+          "default": {},
+          "properties": {
+            "policy": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "protocolStrategy": {
+              "default": "",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "transportConfig": {
+              "additionalProperties": false,
+              "default": {},
+              "properties": {
+                "tls": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "caBundle": {
+                      "additionalProperties": false,
+                      "default": {},
+                      "properties": {
+                        "name": {
+                          "default": "",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "name"
+                      ],
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
+                    "serverName": {
+                      "default": "",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "serverName"
+                  ],
+                  "type": [
+                    "object",
+                    "null"
+                  ]
+                },
+                "transport": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "upstreams": {
+              "items": {
+                "additionalProperties": false,
+                "default": {},
+                "properties": {
+                  "address": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "port": {
+                    "format": "int64",
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "type": {
+                    "default": "",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "type"
+                ],
+                "type": "object"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            }
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        }
+      },
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "status": {
+      "additionalProperties": false,
+      "default": {},
+      "properties": {
+        "clusterDomain": {
+          "default": "",
+          "type": "string"
+        },
+        "clusterIP": {
+          "default": "",
+          "type": "string"
+        },
+        "conditions": {
+          "items": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "lastTransitionTime": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "message": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "reason": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "status": {
+                "default": "",
+                "type": "string"
+              },
+              "type": {
+                "default": "",
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "status",
+              "lastTransitionTime"
+            ],
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "clusterIP",
+        "clusterDomain"
+      ],
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "apiVersion",
+    "kind"
+  ],
+  "type": "object"
+}

@@ -166,7 +166,9 @@ func TestExtractOpenShift_RefToK8sTypeInlined(t *testing.T) {
 	g.Expect(metaProps).To(HaveKey("name"))
 }
 
-func TestExtractOpenShift_SuffixListSkipped(t *testing.T) {
+func TestExtractOpenShift_ListsEmitted(t *testing.T) {
+	// *List kinds are applyable Git manifests; the K8s catalog ships
+	// every *List schema, and OpenShift mirrors that for parity.
 	g := NewWithT(t)
 	data := swaggerWith(t, map[string]any{
 		"com.github.openshift.api.route.v1.Route":     gitopsKindDef(nil),
@@ -174,8 +176,9 @@ func TestExtractOpenShift_SuffixListSkipped(t *testing.T) {
 	})
 	schemas, errs := ExtractOpenShift(data)
 	g.Expect(errs).To(BeEmpty())
-	g.Expect(schemas).To(HaveLen(1))
+	g.Expect(schemas).To(HaveLen(2))
 	g.Expect(schemas[0].Kind).To(Equal("Route"))
+	g.Expect(schemas[1].Kind).To(Equal("RouteList"))
 }
 
 func TestExtractOpenShift_SuffixReviewSkipped(t *testing.T) {

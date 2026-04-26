@@ -64,14 +64,8 @@ var (
 	// stable (vN), alpha (vNalphaN), beta (vNbetaN).
 	openShiftVersionRe = regexp.MustCompile(`^v\d+(alpha\d+|beta\d+)?$`)
 
-	// openShiftSkipKindRe matches kind names that are never persisted to Git:
-	// list wrappers (server response shape), review/option payloads (POST
-	// bodies on auth and subresource endpoints), and provider configs
-	// (embedded as RawExtension under MachineSet, never validated standalone).
-	// The pattern is anchored so unrelated kinds whose names happen to
-	// contain a suffix substring (e.g. "Console", "Configurations") are
-	// preserved.
-	openShiftSkipKindRe = regexp.MustCompile(`^[A-Za-z]+(List|ReviewResponse|Review|ProviderConfig|ProviderSpec|ProviderStatus|Options)$`)
+	// openShiftSkipKindRe matches kind names that are not GitOps-applicable.
+	openShiftSkipKindRe = regexp.MustCompile(`^[A-Za-z]+(ReviewResponse|Review|ProviderConfig|ProviderSpec|ProviderStatus|Options)$`)
 )
 
 // ExtractOpenShift walks an openshift/api OpenAPI v2 swagger document and

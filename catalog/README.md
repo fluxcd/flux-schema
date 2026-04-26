@@ -1,13 +1,13 @@
 # Flux Schema Catalog
 
-This is the catalog of JSON Schemas for Kubernetes APIs and Flux CRDs,
-used by the `flux schema validation` tool.
+This is the catalog of JSON Schemas used by the `flux schema validation` tool.
 
 <!-- versions:start -->
 | Source | Version |
 | --- | --- |
 | [kubernetes/kubernetes](https://github.com/kubernetes/kubernetes) | v1.35.4 |
 | [kubernetes-sigs/gateway-api](https://github.com/kubernetes-sigs/gateway-api) | v1.5.1 |
+| [openshift/api](https://github.com/openshift/api) | v4.20 |
 | [fluxcd/flux2](https://github.com/fluxcd/flux2) | v2.8.6 |
 | [fluxcd/flagger](https://github.com/fluxcd/flagger) | v1.43.0 |
 | [controlplaneio-fluxcd/flux-operator](https://github.com/controlplaneio-fluxcd/flux-operator) | v0.48.0 |
@@ -65,3 +65,20 @@ flux-schema validate ./manifests \
   --schema-location './gwapi-experimental/{{.Group}}/{{.Kind}}_{{.Version}}.json' \
   --schema-location default
 ```
+
+## OpenShift APIs
+
+Extracted from the OpenAPI v2 swagger of the latest stable release of OpenShift.
+
+- `apps.openshift.io`, `route.openshift.io`, `build.openshift.io`, `image.openshift.io`,
+  `template.openshift.io`, `project.openshift.io`, `quota.openshift.io`,
+  `user.openshift.io`, `oauth.openshift.io`, `console.openshift.io`,
+  `monitoring.openshift.io`, `helm.openshift.io`, `samples.operator.openshift.io`
+- `config.openshift.io`, `operator.openshift.io`, `machine.openshift.io`,
+  `machineconfiguration.openshift.io`, `network.openshift.io`,
+  `authorization.openshift.io`, `security.openshift.io`, `apiserver.openshift.io`
+- `cloud.network.openshift.io`, `network.operator.openshift.io`,
+  `ingress.operator.openshift.io`, `controlplane.operator.openshift.io`,
+  `kubecontrolplane.config.openshift.io`,
+  `openshiftcontrolplane.config.openshift.io`, `osin.config.openshift.io`,
+  `servicecertsigner.config.openshift.io`, `security.internal.openshift.io`

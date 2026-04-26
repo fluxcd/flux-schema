@@ -1,0 +1,998 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": {
+      "type": "string"
+    },
+    "kind": {
+      "type": "string"
+    },
+    "metadata": {
+      "additionalProperties": false,
+      "default": {},
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "default": "",
+            "type": "string"
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "creationTimestamp": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "deletionGracePeriodSeconds": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "deletionTimestamp": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "finalizers": {
+          "items": {
+            "default": "",
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "generateName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "generation": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "labels": {
+          "additionalProperties": {
+            "default": "",
+            "type": "string"
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "managedFields": {
+          "items": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "apiVersion": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "fieldsType": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "fieldsV1": {
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "manager": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "operation": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "subresource": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "time": {
+                "format": "date-time",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "namespace": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ownerReferences": {
+          "items": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "apiVersion": {
+                "default": "",
+                "type": "string"
+              },
+              "blockOwnerDeletion": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "controller": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "kind": {
+                "default": "",
+                "type": "string"
+              },
+              "name": {
+                "default": "",
+                "type": "string"
+              },
+              "uid": {
+                "default": "",
+                "type": "string"
+              }
+            },
+            "required": [
+              "apiVersion",
+              "kind",
+              "name",
+              "uid"
+            ],
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "resourceVersion": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "selfLink": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "uid": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "spec": {
+      "additionalProperties": false,
+      "default": {},
+      "properties": {
+        "identityProviders": {
+          "items": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "basicAuth": {
+                "additionalProperties": false,
+                "properties": {
+                  "ca": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "name": {
+                        "default": "",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "tlsClientCert": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "name": {
+                        "default": "",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "tlsClientKey": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "name": {
+                        "default": "",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "url": {
+                    "default": "",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "url"
+                ],
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "github": {
+                "additionalProperties": false,
+                "properties": {
+                  "ca": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "name": {
+                        "default": "",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "clientID": {
+                    "default": "",
+                    "type": "string"
+                  },
+                  "clientSecret": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "name": {
+                        "default": "",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "type": "object"
+                  },
+                  "hostname": {
+                    "default": "",
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "organizations": {
+                    "items": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "type": [
+                      "array",
+                      "null"
+                    ]
+                  },
+                  "teams": {
+                    "items": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "type": [
+                      "array",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "clientID",
+                  "clientSecret"
+                ],
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "gitlab": {
+                "additionalProperties": false,
+                "properties": {
+                  "ca": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "name": {
+                        "default": "",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "clientID": {
+                    "default": "",
+                    "type": "string"
+                  },
+                  "clientSecret": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "name": {
+                        "default": "",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "type": "object"
+                  },
+                  "url": {
+                    "default": "",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "clientID",
+                  "clientSecret",
+                  "url"
+                ],
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "google": {
+                "additionalProperties": false,
+                "properties": {
+                  "clientID": {
+                    "default": "",
+                    "type": "string"
+                  },
+                  "clientSecret": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "name": {
+                        "default": "",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "type": "object"
+                  },
+                  "hostedDomain": {
+                    "default": "",
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "clientID",
+                  "clientSecret"
+                ],
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "htpasswd": {
+                "additionalProperties": false,
+                "properties": {
+                  "fileData": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "name": {
+                        "default": "",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "fileData"
+                ],
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "keystone": {
+                "additionalProperties": false,
+                "properties": {
+                  "ca": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "name": {
+                        "default": "",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "domainName": {
+                    "default": "",
+                    "type": "string"
+                  },
+                  "tlsClientCert": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "name": {
+                        "default": "",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "tlsClientKey": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "name": {
+                        "default": "",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "url": {
+                    "default": "",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "url",
+                  "domainName"
+                ],
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "ldap": {
+                "additionalProperties": false,
+                "properties": {
+                  "attributes": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "email": {
+                        "items": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      },
+                      "id": {
+                        "items": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "name": {
+                        "items": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      },
+                      "preferredUsername": {
+                        "items": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id"
+                    ],
+                    "type": "object"
+                  },
+                  "bindDN": {
+                    "default": "",
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "bindPassword": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "name": {
+                        "default": "",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "ca": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "name": {
+                        "default": "",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "insecure": {
+                    "default": false,
+                    "type": "boolean"
+                  },
+                  "url": {
+                    "default": "",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "url",
+                  "insecure",
+                  "attributes"
+                ],
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "mappingMethod": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "name": {
+                "default": "",
+                "type": "string"
+              },
+              "openID": {
+                "additionalProperties": false,
+                "properties": {
+                  "ca": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "name": {
+                        "default": "",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "claims": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "email": {
+                        "items": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      },
+                      "groups": {
+                        "items": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      },
+                      "name": {
+                        "items": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      },
+                      "preferredUsername": {
+                        "items": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "clientID": {
+                    "default": "",
+                    "type": "string"
+                  },
+                  "clientSecret": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "name": {
+                        "default": "",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "type": "object"
+                  },
+                  "extraAuthorizeParameters": {
+                    "additionalProperties": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "extraScopes": {
+                    "items": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "type": [
+                      "array",
+                      "null"
+                    ]
+                  },
+                  "issuer": {
+                    "default": "",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "clientID",
+                  "clientSecret",
+                  "issuer",
+                  "claims"
+                ],
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "requestHeader": {
+                "additionalProperties": false,
+                "properties": {
+                  "ca": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "name": {
+                        "default": "",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "type": "object"
+                  },
+                  "challengeURL": {
+                    "default": "",
+                    "type": "string"
+                  },
+                  "clientCommonNames": {
+                    "items": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "type": [
+                      "array",
+                      "null"
+                    ]
+                  },
+                  "emailHeaders": {
+                    "items": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "headers": {
+                    "items": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "loginURL": {
+                    "default": "",
+                    "type": "string"
+                  },
+                  "nameHeaders": {
+                    "items": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "preferredUsernameHeaders": {
+                    "items": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "loginURL",
+                  "challengeURL",
+                  "ca",
+                  "headers",
+                  "preferredUsernameHeaders",
+                  "nameHeaders",
+                  "emailHeaders"
+                ],
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "type": {
+                "default": "",
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "type"
+            ],
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "templates": {
+          "additionalProperties": false,
+          "default": {},
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "default": {},
+              "properties": {
+                "name": {
+                  "default": "",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "login": {
+              "additionalProperties": false,
+              "default": {},
+              "properties": {
+                "name": {
+                  "default": "",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "providerSelection": {
+              "additionalProperties": false,
+              "default": {},
+              "properties": {
+                "name": {
+                  "default": "",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "tokenConfig": {
+          "additionalProperties": false,
+          "default": {},
+          "properties": {
+            "accessTokenInactivityTimeout": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "accessTokenInactivityTimeoutSeconds": {
+              "format": "int32",
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "accessTokenMaxAgeSeconds": {
+              "format": "int32",
+              "type": [
+                "integer",
+                "null"
+              ]
+            }
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "tokenConfig"
+      ],
+      "type": "object"
+    },
+    "status": {
+      "default": {},
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "metadata",
+    "spec",
+    "apiVersion",
+    "kind"
+  ],
+  "type": "object"
+}

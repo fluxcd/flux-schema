@@ -7,8 +7,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"sort"
 )
+
+// k8sSkipKindRe matches kind names that are not GitOps-applicable.
+var k8sSkipKindRe = regexp.MustCompile(`^(WatchEvent|[A-Za-z]+Options)$`)
 
 // ExtractKubernetes walks a Kubernetes OpenAPI v2 swagger document and returns
 // one Schema per x-kubernetes-group-version-kind entry with all $refs inlined
@@ -33,6 +37,9 @@ func ExtractKubernetes(data []byte) ([]Schema, []error) {
 			continue
 		}
 		for _, gvk := range gvks {
+			if k8sSkipKindRe.MatchString(gvk.Kind) {
+				continue
+			}
 			schema, err := buildSchema(name, def, definitions)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("%s: %w", name, err))

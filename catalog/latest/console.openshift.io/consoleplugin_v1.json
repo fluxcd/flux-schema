@@ -1,0 +1,411 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": {
+      "type": "string"
+    },
+    "kind": {
+      "type": "string"
+    },
+    "metadata": {
+      "additionalProperties": false,
+      "default": {},
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "default": "",
+            "type": "string"
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "creationTimestamp": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "deletionGracePeriodSeconds": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "deletionTimestamp": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "finalizers": {
+          "items": {
+            "default": "",
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "generateName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "generation": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "labels": {
+          "additionalProperties": {
+            "default": "",
+            "type": "string"
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "managedFields": {
+          "items": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "apiVersion": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "fieldsType": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "fieldsV1": {
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "manager": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "operation": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "subresource": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "time": {
+                "format": "date-time",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "namespace": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ownerReferences": {
+          "items": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "apiVersion": {
+                "default": "",
+                "type": "string"
+              },
+              "blockOwnerDeletion": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "controller": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "kind": {
+                "default": "",
+                "type": "string"
+              },
+              "name": {
+                "default": "",
+                "type": "string"
+              },
+              "uid": {
+                "default": "",
+                "type": "string"
+              }
+            },
+            "required": [
+              "apiVersion",
+              "kind",
+              "name",
+              "uid"
+            ],
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "resourceVersion": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "selfLink": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "uid": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "spec": {
+      "additionalProperties": false,
+      "default": {},
+      "properties": {
+        "backend": {
+          "additionalProperties": false,
+          "default": {},
+          "properties": {
+            "service": {
+              "additionalProperties": false,
+              "properties": {
+                "basePath": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "name": {
+                  "default": "",
+                  "type": "string"
+                },
+                "namespace": {
+                  "default": "",
+                  "type": "string"
+                },
+                "port": {
+                  "default": 0,
+                  "format": "int32",
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "name",
+                "namespace",
+                "port"
+              ],
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "type": {
+              "default": "",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        "contentSecurityPolicy": {
+          "items": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "directive": {
+                "default": "",
+                "enum": [
+                  "ConnectSrc",
+                  "DefaultSrc",
+                  "FontSrc",
+                  "ImgSrc",
+                  "ScriptSrc",
+                  "StyleSrc"
+                ],
+                "type": "string"
+              },
+              "values": {
+                "items": {
+                  "default": "",
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "directive",
+              "values"
+            ],
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "displayName": {
+          "default": "",
+          "type": "string"
+        },
+        "i18n": {
+          "additionalProperties": false,
+          "default": {},
+          "properties": {
+            "loadType": {
+              "default": "",
+              "type": "string"
+            }
+          },
+          "required": [
+            "loadType"
+          ],
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "proxy": {
+          "items": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "alias": {
+                "default": "",
+                "type": "string"
+              },
+              "authorization": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "caCertificate": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "endpoint": {
+                "additionalProperties": false,
+                "default": {},
+                "properties": {
+                  "service": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "name": {
+                        "default": "",
+                        "type": "string"
+                      },
+                      "namespace": {
+                        "default": "",
+                        "type": "string"
+                      },
+                      "port": {
+                        "default": 0,
+                        "format": "int32",
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "namespace",
+                      "port"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "type": {
+                    "default": "",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "type"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "endpoint",
+              "alias"
+            ],
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "displayName",
+        "backend"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "metadata",
+    "spec",
+    "apiVersion",
+    "kind"
+  ],
+  "type": "object"
+}

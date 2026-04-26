@@ -1,0 +1,935 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": {
+      "type": "string"
+    },
+    "kind": {
+      "type": "string"
+    },
+    "metadata": {
+      "additionalProperties": false,
+      "default": {},
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "default": "",
+            "type": "string"
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "creationTimestamp": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "deletionGracePeriodSeconds": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "deletionTimestamp": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "finalizers": {
+          "items": {
+            "default": "",
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "generateName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "generation": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "labels": {
+          "additionalProperties": {
+            "default": "",
+            "type": "string"
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "managedFields": {
+          "items": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "apiVersion": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "fieldsType": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "fieldsV1": {
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "manager": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "operation": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "subresource": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "time": {
+                "format": "date-time",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "namespace": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ownerReferences": {
+          "items": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "apiVersion": {
+                "default": "",
+                "type": "string"
+              },
+              "blockOwnerDeletion": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "controller": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "kind": {
+                "default": "",
+                "type": "string"
+              },
+              "name": {
+                "default": "",
+                "type": "string"
+              },
+              "uid": {
+                "default": "",
+                "type": "string"
+              }
+            },
+            "required": [
+              "apiVersion",
+              "kind",
+              "name",
+              "uid"
+            ],
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "resourceVersion": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "selfLink": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "uid": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "spec": {
+      "additionalProperties": false,
+      "default": {},
+      "properties": {
+        "machineNamePrefix": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "replicas": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "selector": {
+          "additionalProperties": false,
+          "default": {},
+          "properties": {
+            "matchExpressions": {
+              "items": {
+                "additionalProperties": false,
+                "default": {},
+                "properties": {
+                  "key": {
+                    "default": "",
+                    "type": "string"
+                  },
+                  "operator": {
+                    "default": "",
+                    "type": "string"
+                  },
+                  "values": {
+                    "items": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "type": [
+                      "array",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "key",
+                  "operator"
+                ],
+                "type": "object"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            "matchLabels": {
+              "additionalProperties": {
+                "default": "",
+                "type": "string"
+              },
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          },
+          "type": "object"
+        },
+        "state": {
+          "default": "Inactive",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "strategy": {
+          "additionalProperties": false,
+          "default": {},
+          "properties": {
+            "type": {
+              "default": "RollingUpdate",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "template": {
+          "additionalProperties": false,
+          "default": {},
+          "properties": {
+            "machineType": {
+              "default": "",
+              "type": "string"
+            },
+            "machines_v1beta1_machine_openshift_io": {
+              "additionalProperties": false,
+              "properties": {
+                "failureDomains": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "aws": {
+                      "items": {
+                        "additionalProperties": false,
+                        "default": {},
+                        "properties": {
+                          "placement": {
+                            "additionalProperties": false,
+                            "default": {},
+                            "properties": {
+                              "availabilityZone": {
+                                "default": "",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "availabilityZone"
+                            ],
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "subnet": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "arn": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "filters": {
+                                "items": {
+                                  "additionalProperties": false,
+                                  "default": {},
+                                  "properties": {
+                                    "name": {
+                                      "default": "",
+                                      "type": "string"
+                                    },
+                                    "values": {
+                                      "items": {
+                                        "default": "",
+                                        "type": "string"
+                                      },
+                                      "type": [
+                                        "array",
+                                        "null"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "name"
+                                  ],
+                                  "type": "object"
+                                },
+                                "type": [
+                                  "array",
+                                  "null"
+                                ]
+                              },
+                              "id": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "type": {
+                                "default": "",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "type"
+                            ],
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": [
+                        "array",
+                        "null"
+                      ]
+                    },
+                    "azure": {
+                      "items": {
+                        "additionalProperties": false,
+                        "default": {},
+                        "properties": {
+                          "subnet": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "zone": {
+                            "default": "",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "zone"
+                        ],
+                        "type": "object"
+                      },
+                      "type": [
+                        "array",
+                        "null"
+                      ]
+                    },
+                    "gcp": {
+                      "items": {
+                        "additionalProperties": false,
+                        "default": {},
+                        "properties": {
+                          "zone": {
+                            "default": "",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "zone"
+                        ],
+                        "type": "object"
+                      },
+                      "type": [
+                        "array",
+                        "null"
+                      ]
+                    },
+                    "nutanix": {
+                      "items": {
+                        "additionalProperties": false,
+                        "default": {},
+                        "properties": {
+                          "name": {
+                            "default": "",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "name"
+                        ],
+                        "type": "object"
+                      },
+                      "type": [
+                        "array",
+                        "null"
+                      ]
+                    },
+                    "openstack": {
+                      "items": {
+                        "additionalProperties": false,
+                        "default": {},
+                        "properties": {
+                          "availabilityZone": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "rootVolume": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "availabilityZone": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "volumeType": {
+                                "default": "",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "volumeType"
+                            ],
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": [
+                        "array",
+                        "null"
+                      ]
+                    },
+                    "platform": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "vsphere": {
+                      "items": {
+                        "additionalProperties": false,
+                        "default": {},
+                        "properties": {
+                          "name": {
+                            "default": "",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "name"
+                        ],
+                        "type": "object"
+                      },
+                      "type": [
+                        "array",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "platform"
+                  ],
+                  "type": [
+                    "object",
+                    "null"
+                  ]
+                },
+                "metadata": {
+                  "additionalProperties": false,
+                  "default": {},
+                  "properties": {
+                    "annotations": {
+                      "additionalProperties": {
+                        "default": "",
+                        "type": "string"
+                      },
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
+                    "labels": {
+                      "additionalProperties": {
+                        "default": "",
+                        "type": "string"
+                      },
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "labels"
+                  ],
+                  "type": "object"
+                },
+                "spec": {
+                  "additionalProperties": false,
+                  "default": {},
+                  "properties": {
+                    "authoritativeAPI": {
+                      "default": "MachineAPI",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "lifecycleHooks": {
+                      "additionalProperties": false,
+                      "default": {},
+                      "properties": {
+                        "preDrain": {
+                          "items": {
+                            "additionalProperties": false,
+                            "default": {},
+                            "properties": {
+                              "name": {
+                                "default": "",
+                                "type": "string"
+                              },
+                              "owner": {
+                                "default": "",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "owner"
+                            ],
+                            "type": "object"
+                          },
+                          "type": [
+                            "array",
+                            "null"
+                          ]
+                        },
+                        "preTerminate": {
+                          "items": {
+                            "additionalProperties": false,
+                            "default": {},
+                            "properties": {
+                              "name": {
+                                "default": "",
+                                "type": "string"
+                              },
+                              "owner": {
+                                "default": "",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "owner"
+                            ],
+                            "type": "object"
+                          },
+                          "type": [
+                            "array",
+                            "null"
+                          ]
+                        }
+                      },
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
+                    "metadata": {
+                      "additionalProperties": false,
+                      "default": {},
+                      "properties": {
+                        "annotations": {
+                          "additionalProperties": {
+                            "default": "",
+                            "type": "string"
+                          },
+                          "type": [
+                            "object",
+                            "null"
+                          ]
+                        },
+                        "generateName": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "labels": {
+                          "additionalProperties": {
+                            "default": "",
+                            "type": "string"
+                          },
+                          "type": [
+                            "object",
+                            "null"
+                          ]
+                        },
+                        "name": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "namespace": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "ownerReferences": {
+                          "items": {
+                            "additionalProperties": false,
+                            "default": {},
+                            "properties": {
+                              "apiVersion": {
+                                "default": "",
+                                "type": "string"
+                              },
+                              "blockOwnerDeletion": {
+                                "type": [
+                                  "boolean",
+                                  "null"
+                                ]
+                              },
+                              "controller": {
+                                "type": [
+                                  "boolean",
+                                  "null"
+                                ]
+                              },
+                              "kind": {
+                                "default": "",
+                                "type": "string"
+                              },
+                              "name": {
+                                "default": "",
+                                "type": "string"
+                              },
+                              "uid": {
+                                "default": "",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "apiVersion",
+                              "kind",
+                              "name",
+                              "uid"
+                            ],
+                            "type": "object"
+                          },
+                          "type": [
+                            "array",
+                            "null"
+                          ]
+                        }
+                      },
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
+                    "providerID": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "providerSpec": {
+                      "additionalProperties": false,
+                      "default": {},
+                      "properties": {
+                        "value": {
+                          "type": [
+                            "object",
+                            "null"
+                          ]
+                        }
+                      },
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
+                    "taints": {
+                      "items": {
+                        "additionalProperties": false,
+                        "default": {},
+                        "properties": {
+                          "effect": {
+                            "default": "",
+                            "enum": [
+                              "NoExecute",
+                              "NoSchedule",
+                              "PreferNoSchedule"
+                            ],
+                            "type": "string"
+                          },
+                          "key": {
+                            "default": "",
+                            "type": "string"
+                          },
+                          "timeAdded": {
+                            "format": "date-time",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "value": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "key",
+                          "effect"
+                        ],
+                        "type": "object"
+                      },
+                      "type": [
+                        "array",
+                        "null"
+                      ]
+                    }
+                  },
+                  "type": "object"
+                }
+              },
+              "required": [
+                "metadata",
+                "spec"
+              ],
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "machineType"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "replicas",
+        "selector",
+        "template"
+      ],
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "status": {
+      "additionalProperties": false,
+      "default": {},
+      "properties": {
+        "conditions": {
+          "items": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "lastTransitionTime": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "message": {
+                "default": "",
+                "type": "string"
+              },
+              "observedGeneration": {
+                "format": "int64",
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "reason": {
+                "default": "",
+                "type": "string"
+              },
+              "status": {
+                "default": "",
+                "type": "string"
+              },
+              "type": {
+                "default": "",
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "status",
+              "lastTransitionTime",
+              "reason",
+              "message"
+            ],
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "observedGeneration": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "readyReplicas": {
+          "format": "int32",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "replicas": {
+          "format": "int32",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "unavailableReplicas": {
+          "format": "int32",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "updatedReplicas": {
+          "format": "int32",
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "apiVersion",
+    "kind"
+  ],
+  "type": "object"
+}

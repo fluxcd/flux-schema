@@ -1,0 +1,1101 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": {
+      "type": "string"
+    },
+    "kind": {
+      "type": "string"
+    },
+    "metadata": {
+      "additionalProperties": false,
+      "default": {},
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "default": "",
+            "type": "string"
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "creationTimestamp": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "deletionGracePeriodSeconds": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "deletionTimestamp": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "finalizers": {
+          "items": {
+            "default": "",
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "generateName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "generation": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "labels": {
+          "additionalProperties": {
+            "default": "",
+            "type": "string"
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "managedFields": {
+          "items": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "apiVersion": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "fieldsType": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "fieldsV1": {
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "manager": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "operation": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "subresource": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "time": {
+                "format": "date-time",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "namespace": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ownerReferences": {
+          "items": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "apiVersion": {
+                "default": "",
+                "type": "string"
+              },
+              "blockOwnerDeletion": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "controller": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "kind": {
+                "default": "",
+                "type": "string"
+              },
+              "name": {
+                "default": "",
+                "type": "string"
+              },
+              "uid": {
+                "default": "",
+                "type": "string"
+              }
+            },
+            "required": [
+              "apiVersion",
+              "kind",
+              "name",
+              "uid"
+            ],
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "resourceVersion": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "selfLink": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "uid": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "spec": {
+      "additionalProperties": false,
+      "default": {},
+      "properties": {
+        "alertmanagerConfig": {
+          "additionalProperties": false,
+          "properties": {
+            "customConfig": {
+              "additionalProperties": false,
+              "properties": {
+                "logLevel": {
+                  "default": "",
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "nodeSelector": {
+                  "additionalProperties": {
+                    "default": "",
+                    "type": "string"
+                  },
+                  "type": [
+                    "object",
+                    "null"
+                  ]
+                },
+                "resources": {
+                  "items": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "limit": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "name": {
+                        "default": "",
+                        "type": "string"
+                      },
+                      "request": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "type": "object"
+                  },
+                  "type": [
+                    "array",
+                    "null"
+                  ]
+                },
+                "secrets": {
+                  "items": {
+                    "default": "",
+                    "type": "string"
+                  },
+                  "type": [
+                    "array",
+                    "null"
+                  ]
+                },
+                "tolerations": {
+                  "items": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "effect": {
+                        "enum": [
+                          "NoExecute",
+                          "NoSchedule",
+                          "PreferNoSchedule"
+                        ],
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "key": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "operator": {
+                        "enum": [
+                          "Equal",
+                          "Exists"
+                        ],
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "tolerationSeconds": {
+                        "format": "int64",
+                        "type": [
+                          "integer",
+                          "null"
+                        ]
+                      },
+                      "value": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "type": [
+                    "array",
+                    "null"
+                  ]
+                },
+                "topologySpreadConstraints": {
+                  "items": {
+                    "additionalProperties": false,
+                    "default": {},
+                    "properties": {
+                      "labelSelector": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "matchExpressions": {
+                            "items": {
+                              "additionalProperties": false,
+                              "default": {},
+                              "properties": {
+                                "key": {
+                                  "default": "",
+                                  "type": "string"
+                                },
+                                "operator": {
+                                  "default": "",
+                                  "type": "string"
+                                },
+                                "values": {
+                                  "items": {
+                                    "default": "",
+                                    "type": "string"
+                                  },
+                                  "type": [
+                                    "array",
+                                    "null"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "key",
+                                "operator"
+                              ],
+                              "type": "object"
+                            },
+                            "type": [
+                              "array",
+                              "null"
+                            ]
+                          },
+                          "matchLabels": {
+                            "additionalProperties": {
+                              "default": "",
+                              "type": "string"
+                            },
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          }
+                        },
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      },
+                      "matchLabelKeys": {
+                        "items": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      },
+                      "maxSkew": {
+                        "default": 0,
+                        "format": "int32",
+                        "type": "integer"
+                      },
+                      "minDomains": {
+                        "format": "int32",
+                        "type": [
+                          "integer",
+                          "null"
+                        ]
+                      },
+                      "nodeAffinityPolicy": {
+                        "enum": [
+                          "Honor",
+                          "Ignore"
+                        ],
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "nodeTaintsPolicy": {
+                        "enum": [
+                          "Honor",
+                          "Ignore"
+                        ],
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "topologyKey": {
+                        "default": "",
+                        "type": "string"
+                      },
+                      "whenUnsatisfiable": {
+                        "default": "",
+                        "enum": [
+                          "DoNotSchedule",
+                          "ScheduleAnyway"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "maxSkew",
+                      "topologyKey",
+                      "whenUnsatisfiable"
+                    ],
+                    "type": "object"
+                  },
+                  "type": [
+                    "array",
+                    "null"
+                  ]
+                },
+                "volumeClaimTemplate": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "apiVersion": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "kind": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "metadata": {
+                      "additionalProperties": false,
+                      "default": {},
+                      "properties": {
+                        "annotations": {
+                          "additionalProperties": {
+                            "default": "",
+                            "type": "string"
+                          },
+                          "type": [
+                            "object",
+                            "null"
+                          ]
+                        },
+                        "creationTimestamp": {
+                          "format": "date-time",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "deletionGracePeriodSeconds": {
+                          "format": "int64",
+                          "type": [
+                            "integer",
+                            "null"
+                          ]
+                        },
+                        "deletionTimestamp": {
+                          "format": "date-time",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "finalizers": {
+                          "items": {
+                            "default": "",
+                            "type": "string"
+                          },
+                          "type": [
+                            "array",
+                            "null"
+                          ]
+                        },
+                        "generateName": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "generation": {
+                          "format": "int64",
+                          "type": [
+                            "integer",
+                            "null"
+                          ]
+                        },
+                        "labels": {
+                          "additionalProperties": {
+                            "default": "",
+                            "type": "string"
+                          },
+                          "type": [
+                            "object",
+                            "null"
+                          ]
+                        },
+                        "managedFields": {
+                          "items": {
+                            "additionalProperties": false,
+                            "default": {},
+                            "properties": {
+                              "apiVersion": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "fieldsType": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "fieldsV1": {
+                                "type": [
+                                  "object",
+                                  "null"
+                                ]
+                              },
+                              "manager": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "operation": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "subresource": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "time": {
+                                "format": "date-time",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "type": "object"
+                          },
+                          "type": [
+                            "array",
+                            "null"
+                          ]
+                        },
+                        "name": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "namespace": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "ownerReferences": {
+                          "items": {
+                            "additionalProperties": false,
+                            "default": {},
+                            "properties": {
+                              "apiVersion": {
+                                "default": "",
+                                "type": "string"
+                              },
+                              "blockOwnerDeletion": {
+                                "type": [
+                                  "boolean",
+                                  "null"
+                                ]
+                              },
+                              "controller": {
+                                "type": [
+                                  "boolean",
+                                  "null"
+                                ]
+                              },
+                              "kind": {
+                                "default": "",
+                                "type": "string"
+                              },
+                              "name": {
+                                "default": "",
+                                "type": "string"
+                              },
+                              "uid": {
+                                "default": "",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "apiVersion",
+                              "kind",
+                              "name",
+                              "uid"
+                            ],
+                            "type": "object"
+                          },
+                          "type": [
+                            "array",
+                            "null"
+                          ]
+                        },
+                        "resourceVersion": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "selfLink": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "uid": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
+                    "spec": {
+                      "additionalProperties": false,
+                      "default": {},
+                      "properties": {
+                        "accessModes": {
+                          "items": {
+                            "default": "",
+                            "enum": [
+                              "ReadOnlyMany",
+                              "ReadWriteMany",
+                              "ReadWriteOnce",
+                              "ReadWriteOncePod"
+                            ],
+                            "type": "string"
+                          },
+                          "type": [
+                            "array",
+                            "null"
+                          ]
+                        },
+                        "dataSource": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "apiGroup": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "kind": {
+                              "default": "",
+                              "type": "string"
+                            },
+                            "name": {
+                              "default": "",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "name"
+                          ],
+                          "type": [
+                            "object",
+                            "null"
+                          ]
+                        },
+                        "dataSourceRef": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "apiGroup": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "kind": {
+                              "default": "",
+                              "type": "string"
+                            },
+                            "name": {
+                              "default": "",
+                              "type": "string"
+                            },
+                            "namespace": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "name"
+                          ],
+                          "type": [
+                            "object",
+                            "null"
+                          ]
+                        },
+                        "resources": {
+                          "additionalProperties": false,
+                          "default": {},
+                          "properties": {
+                            "limits": {
+                              "additionalProperties": {
+                                "type": "string"
+                              },
+                              "type": [
+                                "object",
+                                "null"
+                              ]
+                            },
+                            "requests": {
+                              "additionalProperties": {
+                                "type": "string"
+                              },
+                              "type": [
+                                "object",
+                                "null"
+                              ]
+                            }
+                          },
+                          "type": [
+                            "object",
+                            "null"
+                          ]
+                        },
+                        "selector": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "matchExpressions": {
+                              "items": {
+                                "additionalProperties": false,
+                                "default": {},
+                                "properties": {
+                                  "key": {
+                                    "default": "",
+                                    "type": "string"
+                                  },
+                                  "operator": {
+                                    "default": "",
+                                    "type": "string"
+                                  },
+                                  "values": {
+                                    "items": {
+                                      "default": "",
+                                      "type": "string"
+                                    },
+                                    "type": [
+                                      "array",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "key",
+                                  "operator"
+                                ],
+                                "type": "object"
+                              },
+                              "type": [
+                                "array",
+                                "null"
+                              ]
+                            },
+                            "matchLabels": {
+                              "additionalProperties": {
+                                "default": "",
+                                "type": "string"
+                              },
+                              "type": [
+                                "object",
+                                "null"
+                              ]
+                            }
+                          },
+                          "type": [
+                            "object",
+                            "null"
+                          ]
+                        },
+                        "storageClassName": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "volumeAttributesClassName": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "volumeMode": {
+                          "enum": [
+                            "Block",
+                            "Filesystem"
+                          ],
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "volumeName": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
+                    "status": {
+                      "additionalProperties": false,
+                      "default": {},
+                      "properties": {
+                        "accessModes": {
+                          "items": {
+                            "default": "",
+                            "enum": [
+                              "ReadOnlyMany",
+                              "ReadWriteMany",
+                              "ReadWriteOnce",
+                              "ReadWriteOncePod"
+                            ],
+                            "type": "string"
+                          },
+                          "type": [
+                            "array",
+                            "null"
+                          ]
+                        },
+                        "allocatedResourceStatuses": {
+                          "additionalProperties": {
+                            "default": "",
+                            "enum": [
+                              "ControllerResizeInProgress",
+                              "ControllerResizeInfeasible",
+                              "NodeResizeInProgress",
+                              "NodeResizeInfeasible",
+                              "NodeResizePending"
+                            ],
+                            "type": "string"
+                          },
+                          "type": [
+                            "object",
+                            "null"
+                          ]
+                        },
+                        "allocatedResources": {
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "type": [
+                            "object",
+                            "null"
+                          ]
+                        },
+                        "capacity": {
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "type": [
+                            "object",
+                            "null"
+                          ]
+                        },
+                        "conditions": {
+                          "items": {
+                            "additionalProperties": false,
+                            "default": {},
+                            "properties": {
+                              "lastProbeTime": {
+                                "format": "date-time",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "lastTransitionTime": {
+                                "format": "date-time",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "message": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "reason": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "status": {
+                                "default": "",
+                                "type": "string"
+                              },
+                              "type": {
+                                "default": "",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "status"
+                            ],
+                            "type": "object"
+                          },
+                          "type": [
+                            "array",
+                            "null"
+                          ]
+                        },
+                        "currentVolumeAttributesClassName": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "modifyVolumeStatus": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "status": {
+                              "default": "",
+                              "enum": [
+                                "InProgress",
+                                "Infeasible",
+                                "Pending"
+                              ],
+                              "type": "string"
+                            },
+                            "targetVolumeAttributesClassName": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "status"
+                          ],
+                          "type": [
+                            "object",
+                            "null"
+                          ]
+                        },
+                        "phase": {
+                          "enum": [
+                            "Bound",
+                            "Lost",
+                            "Pending"
+                          ],
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    }
+                  },
+                  "type": [
+                    "object",
+                    "null"
+                  ]
+                }
+              },
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "deploymentMode": {
+              "default": "",
+              "type": "string"
+            }
+          },
+          "required": [
+            "deploymentMode"
+          ],
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "userDefined": {
+          "additionalProperties": false,
+          "properties": {
+            "mode": {
+              "default": "",
+              "enum": [
+                "Disabled",
+                "NamespaceIsolated"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "mode"
+          ],
+          "type": [
+            "object",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "status": {
+      "default": {},
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "spec",
+    "apiVersion",
+    "kind"
+  ],
+  "type": "object"
+}

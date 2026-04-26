@@ -1,0 +1,1233 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": {
+      "type": "string"
+    },
+    "items": {
+      "items": {
+        "additionalProperties": false,
+        "default": {},
+        "properties": {
+          "apiVersion": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "kind": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "metadata": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "annotations": {
+                "additionalProperties": {
+                  "default": "",
+                  "type": "string"
+                },
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "creationTimestamp": {
+                "format": "date-time",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "deletionGracePeriodSeconds": {
+                "format": "int64",
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "deletionTimestamp": {
+                "format": "date-time",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "finalizers": {
+                "items": {
+                  "default": "",
+                  "type": "string"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ]
+              },
+              "generateName": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "generation": {
+                "format": "int64",
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "labels": {
+                "additionalProperties": {
+                  "default": "",
+                  "type": "string"
+                },
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "managedFields": {
+                "items": {
+                  "additionalProperties": false,
+                  "default": {},
+                  "properties": {
+                    "apiVersion": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "fieldsType": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "fieldsV1": {
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
+                    "manager": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "operation": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "subresource": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "time": {
+                      "format": "date-time",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "type": "object"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "namespace": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "ownerReferences": {
+                "items": {
+                  "additionalProperties": false,
+                  "default": {},
+                  "properties": {
+                    "apiVersion": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "blockOwnerDeletion": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    },
+                    "controller": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    },
+                    "kind": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "name": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "uid": {
+                      "default": "",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "apiVersion",
+                    "kind",
+                    "name",
+                    "uid"
+                  ],
+                  "type": "object"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ]
+              },
+              "resourceVersion": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "selfLink": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "uid": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "spec": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "additionalNetworks": {
+                "items": {
+                  "additionalProperties": false,
+                  "default": {},
+                  "properties": {
+                    "name": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "namespace": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "rawCNIConfig": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "simpleMacvlanConfig": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "ipamConfig": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "staticIPAMConfig": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "addresses": {
+                                  "items": {
+                                    "additionalProperties": false,
+                                    "default": {},
+                                    "properties": {
+                                      "address": {
+                                        "default": "",
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ]
+                                      },
+                                      "gateway": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ]
+                                      }
+                                    },
+                                    "type": "object"
+                                  },
+                                  "type": [
+                                    "array",
+                                    "null"
+                                  ]
+                                },
+                                "dns": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "domain": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "nameservers": {
+                                      "items": {
+                                        "default": "",
+                                        "type": "string"
+                                      },
+                                      "type": [
+                                        "array",
+                                        "null"
+                                      ]
+                                    },
+                                    "search": {
+                                      "items": {
+                                        "default": "",
+                                        "type": "string"
+                                      },
+                                      "type": [
+                                        "array",
+                                        "null"
+                                      ]
+                                    }
+                                  },
+                                  "type": [
+                                    "object",
+                                    "null"
+                                  ]
+                                },
+                                "routes": {
+                                  "items": {
+                                    "additionalProperties": false,
+                                    "default": {},
+                                    "properties": {
+                                      "destination": {
+                                        "default": "",
+                                        "type": "string"
+                                      },
+                                      "gateway": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "destination"
+                                    ],
+                                    "type": "object"
+                                  },
+                                  "type": [
+                                    "array",
+                                    "null"
+                                  ]
+                                }
+                              },
+                              "type": [
+                                "object",
+                                "null"
+                              ]
+                            },
+                            "type": {
+                              "default": "",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "type"
+                          ],
+                          "type": [
+                            "object",
+                            "null"
+                          ]
+                        },
+                        "master": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "mode": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "mtu": {
+                          "format": "int64",
+                          "type": [
+                            "integer",
+                            "null"
+                          ]
+                        }
+                      },
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
+                    "type": {
+                      "default": "",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "name"
+                  ],
+                  "type": "object"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ]
+              },
+              "additionalRoutingCapabilities": {
+                "additionalProperties": false,
+                "properties": {
+                  "providers": {
+                    "items": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "providers"
+                ],
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "clusterNetwork": {
+                "items": {
+                  "additionalProperties": false,
+                  "default": {},
+                  "properties": {
+                    "cidr": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "hostPrefix": {
+                      "format": "int64",
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "cidr"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "defaultNetwork": {
+                "additionalProperties": false,
+                "default": {},
+                "properties": {
+                  "openshiftSDNConfig": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "enableUnidling": {
+                        "type": [
+                          "boolean",
+                          "null"
+                        ]
+                      },
+                      "mode": {
+                        "default": "",
+                        "type": "string"
+                      },
+                      "mtu": {
+                        "format": "int64",
+                        "type": [
+                          "integer",
+                          "null"
+                        ]
+                      },
+                      "useExternalOpenvswitch": {
+                        "type": [
+                          "boolean",
+                          "null"
+                        ]
+                      },
+                      "vxlanPort": {
+                        "format": "int64",
+                        "type": [
+                          "integer",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "mode"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "ovnKubernetesConfig": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "egressIPConfig": {
+                        "additionalProperties": false,
+                        "default": {},
+                        "properties": {
+                          "reachabilityTotalTimeoutSeconds": {
+                            "format": "int64",
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          }
+                        },
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      },
+                      "gatewayConfig": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "ipForwarding": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "ipv4": {
+                            "additionalProperties": false,
+                            "default": {},
+                            "properties": {
+                              "internalMasqueradeSubnet": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "ipv6": {
+                            "additionalProperties": false,
+                            "default": {},
+                            "properties": {
+                              "internalMasqueradeSubnet": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "routingViaHost": {
+                            "type": [
+                              "boolean",
+                              "null"
+                            ]
+                          }
+                        },
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      },
+                      "genevePort": {
+                        "format": "int64",
+                        "type": [
+                          "integer",
+                          "null"
+                        ]
+                      },
+                      "hybridOverlayConfig": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "hybridClusterNetwork": {
+                            "items": {
+                              "additionalProperties": false,
+                              "default": {},
+                              "properties": {
+                                "cidr": {
+                                  "default": "",
+                                  "type": "string"
+                                },
+                                "hostPrefix": {
+                                  "format": "int64",
+                                  "type": [
+                                    "integer",
+                                    "null"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "cidr"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "hybridOverlayVXLANPort": {
+                            "format": "int64",
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "hybridClusterNetwork"
+                        ],
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      },
+                      "ipsecConfig": {
+                        "additionalProperties": false,
+                        "default": {
+                          "mode": "Disabled"
+                        },
+                        "properties": {
+                          "full": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "encapsulation": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "mode": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      },
+                      "ipv4": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "internalJoinSubnet": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "internalTransitSwitchSubnet": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      },
+                      "ipv6": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "internalJoinSubnet": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "internalTransitSwitchSubnet": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      },
+                      "mtu": {
+                        "format": "int64",
+                        "type": [
+                          "integer",
+                          "null"
+                        ]
+                      },
+                      "policyAuditConfig": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "destination": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "maxFileSize": {
+                            "format": "int64",
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "maxLogFiles": {
+                            "format": "int32",
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "rateLimit": {
+                            "format": "int64",
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "syslogFacility": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      },
+                      "routeAdvertisements": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "v4InternalSubnet": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "v6InternalSubnet": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "type": {
+                    "default": "",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "type"
+                ],
+                "type": "object"
+              },
+              "deployKubeProxy": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "disableMultiNetwork": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "disableNetworkDiagnostics": {
+                "default": false,
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "exportNetworkFlows": {
+                "additionalProperties": false,
+                "properties": {
+                  "ipfix": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "collectors": {
+                        "items": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      }
+                    },
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "netFlow": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "collectors": {
+                        "items": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      }
+                    },
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "sFlow": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "collectors": {
+                        "items": {
+                          "default": "",
+                          "type": "string"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      }
+                    },
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  }
+                },
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "kubeProxyConfig": {
+                "additionalProperties": false,
+                "properties": {
+                  "bindAddress": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "iptablesSyncPeriod": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "proxyArguments": {
+                    "additionalProperties": {
+                      "items": {
+                        "default": "",
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  }
+                },
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "logLevel": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "managementState": {
+                "default": "",
+                "type": "string"
+              },
+              "migration": {
+                "additionalProperties": false,
+                "properties": {
+                  "features": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "egressFirewall": {
+                        "type": [
+                          "boolean",
+                          "null"
+                        ]
+                      },
+                      "egressIP": {
+                        "type": [
+                          "boolean",
+                          "null"
+                        ]
+                      },
+                      "multicast": {
+                        "type": [
+                          "boolean",
+                          "null"
+                        ]
+                      }
+                    },
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "mode": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "mtu": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "machine": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "from": {
+                            "format": "int64",
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "to": {
+                            "format": "int64",
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "to"
+                        ],
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      },
+                      "network": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "from": {
+                            "format": "int64",
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "to": {
+                            "format": "int64",
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "to"
+                        ],
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      }
+                    },
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "networkType": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "observedConfig": {
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "operatorLogLevel": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "serviceNetwork": {
+                "items": {
+                  "default": "",
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "unsupportedConfigOverrides": {
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "useMultiNetworkPolicy": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "managementState",
+              "clusterNetwork",
+              "serviceNetwork",
+              "defaultNetwork"
+            ],
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "status": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "conditions": {
+                "items": {
+                  "additionalProperties": false,
+                  "default": {},
+                  "properties": {
+                    "lastTransitionTime": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "reason": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "status": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "type": {
+                      "default": "",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "status",
+                    "lastTransitionTime"
+                  ],
+                  "type": "object"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ]
+              },
+              "generations": {
+                "items": {
+                  "additionalProperties": false,
+                  "default": {},
+                  "properties": {
+                    "group": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "hash": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "lastGeneration": {
+                      "default": 0,
+                      "format": "int64",
+                      "type": "integer"
+                    },
+                    "name": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "namespace": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "resource": {
+                      "default": "",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "group",
+                    "resource",
+                    "namespace",
+                    "name",
+                    "lastGeneration",
+                    "hash"
+                  ],
+                  "type": "object"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ]
+              },
+              "latestAvailableRevision": {
+                "format": "int32",
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "observedGeneration": {
+                "format": "int64",
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "readyReplicas": {
+                "default": 0,
+                "format": "int32",
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "version": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "kind": {
+      "type": "string"
+    },
+    "metadata": {
+      "additionalProperties": false,
+      "default": {},
+      "properties": {
+        "continue": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "remainingItemCount": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "resourceVersion": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "selfLink": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "items",
+    "apiVersion",
+    "kind"
+  ],
+  "type": "object"
+}
