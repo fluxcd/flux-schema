@@ -200,6 +200,37 @@ Rules:
 - Setting `--config` overrides `FLUX_SCHEMA_CONFIG`. When both are set, the flag wins and the env var is ignored.
 - Manifest paths stay positional. The config file configures how to validate; paths are given on the command line.
 
+#### GitHub Action
+
+For GitOps repositories, the [`fluxcd/flux-schema/actions/validate`](actions/validate)
+action runs validation across a directory tree on every pull request.
+It auto-detects kustomize overlays, builds them with `kubectl kustomize`, and
+validates the rendered manifests against the catalog (including CEL rules):
+
+```yaml
+name: validate
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: azure/setup-kubectl@v4
+      - uses: fluxcd/flux-schema/actions/setup@main
+      - uses: fluxcd/flux-schema/actions/validate@main
+        with:
+          path: "."
+          schema-location: |
+            default
+            https://raw.githubusercontent.com/datreeio/CRDs-catalog/main
+```
+
+See the [action README](actions/validate/README.md) for the full input reference.
+
 ### Kubernetes CRD Extraction
 
 The `extract crd` command reads Kubernetes CustomResourceDefinition YAML
@@ -267,7 +298,7 @@ Fetch the upstream swagger for a Kubernetes release and generate schemas:
 flux-schema extract k8s --version 1.35.0 -d ./schemas
 ```
 
-Supply the swagger file from the cluster:
+You can also supply the swagger file directly, e.g. from a live cluster:
 
 ```shell
 kubectl get --raw /openapi/v2 | flux-schema extract k8s -d ./schemas
@@ -301,7 +332,7 @@ Fetch the swagger from `openshift/api` at a release branch:
 flux-schema extract openshift --ref release-4.20 -d ./schemas
 ```
 
-Supply the swagger file:
+You can also supply the swagger file directly, e.g. from a URL:
 
 ```shell
 curl -sL https://raw.githubusercontent.com/openshift/api/release-4.20/openapi/openapi.json \

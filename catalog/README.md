@@ -1,6 +1,7 @@
 # Flux Schema Catalog
 
-This is the catalog of JSON Schemas used by the `flux schema validation` tool.
+This is the catalog of JSON Schemas used by the `flux schema validation` tool
+and the GitHub Action [fluxcd/flux-schema/actions/validate](../actions/validate).
 
 <!-- versions:start -->
 | Source | Version |
@@ -26,6 +27,28 @@ Extracted from the CRDs shipped by the latest stable Flux distribution, Flagger 
 - `flagger.app` — `Canary`, `MetricTemplate`, `AlertProvider`
 - `fluxcd.controlplane.io` — `FluxInstance`, `FluxReport`, `ResourceSet`, `ResourceSetInputProvider`
 
+## Gateway API
+
+Extracted from the CRDs shipped by the latest stable release of the Kubernetes Gateway API.
+
+- `gateway.networking.k8s.io` — `Gateway`, `GatewayClass`, `GRPCRoute`, `HTTPRoute`, etc.
+
+If you need schemas for the Gateway API [experimental](https://gateway-api.sigs.k8s.io/concepts/versioning/)
+channel, you can generate them with:
+
+```shell
+kubectl kustomize https://github.com/kubernetes-sigs/gateway-api/config/crd/experimental?ref=main | \
+  flux-schema extract crd -d ./gwapi-experimental
+```
+
+And use them with `--schema-location`, before the `default` catalog, when validating:
+
+```shell
+flux-schema validate ./manifests \
+  --schema-location ./gwapi-experimental \
+  --schema-location default
+```
+
 ## Kubernetes APIs
 
 Extracted from the OpenAPI v2 swagger of the latest stable version of Kubernetes.
@@ -41,30 +64,6 @@ Extracted from the OpenAPI v2 swagger of the latest stable version of Kubernetes
 - `networking.k8s.io`, `node.k8s.io`
 - `rbac.authorization.k8s.io`, `resource.k8s.io`
 - `scheduling.k8s.io`, `storage.k8s.io`, `storagemigration.k8s.io`
-
-## Gateway API
-
-Extracted from the CRDs shipped by the latest stable release of the Kubernetes Gateway API.
-
-- `gateway.networking.k8s.io` — `Gateway`, `GatewayClass`, `GRPCRoute`, `HTTPRoute`, etc.
-
-If you need schemas for the Gateway API [experimental](https://gateway-api.sigs.k8s.io/concepts/versioning/)
-channel, you can generate them with:
-
-```shell
-kubectl kustomize https://github.com/kubernetes-sigs/gateway-api/config/crd/experimental?ref=main | \
-    flux-schema extract crd /dev/stdin \
-    -d ./gwapi-experimental \
-    -f '{{ .Group }}/{{ .Kind }}_{{ .Version }}.json'
-```
-
-And use them with `--schema-location`, before the `default` catalog, when validating:
-
-```shell
-flux-schema validate ./manifests \
-  --schema-location './gwapi-experimental/{{.Group}}/{{.Kind}}_{{.Version}}.json' \
-  --schema-location default
-```
 
 ## OpenShift APIs
 
