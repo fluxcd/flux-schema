@@ -21,6 +21,7 @@ import (
 
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/santhosh-tekuri/jsonschema/v6"
+	utiljson "k8s.io/apimachinery/pkg/util/json"
 	"sigs.k8s.io/yaml"
 
 	"github.com/fluxcd/flux-schema/internal/tmpl"
@@ -603,13 +604,13 @@ func (v *Validator) validateDoc(ctx context.Context, source string, idx int, raw
 		return StatusInvalid
 	}
 
-	var doc map[string]any
-	if err := yaml.UnmarshalStrict(raw, &doc); err != nil {
+	doc, err := decodeDoc(raw, true)
+	if err != nil {
 		// Lenient re-parse so callers can still render Kind/Namespace/Name
 		// for a doc that failed admission (e.g. duplicate keys), rather
 		// than the anonymous "/#1".
-		var lenient map[string]any
-		if yaml.Unmarshal(raw, &lenient) == nil && lenient != nil {
+		lenient, _ := decodeDoc(raw, false)
+		if lenient != nil {
 			r.APIVersion, r.Kind, r.Namespace, r.Name = extractIdentity(lenient)
 		}
 		if r.Name == "" {
@@ -730,6 +731,39 @@ func (v *Validator) validateDoc(ctx context.Context, source string, idx int, raw
 	return r, true
 }
 
+// decodeDoc parses one YAML document into a map[string]any while preserving
+// the int/float distinction that CEL evaluation requires.
+//
+// We deliberately avoid sigs.k8s.io/yaml's Unmarshal helpers: they finish the
+// YAML→JSON→Go round-trip with stdlib encoding/json, which decodes every JSON
+// number into float64 when the target is interface{}. apiserver's CEL
+// UnstructuredToVal then rejects integer-typed fields with "expected int, got
+// float64". apimachinery's util/json.Unmarshal preserves the int distinction
+// (kjson.UnmarshalCaseSensitivePreserveInts under the hood), matching how the
+// kube-apiserver decodes admission payloads before invoking CEL.
+//
+// strict=true triggers YAMLToJSONStrict, which surfaces duplicate YAML keys
+// as an error.
+func decodeDoc(raw []byte, strict bool) (map[string]any, error) {
+	var (
+		jsonBytes []byte
+		err       error
+	)
+	if strict {
+		jsonBytes, err = yaml.YAMLToJSONStrict(raw)
+	} else {
+		jsonBytes, err = yaml.YAMLToJSON(raw)
+	}
+	if err != nil {
+		return nil, err
+	}
+	var doc map[string]any
+	if err := utiljson.Unmarshal(jsonBytes, &doc); err != nil {
+		return nil, err
+	}
+	return doc, nil
+}
+
 // splitYAMLError turns a YAML decode error into clean, per-violation details
 // the CLI can render on indented sub-lines, the same way JSON Schema
 // violations are rendered.
@@ -743,13 +777,22 @@ func (v *Validator) validateDoc(ctx context.Context, source string, idx int, raw
 // that doesn't match a known shape is returned verbatim rather than
 // dropped.
 func splitYAMLError(err error) []ValidationError {
+	// decodeDoc surfaces yaml errors directly from yaml.YAMLToJSONStrict (e.g.
+	// "yaml: unmarshal errors:\n  line N: ..."). The "error converting YAML
+	// to JSON: " variants are kept for back-compat in case any code path
+	// still routes through sigs.k8s.io/yaml's higher-level Unmarshal helpers.
 	const (
-		multiPrefix  = "error converting YAML to JSON: yaml: unmarshal errors:"
-		singlePrefix = "error converting YAML to JSON: yaml: "
-		rawPrefix    = "yaml: "
+		multiPrefixWrapped = "error converting YAML to JSON: yaml: unmarshal errors:"
+		multiPrefixBare    = "yaml: unmarshal errors:"
+		singlePrefix       = "error converting YAML to JSON: yaml: "
+		rawPrefix          = "yaml: "
 	)
 	msg := err.Error()
-	if rest, ok := strings.CutPrefix(msg, multiPrefix); ok {
+	for _, prefix := range []string{multiPrefixWrapped, multiPrefixBare} {
+		rest, ok := strings.CutPrefix(msg, prefix)
+		if !ok {
+			continue
+		}
 		var out []ValidationError
 		for line := range strings.SplitSeq(rest, "\n") {
 			t := strings.TrimSpace(line)
