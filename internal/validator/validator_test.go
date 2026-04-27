@@ -88,6 +88,92 @@ spec:
 	g.Expect(results[0].Errors).To(BeEmpty())
 }
 
+// writeWidgetSchemaWithIntCEL writes a Widget schema with an integer-typed
+// field guarded by an x-kubernetes-validations rule. The rule ("self.port >
+// 0") forces the apiserver CEL evaluator to bind self.port as an int — which
+// only works if the YAML decoder hands back an int rather than a JSON-default
+// float64. Used by the regression test below to lock in that wiring.
+func writeWidgetSchemaWithIntCEL(t *testing.T, dir string) {
+	t.Helper()
+	schema := map[string]any{
+		"type":     "object",
+		"required": []any{"apiVersion", "kind", "spec"},
+		"properties": map[string]any{
+			"apiVersion": map[string]any{"type": "string"},
+			"kind":       map[string]any{"type": "string"},
+			"metadata":   map[string]any{"type": "object"},
+			"spec": map[string]any{
+				"type":                 "object",
+				"additionalProperties": false,
+				"required":             []any{"port"},
+				"properties": map[string]any{
+					"port": map[string]any{"type": "integer", "format": "int32"},
+				},
+				"x-kubernetes-validations": []any{
+					map[string]any{"rule": "self.port > 0", "message": "port must be positive"},
+				},
+			},
+		},
+	}
+	b, err := json.MarshalIndent(schema, "", "  ")
+	if err != nil {
+		t.Fatalf("marshal schema: %v", err)
+	}
+	path := filepath.Join(dir, "widget-example-v1.json")
+	if err := os.WriteFile(path, b, 0o644); err != nil {
+		t.Fatalf("write schema: %v", err)
+	}
+}
+
+// Regression: a CEL rule that references an integer field used to fail with
+// "invalid data, expected int, got float64" because sigs.k8s.io/yaml decoded
+// JSON numbers via stdlib encoding/json (float64 by default for any).
+// The validator now decodes via apimachinery's util/json, which preserves
+// the int distinction the apiserver CEL evaluator requires.
+func TestValidateBytes_CELRuleOnIntegerField(t *testing.T) {
+	g := NewWithT(t)
+	dir := t.TempDir()
+	writeWidgetSchemaWithIntCEL(t, dir)
+	v := newLocalValidator(t, dir, false)
+
+	doc := []byte(`apiVersion: example.com/v1
+kind: Widget
+metadata:
+  name: w1
+  namespace: default
+spec:
+  port: 80
+`)
+	results := v.ValidateBytes(context.Background(), "test.yaml", doc)
+	g.Expect(results).To(HaveLen(1))
+	g.Expect(results[0].Status).To(Equal(StatusValid), "errors: %+v", results[0].Errors)
+	g.Expect(results[0].Errors).To(BeEmpty())
+}
+
+// Companion test: the same rule must still fire when the manifest violates
+// it. Guards against a regression where decode-side coercion accidentally
+// makes every integer compare unevaluable.
+func TestValidateBytes_CELRuleOnIntegerField_Violation(t *testing.T) {
+	g := NewWithT(t)
+	dir := t.TempDir()
+	writeWidgetSchemaWithIntCEL(t, dir)
+	v := newLocalValidator(t, dir, false)
+
+	doc := []byte(`apiVersion: example.com/v1
+kind: Widget
+metadata:
+  name: w1
+spec:
+  port: 0
+`)
+	results := v.ValidateBytes(context.Background(), "test.yaml", doc)
+	g.Expect(results).To(HaveLen(1))
+	g.Expect(results[0].Status).To(Equal(StatusInvalid))
+	g.Expect(results[0].Reason).To(Equal(ReasonCELViolation))
+	g.Expect(results[0].Errors).ToNot(BeEmpty())
+	g.Expect(results[0].Errors[0].Msg).To(ContainSubstring("port must be positive"))
+}
+
 func TestValidateBytes_InvalidFieldType(t *testing.T) {
 	g := NewWithT(t)
 	dir := t.TempDir()
