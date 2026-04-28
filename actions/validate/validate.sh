@@ -35,6 +35,11 @@ default_flux_schema_flags=("--skip-json-path=/sops" "--skip-missing-schemas" "--
 # Effective flags passed to flux-schema, populated by resolve_config.
 flux_schema_flags=()
 
+# Effective flux-schema invocation, populated by resolve_cli.
+# Either ("flux-schema") for the standalone CLI or ("flux" "schema") for the
+# Flux CLI plugin.
+flux_schema_cmd=()
+
 # root directory to validate
 root_dir="."
 
@@ -104,14 +109,21 @@ parse_args() {
 }
 
 check_prerequisites() {
-  local missing=0
-  for cmd in kubectl flux-schema; do
-    if ! command -v "$cmd" &> /dev/null; then
-      echo "ERROR - $cmd is not installed" >&2
-      missing=1
-    fi
-  done
-  if [[ $missing -ne 0 ]]; then
+  if ! command -v kubectl &> /dev/null; then
+    echo "ERROR - kubectl is not installed" >&2
+    exit 1
+  fi
+}
+
+# Pick the flux-schema invocation. Prefer the standalone CLI; fall back to
+# the Flux CLI plugin form ('flux schema') when only that is available.
+resolve_cli() {
+  if command -v flux-schema &> /dev/null; then
+    flux_schema_cmd=("flux-schema")
+  elif command -v flux &> /dev/null && flux schema --help &> /dev/null; then
+    flux_schema_cmd=("flux" "schema")
+  else
+    echo "ERROR - flux-schema is not installed (tried 'flux-schema' and 'flux schema' plugin)" >&2
     exit 1
   fi
 }
@@ -198,7 +210,7 @@ validate_kubernetes_manifests() {
     files+=("$file")
   done < <(find "$root_dir" -path '*/.*' -prune -o -type f -name '*.yaml' -print0)
   if [[ ${#files[@]} -gt 0 ]]; then
-    flux-schema validate "${flux_schema_flags[@]}" "${files[@]}"
+    "${flux_schema_cmd[@]}" validate "${flux_schema_flags[@]}" "${files[@]}"
   fi
 }
 
@@ -210,7 +222,7 @@ validate_kustomize_overlays() {
     fi
     echo "INFO - Validating kustomize overlay ${file/%$kustomize_config}"
     kubectl kustomize "${file/%$kustomize_config}" "${kustomize_flags[@]}" | \
-      flux-schema validate "${flux_schema_flags[@]}"
+      "${flux_schema_cmd[@]}" validate "${flux_schema_flags[@]}"
     if [[ ${PIPESTATUS[0]} != 0 || ${PIPESTATUS[1]} != 0 ]]; then
       exit 1
     fi
@@ -220,6 +232,7 @@ validate_kustomize_overlays() {
 # Main
 parse_args "$@"
 check_prerequisites
+resolve_cli
 resolve_config
 detect_excluded_dirs
 validate_kubernetes_manifests
