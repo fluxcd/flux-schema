@@ -60,7 +60,7 @@ var validateCmd = &cobra.Command{
     --skip-file 'kustomization.yaml'
 
   # Load flag defaults from a checked-in YAML config (CLI flags still override)
-  flux-schema validate ./manifests --config .flux-schema.yaml`,
+  flux-schema validate ./manifests --config .fluxschema.yml`,
 	RunE: validateCmdRun,
 }
 

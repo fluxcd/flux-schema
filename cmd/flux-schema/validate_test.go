@@ -553,7 +553,7 @@ func TestValidateCmd_Config_AppliesFlagValues(t *testing.T) {
 	manifestDir := t.TempDir()
 	writeManifest(t, manifestDir, "ok.yaml", validWidget)
 
-	cfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
 validate:
   verbose: true
   skip-kind:
@@ -576,7 +576,7 @@ func TestValidateCmd_Config_CLIOverridesBool(t *testing.T) {
 	manifestDir := t.TempDir()
 	writeManifest(t, manifestDir, "ok.yaml", validWidget)
 
-	cfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
 validate:
   verbose: true
 `)
@@ -596,7 +596,7 @@ validate:
 func TestValidateCmd_Config_SkipJSONPath(t *testing.T) {
 	g := NewWithT(t)
 
-	cfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
 validate:
   skip-json-path:
     - Secret:/sops
@@ -617,7 +617,7 @@ func TestValidateCmd_Config_CLIOverridesSkipJSONPath(t *testing.T) {
 
 	// Config strips /sops; CLI replaces the list with a different pointer
 	// that doesn't match anything in the doc, so SOPS validation fails.
-	cfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
 validate:
   skip-json-path:
     - Secret:/sops
@@ -640,7 +640,7 @@ func TestValidateCmd_Config_SkipFile(t *testing.T) {
 	writeManifest(t, manifestDir, "ok.yaml", validWidget)
 	writeManifest(t, manifestDir, "kustomization.yaml", invalidWidget)
 
-	cfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
 validate:
   skip-file:
     - kustomization.yaml
@@ -661,7 +661,7 @@ func TestValidateCmd_Config_CLIOverridesSlice(t *testing.T) {
 	manifestDir := t.TempDir()
 	writeManifest(t, manifestDir, "ok.yaml", validWidget)
 
-	cfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
 validate:
   skip-kind:
     - Widget
@@ -685,7 +685,7 @@ func TestValidateCmd_Config_Concurrent(t *testing.T) {
 	manifestDir := t.TempDir()
 	writeManifest(t, manifestDir, "ok.yaml", validWidget)
 
-	cfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
 validate:
   verbose: true
 `)
@@ -696,7 +696,7 @@ validate:
 	})
 	g.Expect(err).ToNot(HaveOccurred())
 
-	cfgZero := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `version: "1"
+	cfgZero := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
 validate:
   concurrent: 0
 `)
@@ -714,7 +714,7 @@ func TestValidateCmd_Config_NoValidateSection(t *testing.T) {
 	manifestDir := t.TempDir()
 	writeManifest(t, manifestDir, "ok.yaml", validWidget)
 
-	cfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
 `)
 	out, err := executeCommand([]string{
 		"validate", manifestDir,
@@ -727,7 +727,7 @@ func TestValidateCmd_Config_NoValidateSection(t *testing.T) {
 
 func TestValidateCmd_Config_VersionMissing(t *testing.T) {
 	g := NewWithT(t)
-	cfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `validate:
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `validate:
   verbose: true
 `)
 	_, err := executeCommand([]string{"validate", "--config", cfg})
@@ -736,7 +736,7 @@ func TestValidateCmd_Config_VersionMissing(t *testing.T) {
 
 func TestValidateCmd_Config_VersionUnsupported(t *testing.T) {
 	g := NewWithT(t)
-	cfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `version: "2"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "2"
 validate:
   verbose: true
 `)
@@ -746,7 +746,7 @@ validate:
 
 func TestValidateCmd_Config_StrictUnknownKey(t *testing.T) {
 	g := NewWithT(t)
-	cfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
 validate:
   skip_kind:
     - Secret
@@ -758,7 +758,7 @@ validate:
 
 func TestValidateCmd_Config_StrictUnknownSection(t *testing.T) {
 	g := NewWithT(t)
-	cfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
 extracft:
   verbose: true
 `)
@@ -781,7 +781,7 @@ func TestValidateCmd_Config_EnvVar(t *testing.T) {
 	manifestDir := t.TempDir()
 	writeManifest(t, manifestDir, "ok.yaml", validWidget)
 
-	cfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
 validate:
   skip-kind:
     - Widget
@@ -804,10 +804,10 @@ func TestValidateCmd_Config_FlagBeatsEnvVar(t *testing.T) {
 	writeManifest(t, manifestDir, "ok.yaml", validWidget)
 
 	// Env var config has unsupported version — must not be read.
-	envCfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `version: "99"`)
+	envCfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "99"`)
 	t.Setenv("FLUX_SCHEMA_CONFIG", envCfg)
 
-	flagCfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `version: "1"
+	flagCfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
 validate:
   skip-kind:
     - Widget
@@ -823,7 +823,7 @@ validate:
 
 func TestValidateCmd_Config_MalformedYAML(t *testing.T) {
 	g := NewWithT(t)
-	cfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml",
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml",
 		"version: \"1\"\nvalidate:\n\tverbose: true\n") // tabs are illegal indent
 	_, err := executeCommand([]string{"validate", "--config", cfg})
 	g.Expect(err).To(MatchError(ContainSubstring("parse " + cfg)))
@@ -1125,7 +1125,7 @@ func TestValidateCmd_Output_JSON_Config(t *testing.T) {
 	manifestDir := t.TempDir()
 	writeManifest(t, manifestDir, "ok.yaml", validWidget)
 
-	cfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
 validate:
   output: json
 `)
@@ -1150,7 +1150,7 @@ func TestValidateCmd_Output_Unsupported(t *testing.T) {
 
 func TestValidateCmd_Config_InvalidOutput(t *testing.T) {
 	g := NewWithT(t)
-	cfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
 validate:
   output: toml
 `)
@@ -1262,7 +1262,7 @@ func TestValidateCmd_CELRule_ConfigFile(t *testing.T) {
 	schemaDir := extractCRDSchema(t, celGadgetCRDYAML)
 	manifestDir := t.TempDir()
 	writeManifest(t, manifestDir, "bad.yaml", celViolatingGadget)
-	cfg := writeManifest(t, t.TempDir(), ".flux-schema.yaml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
 validate:
   skip-cel-rules: true
 `)
