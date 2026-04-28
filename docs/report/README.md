@@ -39,17 +39,17 @@ Every report is wrapped in a top-level envelope:
 | `reason`       | Stable kebab-case code (see below). Omitted when `status` is `"valid"`.                                                                                                   |
 | `violations[]` | Zero or more `{path?, message}` entries. `path` is a JSON Pointer set by schema violations; for every other reason it is absent and `message` carries the raw error text. |
 
-## Reason enum
+## Reasons
 
-| Reason              | Triggered by                                                                                           | Status (default / with `--skip-missing-schemas`) |
-|---------------------|--------------------------------------------------------------------------------------------------------|--------------------------------------------------|
-| `source-load-error` | Source-level open/read failure.                                                                        | `invalid` / `invalid`                            |
-| `yaml-parse-error`  | Strict YAML decode fails (duplicate keys, malformed doc).                                              | `invalid` / `invalid`                            |
-| `schema-load-error` | Schema loader failure (HTTP fetch, file read, or JSON Schema compile).                                 | `invalid` / `invalid`                            |
-| `schema-not-found`  | No schema applicable — either no schema file matches the GVK, or the document has no GVK to look up.   | `invalid` / `skipped`                            |
-| `schema-violation`  | Document fails one or more schema constraints. `violations[]` carries a JSON Pointer `path` per entry. | `invalid` / `invalid`                            |
-| `cel-violation`     | Document fails one or more `x-kubernetes-validations` CEL rules, or the schema's CEL evaluator could not be built. JSON Schema constraints all passed. | `invalid` / `invalid`                            |
-| `kind-skipped`      | Matched a `--skip-kind` pattern.                                                                       | `skipped` / `skipped`                            |
+| Reason              | Triggered by                                                                                                                                           |
+|---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `source-load-error` | Source-level open/read failure.                                                                                                                        |
+| `yaml-parse-error`  | Strict YAML decode fails (duplicate keys, malformed doc).                                                                                              |
+| `schema-load-error` | Schema loader failure (HTTP fetch, file read, or JSON Schema compile).                                                                                 |
+| `schema-not-found`  | No schema applicable — either no schema file matches the GVK, or the document has no GVK to look up.                                                   |
+| `schema-violation`  | Document fails one or more schema constraints. `violations[]` carries a JSON Pointer `path` per entry.                                                 |
+| `cel-violation`     | Document fails one or more `x-kubernetes-validations` CEL rules, or the schema's CEL evaluator could not be built. JSON Schema constraints all passed. |
+| `kind-skipped`      | Matched a `--skip-kind` pattern.                                                                                                                       |
 
 ## Example
 
