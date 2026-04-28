@@ -5,24 +5,27 @@ All GitHub runners are supported, including Ubuntu, Windows, and macOS.
 
 ## Usage
 
-Example workflow for printing the latest version:
+Example workflow for validating a Helm chart in pull requests:
 
 ```yaml
-name: Check the latest version
+name: flux-schema
 
 on:
-  workflow_dispatch:
+  pull_request:
+    branches: [main]
 
 jobs:
-  check-latest-flux-schema-version:
+  validate-chart:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v6
       - name: Setup Flux Schema CLI
         uses: fluxcd/flux-schema/actions/setup@main
-        with:
-          version: latest
-      - name: Print Flux Schema Version
-        run: flux-schema version
+      - name: Validate chart
+        run: |
+          helm template ./charts/app | \
+          flux-schema validate --skip-missing-schemas -o json
 ```
 
 ## Action Inputs

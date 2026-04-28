@@ -4,15 +4,19 @@ This GitHub Action validates Kubernetes YAML manifests and kustomize overlays
 against the Flux Schema catalog, including CEL rule evaluation. It is intended
 to run in CI before changes are merged to a branch synced by Flux.
 
-The action wraps [`validate.sh`](validate.sh), which
-auto-detects kustomize overlays and skips Helm chart and Terraform directories.
+The action wraps [`validate.sh`](validate.sh), which auto-detects kustomize
+overlays and skips YAML files included in Helm chart and Terraform modules.
 
 ## Prerequisites
 
-The action expects `kubectl` (for the built-in `kubectl kustomize`)
-and `flux-schema` to be on `PATH`. Compose with
-[`fluxcd/flux-schema/actions/setup`](../setup) and an installer like
-[`azure/setup-kubectl`](https://github.com/Azure/setup-kubectl):
+The action expects `kubectl` (for building overlays with `kubectl kustomize`)
+and `flux-schema` to be on `PATH`. `kubectl` is pre-installed on GitHub-hosted
+runners; compose with [`fluxcd/flux-schema/actions/setup`](../setup)
+to install the CLI.
+
+## Usage
+
+Example workflow for validating pull requests:
 
 ```yaml
 name: validate
@@ -26,23 +30,52 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: azure/setup-kubectl@v4
       - uses: fluxcd/flux-schema/actions/setup@main
       - uses: fluxcd/flux-schema/actions/validate@main
         with:
-          path: ./clusters/production
+          path: "."
           exclude: |
-            charts
-            terraform
-          schema-location: |
-            default
-            https://raw.githubusercontent.com/datreeio/CRDs-catalog/main
+            config/testdata
+```
+
+By default, the action looks for a `.fluxschema.yml` file at the repository
+root. When present, all validation options (schema locations, skipped kinds,
+SOPS field stripping, etc.) are read from it. When absent, the action falls
+back to a built-in set of defaults that targets the Flux Schema catalog.
+
+### Using a config file
+
+Commit a `.fluxschema.yml` to your repository root to control the validation:
+
+```yaml
+# .fluxschema.yml
+version: "1"
+validate:
+  schema-location:
+    - default
+    - https://raw.githubusercontent.com/datreeio/CRDs-catalog/main
+  skip-json-path:
+    - Secret:/sops
+  skip-missing-schemas: true
+  verbose: true
+  output: text
+```
+
+See the [validate config file reference](../../docs/validate.md#config-file)
+for the full list of supported keys.
+
+If the file lives at a non-default path, point the action at it with `config`:
+
+```yaml
+- uses: fluxcd/flux-schema/actions/validate@main
+  with:
+    config: .github/.fluxschema.yml
 ```
 
 ## Action Inputs
 
-| Name              | Description                                                                                                                 | Default                 |
-|-------------------|-----------------------------------------------------------------------------------------------------------------------------|-------------------------|
-| `path`            | Root directory to validate (relative to the repository root).                                                               | `.`                     |
-| `exclude`         | Newline-separated list of directories to exclude from validation.                                                           | `""`                    |
-| `schema-location` | Newline-separated list of schema sources (URL or path). The literal `default` selects the built-in catalog; tried in order. | `""` (built-in catalog) |
+| Name      | Description                                                                                                                   | Default           |
+|-----------|-------------------------------------------------------------------------------------------------------------------------------|-------------------|
+| `path`    | Root directory to validate (relative to the repository root).                                                                 | `.`               |
+| `exclude` | Newline-separated list of directories to exclude from validation.                                                             | `""`              |
+| `config`  | Path to Flux Schema CLI config file. When the file does not exist, sensible defaults targeting the built-in catalog are used. | `.fluxschema.yml` |

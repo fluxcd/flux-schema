@@ -13,13 +13,12 @@ inputs:
     description: Newline-separated list of directories to exclude from validation
     required: false
     default: ""
-  schema-location:
+  config:
     description: |
-      Newline-separated list of --schema-location values passed to flux-schema.
-      Use the literal value 'default' to select the built-in catalog. When
-      empty, the built-in catalog is used.
+      Path to a flux-schema config file (relative to the repository root).
+      When the file does not exist, the default Flux Schema catalog will be used.
     required: false
-    default: ""
+    default: ".fluxschema.yml"
 runs:
   using: composite
   steps:
@@ -28,20 +27,14 @@ runs:
       env:
         ROOT_DIR: ${{ inputs.path }}
         EXCLUDE_DIRS: ${{ inputs.exclude }}
-        SCHEMA_LOCATIONS: ${{ inputs.schema-location }}
+        CONFIG_FILE: ${{ inputs.config }}
       run: |
         set -euo pipefail
-        args=("-d" "$ROOT_DIR")
+        args=("-d" "$ROOT_DIR" "-c" "$CONFIG_FILE")
         if [[ -n "$EXCLUDE_DIRS" ]]; then
           while IFS= read -r line; do
             [[ -z "$line" ]] && continue
             args+=("-e" "$line")
           done <<< "$EXCLUDE_DIRS"
-        fi
-        if [[ -n "$SCHEMA_LOCATIONS" ]]; then
-          while IFS= read -r line; do
-            [[ -z "$line" ]] && continue
-            args+=("-s" "$line")
-          done <<< "$SCHEMA_LOCATIONS"
         fi
         "${GITHUB_ACTION_PATH}/validate.sh" "${args[@]}"
