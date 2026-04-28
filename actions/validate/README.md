@@ -29,9 +29,12 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: fluxcd/flux-schema/actions/setup@main
-      - uses: fluxcd/flux-schema/actions/validate@main
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Setup Flux Schema CLI
+        uses: fluxcd/flux-schema/actions/setup@main
+      - name: Validate manifests
+        uses: fluxcd/flux-schema/actions/validate@main
         with:
           path: "."
           exclude: |
@@ -61,7 +64,7 @@ validate:
   output: text
 ```
 
-See the [validate config file reference](../../docs/validate.md#config-file)
+See the [validate config file reference](../../docs/guides/manifests-validation.md#config-file)
 for the full list of supported keys.
 
 If the file lives at a non-default path, point the action at it with `config`:

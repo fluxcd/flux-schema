@@ -6,209 +6,110 @@
 [![license](https://img.shields.io/github/license/fluxcd/flux-schema.svg)](https://github.com/fluxcd/flux-schema/blob/main/LICENSE)
 [![slsa](https://slsa.dev/images/gh-badge-level2.svg)](https://github.com/fluxcd/flux-schema/attestations)
 
-Flux CLI plugin for Kubernetes schema extraction and manifests validation against JSON Schemas and CEL rules.
+**Flux Schema** is a CLI for validating Kubernetes YAML manifests against JSON
+Schema and CEL rules using the same evaluation semantics as the Kubernetes
+API server. It ships as a single Go binary with a built-in catalog covering
+Kubernetes, OpenShift, Gateway API and the Flux ecosystem CRDs.
+
+This project is inspired by `kubeconform`, adding CEL rule evaluation,
+built-in schema extraction for CRDs & OpenAPI swagger, and a curated catalog
+refreshed automatically from upstream stable releases.
 
 > [!NOTE]
-> This repository is in early development and the plugin system is not yet available in a stable release of Flux.
-> The instructions for installing and using the plugin will be added here when [RFC-0013](https://github.com/fluxcd/flux2/blob/main/rfcs/0013-cli-plugin-system/README.md)
-> has been implemented and released in Flux 2.9 or later.
+> This repository is in early development and the plugin system is not yet
+> available in a stable release of Flux. Instructions for installing and
+> using `flux-schema` as a Flux CLI plugin will be added here once
+> [RFC-0013](https://github.com/fluxcd/flux2/blob/main/rfcs/0013-cli-plugin-system/README.md)
+> ships in Flux 2.9 or later.
 
-## Available Commands
+## Features
 
-- `flux-schema validate [paths...]`: Validate Kubernetes manifests against JSON Schemas
-    - `--schema-location`: URL or file path for schemas (repeatable, tried in order); `default` points at the built-in catalog
-    - `--skip-missing-schemas`: Skip documents for which no schema can be found
-    - `--skip-kind`: Skip documents matching `kind` or `apiVersion/kind` (repeatable)
-    - `--skip-json-path`: Strip a JSON Pointer field before validation, optionally scoped: `[apiVersion/kind:]/path` (repeatable)
-    - `--skip-file`: Glob pattern matched against files and dirs; defaults to skipping dotfiles and dot-dirs (repeatable)
-    - `--skip-cel-rules`: Skip evaluation of `x-kubernetes-validations` CEL rules
-    - `--fail-fast`: Exit after the first invalid document
-    - `--concurrent`: Number of concurrent workers (default 8)
-    - `--insecure-skip-tls-verify`: Disable TLS certificate verification when fetching schemas over HTTPS
-    - `-v, --verbose`: Print a line for every document, including valid and skipped ones
-    - `-o, --output`: Output format, one of `text|json|yaml` (default: `text`)
-    - `--config`: Path to a YAML file supplying default values for validate flags (env: `FLUX_SCHEMA_CONFIG`)
-- `flux-schema extract crd [files...]`: Extract JSON Schema from Kubernetes CRD YAMLs
-  - `-d, --output-dir`: Directory to write JSON Schema files to (mutually exclusive with `--output-archive`)
-  - `-a, --output-archive`: Path to write a gzipped tar archive of JSON Schema files to
-  - `-f, --output-format`: Go template for output file paths (default: `{{ .Group }}/{{ .Kind }}_{{ .Version }}.json`)
-  - `--strip-description`: Drop `description` fields from the generated schemas to reduce their size
-- `flux-schema extract k8s [swagger-file]`: Extract JSON Schema from a Kubernetes OpenAPI v2 swagger document
-  - `--version X.Y.Z`: Fetch the swagger from `kubernetes/kubernetes` for the given release tag (mutually exclusive with a swagger file)
-  - `-d, --output-dir`, `-f, --output-format`, `--strip-description`: same as `extract crd`
-- `flux-schema extract openshift [swagger-file]`: Extract JSON Schema from an `openshift/api` OpenAPI v2 swagger document
-  - `--ref REF`: Fetch the swagger from `openshift/api` at the given git ref (e.g. `release-4.20`); mutually exclusive with a swagger file
-  - `-d, --output-dir`, `-f, --output-format`, `--strip-description`: same as `extract k8s`
+- **Strict schema validation** — every field of every Kubernetes built-in
+  kind and custom resource is checked. Unknown fields, wrong types, and
+  missing required properties are all reported as schema violations.
+- **CEL evaluation** — `x-kubernetes-validations` rules evaluated with the
+  same engine as Kubernetes API server.
+- **Strict YAML decoding** — duplicate keys are rejected matching Flux
+  behavior. Metadata name, namespace, labels, and annotations are
+  checked against API server rules (DNS-1123, qualified names).
+- **Built-in catalog** — JSON Schemas with CEL rules for Kubernetes, OpenShift,
+  Gateway API, Flux, Flagger and Flux Operator CRDs, refreshed automatically against upstream.
+- **Custom catalogs** — extract JSON Schemas from Kubernetes CRDs and OpenAPI swagger files,
+  then layer your catalog on top of the default schemas.
+- **SOPS-aware** — strip SOPS metadata fields so the rest of the document can be validated without decryption.
+- **Structured reports** — versioned JSON or YAML validation reports for CI tooling and downstream automation.
+- **Declarative validation** — define the validation config in a `.fluxschema.yml` file for reproducible runs across local and CI environments.
+- **GitHub Actions** — composite actions for installation and manifests validation on GitHub runners.
 
-### Kubernetes Manifests Validation
+## Install
 
-The validate command reads Kubernetes YAML manifests from one or more files or directories
-and validates each document against a JSON Schema resolved from its `apiVersion` and `kind`.
-
-When no `--schema-location` is given, validate uses the [flux-schema catalog](catalog/README.md),
-which covers the latest Kubernetes and OpenShift APIs, the stable channel of Gateway API,
-and the Flux ecosystem CRDs:
+Download the binary for your platform from the [releases page](https://github.com/fluxcd/flux-schema/releases),
+or build from source:
 
 ```shell
-flux-schema validate ./manifests
+go install github.com/fluxcd/flux-schema/cmd/flux-schema@latest
 ```
 
-To validate against your own schemas generated by `flux-schema extract`, pass the
-directory as `--schema-location`. Bare paths and URLs are auto-expanded to the
-catalog layout `{{.Group}}/{{.Kind}}_{{.Version}}.json`:
+For GitHub Actions runners, use the [`actions/setup`](actions/setup) action.
 
-```shell
-flux-schema validate ./manifests --schema-location ./my-schemas
-```
+## Quickstart
 
-For a different layout, pass a full Go template ending in `.json`:
+Validate a directory tree against the built-in catalog and 3rd-party schemas:
 
 ```shell
 flux-schema validate ./manifests \
-  --skip-missing-schemas \
-  --schema-location './schemas/{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json'
+--schema-location default \
+--schema-location https://raw.githubusercontent.com/datreeio/CRDs-catalog/main
 ```
 
-Template variables are `.Group`, `.GroupPrefix`, `.Kind`, and `.Version`.
-
-The `--schema-location` flag is repeatable and locations are tried in order (the first match wins).
-Pass the literal value `default` to include the flux-schema catalog alongside your own schemas:
+Build a kustomize overlay and validate the generated manifests:
 
 ```shell
-flux-schema validate ./manifests \
-  --schema-location default \
-  --schema-location https://raw.githubusercontent.com/datreeio/CRDs-catalog/main \
-  --schema-location './schemas/{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json'
+kustomize build ./clusters/production | flux-schema validate --verbose
 ```
 
-Manifests can also be piped in and certain documents skipped with `--skip-kind`:
+Render a Helm chart and validate the generated manifests:
 
 ```shell
-kustomize build . | flux-schema validate \
-  --skip-kind 'v1/Service' \
-  --skip-kind 'source.toolkit.fluxcd.io/v1/ExternalArtifact'
+helm template ./charts/app | flux-schema validate -v --skip-missing-schemas
 ```
 
-Some manifests carry tooling-injected fields that are stripped at apply time by Flux
-(e.g. SOPS-encrypted Secrets). Use `--skip-json-path` to remove those fields from
-validation so the rest of the document is still checked.
+Build a [ResourceSet](https://fluxoperator.dev/docs/resourcesets/introduction/) and validate the generated manifests:
 
 ```shell
-flux-schema validate ./manifests \
-  --skip-json-path 'v1/Secret:/sops' \
-  --skip-json-path 'Deployment:/sops'
+flux-operator build rset -f tenants.yaml | flux-schema validate
 ```
 
-Output example with validation errors:
-
-```
-manifests/releases.yaml - HelmRelease/apps/webapp is invalid: cel violation
-  - /spec: Invalid value: either 'chart' or 'chartRef' must be set
-manifests/sources.yaml - Bucket/apps/webapp-data is invalid: schema violation
-  - /spec: missing property 'bucketName'
-  - /spec/interval: got number, want string
-  - /spec/secretRef/name: got object, want string
-  - /spec: additional properties 'force' not allowed
-manifests/sources.yaml - OCIRepository/apps/webapp is invalid: yaml parse error
-  - line 18: key "app.kubernetes.io/name" already set in map
-manifests/sources.yaml - HelmChart/apps/webapp is valid
-manifests/sources.yaml - Secret/apps/auth-sops is skipped: kind skipped
-Summary: 5 resources found in 2 files - Valid: 1, Invalid: 3, Skipped: 1
-```
-
-A non-zero exit code is returned when any document is invalid or errored.
-
-#### Structured output
-
-For CI pipelines and tooling, pass `-o json` (or `-o yaml`) to emit a
-machine-readable report instead of text:
+Emit a structured report for CI tooling:
 
 ```shell
 flux-schema validate ./manifests -o json
 ```
 
-See the [validation report reference](docs/report/README.md) for the full
-envelope shape, the `reason` enum, and an example covering every result
-type. The report is versioned by a published
-[JSON Schema](docs/report/schema-1.0.0.json).
-
-#### Validation rules
-
-- YAML documents with duplicate keys are rejected matching Flux behavior.
-- Documents missing both `metadata.name` and `metadata.generateName` are flagged as invalid
-  matching Kubernetes API behavior.
-- `metadata.name`, `generateName`, `namespace`, and `labels`/`annotations` keys and values
-  are checked against the Kubernetes API server's ObjectMeta rules (DNS-1123, qualified names).
-- Schemas produced by `flux-schema extract crd` close objects with `additionalProperties: false`,
-  so undocumented fields under `spec` fail validation.
-- String formats `duration`, `date`, `datetime`/`date-time`, and `time` are validated
-  matching Kubernetes API conventions.
-
-#### CEL validation rules
-
-By default, the validate command extracts the `x-kubernetes-validations`
-rules from the schemas and evaluates them as CEL expressions
-using the same engine as the Kubernetes API.
-
-CEL evaluation runs only after JSON Schema validation passes,
-and any rule violations are reported with the `cel-violation` reason.
-Transition rules referencing `oldSelf` evaluate with no prior state,
-matching the Kubernetes API behavior on `CREATE`.
-
-The CEL validation can be disabled with the `--skip-cel-rules` flag.
-
-#### Config file
-
-Flag values can be pre-set in a YAML config file and referenced with `--config`
-or with the `FLUX_SCHEMA_CONFIG` environment variable.
-This keeps long invocations out of CI scripts and makes validation reproducible
-across developers:
+Extract JSON Schemas from your CRDs and layer them on top of the built-in catalog:
 
 ```shell
-flux-schema validate ./manifests --config .flux-schema.yaml
+kubectl get crds -o yaml | flux-schema extract crd -d ./my-catalog
+
+flux-schema validate ./manifests \
+  --schema-location ./my-catalog \
+  --schema-location default
 ```
 
-The file has a `version` (required, must be `"1"`) and a `validate` section
-whose keys mirror the CLI flag names:
+## GitHub Actions
+
+Two composite actions cover GitOps validation pipelines:
+
+- **[`fluxcd/flux-schema/actions/setup`](actions/setup)** — install the CLI on GitHub runners.
+- **[`fluxcd/flux-schema/actions/validate`](actions/validate)** —
+  auto-detect kustomize overlays, render them with `kubectl kustomize`, and
+  validate every YAML document against the catalog (including CEL rules).
+  Configurable via `.fluxschema.yml`.
+
+Minimal pull-request workflow:
 
 ```yaml
-version: "1"
-validate:
-  schema-location:
-    - default
-    - https://raw.githubusercontent.com/datreeio/CRDs-catalog/main
-  skip-kind:
-    - v1/ServiceAccont
-    - source.toolkit.fluxcd.io/v1/ExternalArtifact
-  skip-json-path:
-    - Secret:/sops
-  skip-file:
-    - '.*'
-    - kustomization.yaml
-  skip-cel-rules: false
-  skip-missing-schemas: false
-  verbose: true
-  fail-fast: false
-  concurrent: 8
-  insecure-skip-tls-verify: false
-  output: text
-```
-
-Rules:
-
-- CLI flags override config values. Setting `--verbose=false` wins over `verbose: true` in the file.
-- Setting `--config` overrides `FLUX_SCHEMA_CONFIG`. When both are set, the flag wins and the env var is ignored.
-- Manifest paths stay positional. The config file configures how to validate; paths are given on the command line.
-
-#### GitHub Action
-
-For GitOps repositories, the [`fluxcd/flux-schema/actions/validate`](actions/validate)
-action runs validation across a directory tree on every pull request.
-It auto-detects kustomize overlays, builds them with `kubectl kustomize`, and
-validates the rendered manifests against the catalog (including CEL rules):
-
-```yaml
-name: validate
+name: flux-schema
 
 on:
   pull_request:
@@ -218,127 +119,38 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: azure/setup-kubectl@v4
-      - uses: fluxcd/flux-schema/actions/setup@main
-      - uses: fluxcd/flux-schema/actions/validate@main
-        with:
-          path: "."
-          schema-location: |
-            default
-            https://raw.githubusercontent.com/datreeio/CRDs-catalog/main
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Setup Flux Schema CLI
+        uses: fluxcd/flux-schema/actions/setup@main
+      - name: Validate manifests
+        uses: fluxcd/flux-schema/actions/validate@main
 ```
 
-See the [action README](actions/validate/README.md) for the full input reference.
+## Commands
 
-### Kubernetes CRD Extraction
+| Command                                   | Description                                                 |
+|-------------------------------------------|-------------------------------------------------------------|
+| `flux-schema validate [paths...]`         | Validate Kubernetes YAML against JSON Schema and CEL rules. |
+| `flux-schema extract crd [files...]`      | Extract JSON Schemas from CRD YAMLs.                        |
+| `flux-schema extract k8s [swagger]`       | Extract JSON Schemas from Kubernetes OpenAPI v2 swagger.    |
+| `flux-schema extract openshift [swagger]` | Extract JSON Schemas from OpenShift OpenAPI v2 swagger.     |
 
-The `extract crd` command reads Kubernetes CustomResourceDefinition YAML
-and writes one JSON Schema file per CRD version.
-The input can be a bare CRD, a `List` of CRDs, or a multi-document YAML stream.
+Run `flux-schema <command> --help` for the full flag list.
 
-Generate schemas for every CRD installed in a cluster, using the
-per-group-directory layout:
+## Documentation
 
-```shell
-kubectl get crds -o yaml | flux-schema extract crd -d ./schemas
-```
+- [Manifest validation guide](docs/guides/manifests-validation.md) — flag
+  reference, schema resolution, CEL rules, skipping documents and fields,
+  and config files.
+- [Custom catalog guide](docs/guides/custom-schema-catalog.md) — populate,
+  layout, host, and refresh your own catalog with the `extract` commands.
+- [Validation report reference](docs/report/README.md) — envelope shape and
+  JSON Schema for `-o json` / `-o yaml` output.
+- [Built-in catalog](catalog/README.md) — Kubernetes, OpenShift, Gateway
+  API, and Flux ecosystem CRDs covered by the default `default` schema location.
 
-You can supply `-f, --output-format` with a Go template to change the layout, e.g. the
-`kubeconform`/`kubeval` flat layout:
+## License
 
-```shell
-flux-schema extract crd crds.yaml -f '{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json'
-```
-
-> The output is compatible with `kubeconform` and `kubeval`, making this command a drop-in replacement for kubeconform's
-> [openapi2jsonschema.py](https://github.com/yannh/kubeconform/blob/master/scripts/openapi2jsonschema.py) script.
-
-To bundle the schemas into a gzipped tar archive instead of writing to a directory,
-use `-a, --output-archive`:
-
-```shell
-kustomize build config/crd | flux-schema extract crd -a dist/crd-schemas.tar.gz
-```
-
-The archive path must end in `.tar.gz` or `.tgz`, and its parent directory is created if missing.
-`-f, --output-format` still controls the entry paths inside the archive, so a nested template produces
-subdirectories within the tarball.
-
-Supported template variables (all lowercased at render time):
-
-| Variable       | Example                    |
-|----------------|----------------------------|
-| `.Group`       | `source.toolkit.fluxcd.io` |
-| `.GroupPrefix` | `source`                   |
-| `.Kind`        | `gitrepository`            |
-| `.Version`     | `v1`                       |
-
-An empty `.Group` (Kubernetes core API, e.g. `apiVersion: v1`) is normalized to `core`, and `.GroupPrefix`
-is derived from `.Group` when unset. So a core `Pod` renders as `core/pod_v1.json` with the default template
-and resolves to the same path when `validate` looks up its schema.
-
-Note that the generated schemas apply the following OpenAPI → JSON Schema transformations:
-
-- Objects with `properties` are closed with `additionalProperties: false`, except under nodes
-  marked with `x-kubernetes-preserve-unknown-fields: true`, which stay open so free-form maps validate correctly.
-- Integer-or-string fields are rewritten to `oneOf: [{type: string}, {type: integer}]`. Both the
-  legacy `format: int-or-string` and the structural `x-kubernetes-int-or-string: true` forms are recognized.
-
-### Kubernetes OpenAPI Extraction
-
-The `extract k8s` command reads a Kubernetes OpenAPI v2 swagger document and writes
-one JSON Schema file per kind listed under `x-kubernetes-group-version-kind`. Helper
-types (e.g. `PodSpec`, `ObjectMeta`) are not emitted as standalone files — they are
-inlined into the kinds that reference them.
-
-Fetch the upstream swagger for a Kubernetes release and generate schemas:
-
-```shell
-flux-schema extract k8s --version 1.35.0 -d ./schemas
-```
-
-You can also supply the swagger file directly, e.g. from a live cluster:
-
-```shell
-kubectl get --raw /openapi/v2 | flux-schema extract k8s -d ./schemas
-```
-
-The same `-f, --output-format` template used by `extract crd` works here, so the
-generated files remain resolvable by `validate` with a single `--schema-location`
-for both built-ins and CRDs. Core API kinds (`apiVersion: v1`) render under the
-`core/` group directory.
-
-The emitted schemas are the standalone-strict variant:
-
-- Every `$ref` is inlined so schemas have no cross-file dependencies.
-- Objects with `properties` are closed with `additionalProperties: false`, except
-  under nodes marked `x-kubernetes-preserve-unknown-fields: true`.
-- Integer-or-string fields are rewritten to `oneOf: [{type: string}, {type: integer}]`.
-- Optional fields are marked nullable (`type: [<t>, "null"]`), matching the
-  Kubernetes API server's behavior of accepting `null` for unset optional values.
-- `apiVersion` and `kind` are injected into every kind's properties and required list.
-
-### OpenShift OpenAPI Extraction
-
-The `extract openshift` command reads the `openshift/api` OpenAPI v2 swagger document
-and writes one JSON Schema file per OpenShift resource. Only definitions in the
-`openshift` namespace are emitted; the upstream Kubernetes types
-embedded in the same document (e.g. `Pod`) are inlined.
-
-Fetch the swagger from `openshift/api` at a release branch:
-
-```shell
-flux-schema extract openshift --ref release-4.20 -d ./schemas
-```
-
-You can also supply the swagger file directly, e.g. from a URL:
-
-```shell
-curl -sL https://raw.githubusercontent.com/openshift/api/release-4.20/openapi/openapi.json \
-  flux-schema extract openshift -d ./schemas
-```
-
-The same `-f, --output-format` template used by `extract k8s` works here, so the
-generated files remain resolvable by `validate` with a single `--schema-location`
-for both Kubernetes and OpenShift resources. 
+The Flux Schema project is [Apache 2.0 licensed](LICENSE) and accepts contributions
+via GitHub pull requests.
