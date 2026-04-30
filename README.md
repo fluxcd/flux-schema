@@ -96,7 +96,15 @@ flux-schema validate ./manifests \
   --schema-location default
 ```
 
-## GitHub Actions
+## Running in CI
+
+Running flux-schema in CI shifts validation left, so schema violations are
+caught in pull requests rather than on the cluster after Flux reconciles them.
+The CLI ships as GitHub Actions for repositories hosted on GitHub,
+and as a multi-arch (AMD64 and ARM64) container image for other CI
+systems and air-gapped environments.
+
+### GitHub Actions
 
 Two composite actions cover GitOps validation pipelines:
 
@@ -126,6 +134,21 @@ jobs:
       - name: Validate manifests
         uses: fluxcd/flux-schema/actions/validate@main
 ```
+
+### Docker
+
+The `ghcr.io/fluxcd/flux-schema` image bakes the built-in catalog into
+`/catalog/latest/`, so it can validate manifests in air-gapped environments:
+
+```shell
+docker run --rm \
+  -v "$PWD/manifests:/manifests:ro" \
+  ghcr.io/fluxcd/flux-schema:latest validate /manifests \
+  --schema-location /catalog/latest
+```
+
+See the [Docker section](docs/guides/manifests-validation.md#docker) of the
+validation guide for details on running the CLI in CI using the container image.
 
 ## Commands
 

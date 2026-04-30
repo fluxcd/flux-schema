@@ -270,6 +270,38 @@ Rules:
 - Manifest paths stay positional. The config file configures how to validate;
   paths are given on the command line.
 
-## CI integration
+## Running in CI
 
-For GitHub Actions, see the [validate action](../../actions/validate/README.md) reference.
+### GitHub Actions
+
+See the [validate action](../../actions/validate/README.md) reference.
+
+### Docker
+
+The `ghcr.io/fluxcd/flux-schema` image bakes the [default catalog](../../catalog/README.md)
+into `/catalog/latest/`, so manifests can be validated offline without fetching schemas from GitHub.
+
+Mount the manifests directory and point `--schema-location` at the builtin catalog:
+
+```sh
+docker run --rm \
+  -v "$PWD/manifests:/manifests:ro" \
+  ghcr.io/fluxcd/flux-schema:latest validate /manifests \
+  --schema-location /catalog/latest
+```
+
+Or pipe rendered manifests into the container over stdin
+(note the `-i` flag to keep stdin open):
+
+```sh
+kustomize build ./manifests | docker run --rm -i \
+  ghcr.io/fluxcd/flux-schema:latest validate \
+  --schema-location /catalog/latest \
+  --skip-missing-schemas
+```
+
+Notes:
+
+- Use `--schema-location /catalog/latest` rather than `default` for air-gapped environments.
+- Pin the image to a release tag e.g. `ghcr.io/fluxcd/flux-schema:v0.3.0`.
+- Tu use your own schema catalog, repeat `--schema-location` with another mounted directory.

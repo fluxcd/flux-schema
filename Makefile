@@ -3,6 +3,7 @@
 
 # Makefile for building and testing the flux-schema CLI.
 
+DOCKER_IMAGE ?= ghcr.io/fluxcd/flux-schema:latest-dev
 VERSION_DEV ?=0.0.0-$(shell git rev-parse --abbrev-ref HEAD)-$(shell git rev-parse --short HEAD)-$(shell date +%s)
 GO_TEST_ARGS ?=
 GO_RUN_ARGS ?=
@@ -48,6 +49,10 @@ lint: golangci-lint ## Run golangci linters.
 .PHONY: build
 build: tidy fmt vet ## Build CLI binary.
 	CGO_ENABLED=0 go build -ldflags="-s -w -X main.VERSION=$(VERSION_DEV)" -o ./bin/flux-schema ./cmd/flux-schema/
+
+.PHONY: docker-build
+docker-build: ## Build docker image with the CLI.
+	docker build -t $(DOCKER_IMAGE) --build-arg VERSION=$(VERSION_DEV) -f Dockerfile .
 
 .PHONY: install
 install: test lint build ## Test, lint, build and copy the binary to GOBIN.
