@@ -32,6 +32,12 @@ jobs:
       - name: Run smoke test
         run: |
           flux install --export | ./bin/flux-schema validate -v --schema-location ./catalog/latest
+      - name: Build Docker image
+        run: make docker-build
+      - name: Run Docker smoke test
+        run: |
+          flux install --export | docker run --rm -i ghcr.io/fluxcd/flux-schema:latest-dev \
+            validate -v --schema-location /catalog/latest
       - name: Check if working tree is dirty
         run: |
           if [[ $(git diff --stat) != '' ]]; then
