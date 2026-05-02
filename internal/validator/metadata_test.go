@@ -51,6 +51,42 @@ func TestValidateMetadata_BadGenerateName(t *testing.T) {
 	g.Expect(errs[0].Path).To(Equal("/metadata/generateName"))
 }
 
+func TestValidateMetadata_RBACAllowsUnderscoreInName(t *testing.T) {
+	g := NewWithT(t)
+	for _, kind := range []string{"Role", "ClusterRole", "RoleBinding", "ClusterRoleBinding"} {
+		errs := validateMetadata(map[string]any{
+			"apiVersion": "rbac.authorization.k8s.io/v1",
+			"kind":       kind,
+			"metadata":   map[string]any{"name": "ops_clusterRole2"},
+		})
+		g.Expect(errs).To(BeEmpty(), "kind %s should accept underscored name", kind)
+	}
+}
+
+func TestValidateMetadata_RBACRejectsPathSegmentViolation(t *testing.T) {
+	g := NewWithT(t)
+	errs := validateMetadata(map[string]any{
+		"apiVersion": "rbac.authorization.k8s.io/v1",
+		"kind":       "ClusterRole",
+		"metadata":   map[string]any{"name": "bad/name"},
+	})
+	g.Expect(errs).ToNot(BeEmpty())
+	g.Expect(errs[0].Path).To(Equal("/metadata/name"))
+}
+
+func TestValidateMetadata_NonRBACKindWithRoleNameStillDNSValidated(t *testing.T) {
+	g := NewWithT(t)
+	// A CRD that happens to be named "Role" in a different group must still
+	// get DNS-subdomain validation.
+	errs := validateMetadata(map[string]any{
+		"apiVersion": "example.com/v1",
+		"kind":       "Role",
+		"metadata":   map[string]any{"name": "ops_clusterRole2"},
+	})
+	g.Expect(errs).ToNot(BeEmpty())
+	g.Expect(errs[0].Path).To(Equal("/metadata/name"))
+}
+
 func TestValidateMetadata_BadNamespace(t *testing.T) {
 	g := NewWithT(t)
 	errs := validateMetadata(map[string]any{
