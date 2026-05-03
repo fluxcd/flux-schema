@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/validate/content"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 )
@@ -32,11 +33,11 @@ func shortenRule(s string) string {
 // that passes JSON Schema validation can still be rejected by the API
 // server at reconcile time.
 //
-// Name validation deliberately uses NameIsDNSSubdomain (the most
-// permissive of the kube name validators) because we don't know each
+// Name validation defaults to NameIsDNSSubdomain since we don't know each
 // kind's nameFn here; tighter rules like NameIsDNSLabel (Service / Pod /
 // Namespace / ConfigMap / Secret) would produce false positives across
-// kinds.
+// kinds. RBAC kinds (Role / ClusterRole / RoleBinding / ClusterRoleBinding)
+// are special-cased to use path-segment validation which allows '_' and ':'.
 func validateMetadata(doc map[string]any) []ValidationError {
 	metadata, _ := doc["metadata"].(map[string]any)
 	if metadata == nil {
@@ -44,13 +45,20 @@ func validateMetadata(doc map[string]any) []ValidationError {
 	}
 	var out []ValidationError
 
+	nameFn := apivalidation.NameIsDNSSubdomain
+	prefixFn := apivalidation.NameIsDNSSubdomain
+	if isRBACKind(doc) {
+		nameFn = pathSegmentName
+		prefixFn = pathSegmentPrefix
+	}
+
 	if name, ok := metadata["name"].(string); ok && name != "" {
-		for _, msg := range apivalidation.NameIsDNSSubdomain(name, false) {
+		for _, msg := range nameFn(name, false) {
 			out = append(out, ValidationError{Path: "/metadata/name", Msg: shortenRule(msg)})
 		}
 	}
 	if gen, ok := metadata["generateName"].(string); ok && gen != "" {
-		for _, msg := range apivalidation.NameIsDNSSubdomain(gen, true) {
+		for _, msg := range prefixFn(gen, true) {
 			out = append(out, ValidationError{Path: "/metadata/generateName", Msg: shortenRule(msg)})
 		}
 	}
@@ -117,6 +125,39 @@ func validateAnnotations(annotations map[string]any) []ValidationError {
 		})
 	}
 	return out
+}
+
+// rbacKinds enumerates the kinds the kube-apiserver validates with
+// path-segment rules instead of DNS-1123 subdomain.
+//
+// See https://github.com/kubernetes/kubernetes/blob/v1.36.0/pkg/apis/rbac/validation/validation.go#L32-L33
+var rbacKinds = map[string]struct{}{
+	"Role":               {},
+	"ClusterRole":        {},
+	"RoleBinding":        {},
+	"ClusterRoleBinding": {},
+}
+
+func isRBACKind(doc map[string]any) bool {
+	kind, _ := doc["kind"].(string)
+	if _, ok := rbacKinds[kind]; !ok {
+		return false
+	}
+	apiVersion, _ := doc["apiVersion"].(string)
+	group, _, ok := strings.Cut(apiVersion, "/")
+	if !ok {
+		// core group has no slash; RBAC kinds don't live there.
+		return false
+	}
+	return group == rbacv1.GroupName
+}
+
+func pathSegmentName(name string, _ bool) []string {
+	return content.IsPathSegmentName(name)
+}
+
+func pathSegmentPrefix(name string, _ bool) []string {
+	return content.IsPathSegmentPrefix(name)
 }
 
 func jsonPointer(parts ...string) string {
