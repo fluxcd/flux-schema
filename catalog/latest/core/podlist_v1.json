@@ -6060,6 +6060,21 @@
                   "null"
                 ]
               },
+              "schedulingGroup": {
+                "additionalProperties": false,
+                "properties": {
+                  "podGroupName": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
               "securityContext": {
                 "additionalProperties": false,
                 "properties": {
@@ -8382,31 +8397,6 @@
                   "array",
                   "null"
                 ]
-              },
-              "workloadRef": {
-                "additionalProperties": false,
-                "properties": {
-                  "name": {
-                    "type": "string"
-                  },
-                  "podGroup": {
-                    "type": "string"
-                  },
-                  "podGroupReplicaKey": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  }
-                },
-                "required": [
-                  "name",
-                  "podGroup"
-                ],
-                "type": [
-                  "object",
-                  "null"
-                ]
               }
             },
             "required": [
@@ -8514,432 +8504,7 @@
                                     "null"
                                   ]
                                 },
-                                "resourceID": {
-                                  "type": "string"
-                                }
-                              },
-                              "required": [
-                                "resourceID"
-                              ],
-                              "type": "object"
-                            },
-                            "type": [
-                              "array",
-                              "null"
-                            ]
-                          }
-                        },
-                        "required": [
-                          "name"
-                        ],
-                        "type": "object"
-                      },
-                      "type": [
-                        "array",
-                        "null"
-                      ]
-                    },
-                    "containerID": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    },
-                    "image": {
-                      "type": "string"
-                    },
-                    "imageID": {
-                      "type": "string"
-                    },
-                    "lastState": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "running": {
-                          "additionalProperties": false,
-                          "properties": {
-                            "startedAt": {
-                              "format": "date-time",
-                              "type": [
-                                "string",
-                                "null"
-                              ]
-                            }
-                          },
-                          "type": [
-                            "object",
-                            "null"
-                          ]
-                        },
-                        "terminated": {
-                          "additionalProperties": false,
-                          "properties": {
-                            "containerID": {
-                              "type": [
-                                "string",
-                                "null"
-                              ]
-                            },
-                            "exitCode": {
-                              "format": "int32",
-                              "type": "integer"
-                            },
-                            "finishedAt": {
-                              "format": "date-time",
-                              "type": [
-                                "string",
-                                "null"
-                              ]
-                            },
-                            "message": {
-                              "type": [
-                                "string",
-                                "null"
-                              ]
-                            },
-                            "reason": {
-                              "type": [
-                                "string",
-                                "null"
-                              ]
-                            },
-                            "signal": {
-                              "format": "int32",
-                              "type": [
-                                "integer",
-                                "null"
-                              ]
-                            },
-                            "startedAt": {
-                              "format": "date-time",
-                              "type": [
-                                "string",
-                                "null"
-                              ]
-                            }
-                          },
-                          "required": [
-                            "exitCode"
-                          ],
-                          "type": [
-                            "object",
-                            "null"
-                          ]
-                        },
-                        "waiting": {
-                          "additionalProperties": false,
-                          "properties": {
-                            "message": {
-                              "type": [
-                                "string",
-                                "null"
-                              ]
-                            },
-                            "reason": {
-                              "type": [
-                                "string",
-                                "null"
-                              ]
-                            }
-                          },
-                          "type": [
-                            "object",
-                            "null"
-                          ]
-                        }
-                      },
-                      "type": [
-                        "object",
-                        "null"
-                      ]
-                    },
-                    "name": {
-                      "type": "string"
-                    },
-                    "ready": {
-                      "type": "boolean"
-                    },
-                    "resources": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "claims": {
-                          "items": {
-                            "additionalProperties": false,
-                            "properties": {
-                              "name": {
-                                "type": "string"
-                              },
-                              "request": {
-                                "type": [
-                                  "string",
-                                  "null"
-                                ]
-                              }
-                            },
-                            "required": [
-                              "name"
-                            ],
-                            "type": "object"
-                          },
-                          "type": [
-                            "array",
-                            "null"
-                          ]
-                        },
-                        "limits": {
-                          "additionalProperties": {
-                            "type": "string"
-                          },
-                          "type": [
-                            "object",
-                            "null"
-                          ]
-                        },
-                        "requests": {
-                          "additionalProperties": {
-                            "type": "string"
-                          },
-                          "type": [
-                            "object",
-                            "null"
-                          ]
-                        }
-                      },
-                      "type": [
-                        "object",
-                        "null"
-                      ]
-                    },
-                    "restartCount": {
-                      "format": "int32",
-                      "type": "integer"
-                    },
-                    "started": {
-                      "type": [
-                        "boolean",
-                        "null"
-                      ]
-                    },
-                    "state": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "running": {
-                          "additionalProperties": false,
-                          "properties": {
-                            "startedAt": {
-                              "format": "date-time",
-                              "type": [
-                                "string",
-                                "null"
-                              ]
-                            }
-                          },
-                          "type": [
-                            "object",
-                            "null"
-                          ]
-                        },
-                        "terminated": {
-                          "additionalProperties": false,
-                          "properties": {
-                            "containerID": {
-                              "type": [
-                                "string",
-                                "null"
-                              ]
-                            },
-                            "exitCode": {
-                              "format": "int32",
-                              "type": "integer"
-                            },
-                            "finishedAt": {
-                              "format": "date-time",
-                              "type": [
-                                "string",
-                                "null"
-                              ]
-                            },
-                            "message": {
-                              "type": [
-                                "string",
-                                "null"
-                              ]
-                            },
-                            "reason": {
-                              "type": [
-                                "string",
-                                "null"
-                              ]
-                            },
-                            "signal": {
-                              "format": "int32",
-                              "type": [
-                                "integer",
-                                "null"
-                              ]
-                            },
-                            "startedAt": {
-                              "format": "date-time",
-                              "type": [
-                                "string",
-                                "null"
-                              ]
-                            }
-                          },
-                          "required": [
-                            "exitCode"
-                          ],
-                          "type": [
-                            "object",
-                            "null"
-                          ]
-                        },
-                        "waiting": {
-                          "additionalProperties": false,
-                          "properties": {
-                            "message": {
-                              "type": [
-                                "string",
-                                "null"
-                              ]
-                            },
-                            "reason": {
-                              "type": [
-                                "string",
-                                "null"
-                              ]
-                            }
-                          },
-                          "type": [
-                            "object",
-                            "null"
-                          ]
-                        }
-                      },
-                      "type": [
-                        "object",
-                        "null"
-                      ]
-                    },
-                    "stopSignal": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    },
-                    "user": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "linux": {
-                          "additionalProperties": false,
-                          "properties": {
-                            "gid": {
-                              "format": "int64",
-                              "type": "integer"
-                            },
-                            "supplementalGroups": {
-                              "items": {
-                                "format": "int64",
-                                "type": "integer"
-                              },
-                              "type": [
-                                "array",
-                                "null"
-                              ]
-                            },
-                            "uid": {
-                              "format": "int64",
-                              "type": "integer"
-                            }
-                          },
-                          "required": [
-                            "uid",
-                            "gid"
-                          ],
-                          "type": [
-                            "object",
-                            "null"
-                          ]
-                        }
-                      },
-                      "type": [
-                        "object",
-                        "null"
-                      ]
-                    },
-                    "volumeMounts": {
-                      "items": {
-                        "additionalProperties": false,
-                        "properties": {
-                          "mountPath": {
-                            "type": "string"
-                          },
-                          "name": {
-                            "type": "string"
-                          },
-                          "readOnly": {
-                            "type": [
-                              "boolean",
-                              "null"
-                            ]
-                          },
-                          "recursiveReadOnly": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
-                          }
-                        },
-                        "required": [
-                          "name",
-                          "mountPath"
-                        ],
-                        "type": "object"
-                      },
-                      "type": [
-                        "array",
-                        "null"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "name",
-                    "ready",
-                    "restartCount",
-                    "image",
-                    "imageID"
-                  ],
-                  "type": "object"
-                },
-                "type": [
-                  "array",
-                  "null"
-                ]
-              },
-              "ephemeralContainerStatuses": {
-                "items": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "allocatedResources": {
-                      "additionalProperties": {
-                        "type": "string"
-                      },
-                      "type": [
-                        "object",
-                        "null"
-                      ]
-                    },
-                    "allocatedResourcesStatus": {
-                      "items": {
-                        "additionalProperties": false,
-                        "properties": {
-                          "name": {
-                            "type": "string"
-                          },
-                          "resources": {
-                            "items": {
-                              "additionalProperties": false,
-                              "properties": {
-                                "health": {
+                                "message": {
                                   "type": [
                                     "string",
                                     "null"
@@ -9316,6 +8881,491 @@
                           "recursiveReadOnly": {
                             "type": [
                               "string",
+                              "null"
+                            ]
+                          },
+                          "volumeStatus": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "image": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "imageRef": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "imageRef"
+                                ],
+                                "type": [
+                                  "object",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "mountPath"
+                        ],
+                        "type": "object"
+                      },
+                      "type": [
+                        "array",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "ready",
+                    "restartCount",
+                    "image",
+                    "imageID"
+                  ],
+                  "type": "object"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ]
+              },
+              "ephemeralContainerStatuses": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "allocatedResources": {
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
+                    "allocatedResourcesStatus": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "resources": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "health": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "message": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "resourceID": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "resourceID"
+                              ],
+                              "type": "object"
+                            },
+                            "type": [
+                              "array",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "name"
+                        ],
+                        "type": "object"
+                      },
+                      "type": [
+                        "array",
+                        "null"
+                      ]
+                    },
+                    "containerID": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "image": {
+                      "type": "string"
+                    },
+                    "imageID": {
+                      "type": "string"
+                    },
+                    "lastState": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "running": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "startedAt": {
+                              "format": "date-time",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "type": [
+                            "object",
+                            "null"
+                          ]
+                        },
+                        "terminated": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "containerID": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "exitCode": {
+                              "format": "int32",
+                              "type": "integer"
+                            },
+                            "finishedAt": {
+                              "format": "date-time",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "message": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "reason": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "signal": {
+                              "format": "int32",
+                              "type": [
+                                "integer",
+                                "null"
+                              ]
+                            },
+                            "startedAt": {
+                              "format": "date-time",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "exitCode"
+                          ],
+                          "type": [
+                            "object",
+                            "null"
+                          ]
+                        },
+                        "waiting": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "message": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "reason": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "type": [
+                            "object",
+                            "null"
+                          ]
+                        }
+                      },
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "ready": {
+                      "type": "boolean"
+                    },
+                    "resources": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "claims": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "name": {
+                                "type": "string"
+                              },
+                              "request": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "name"
+                            ],
+                            "type": "object"
+                          },
+                          "type": [
+                            "array",
+                            "null"
+                          ]
+                        },
+                        "limits": {
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "type": [
+                            "object",
+                            "null"
+                          ]
+                        },
+                        "requests": {
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "type": [
+                            "object",
+                            "null"
+                          ]
+                        }
+                      },
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
+                    "restartCount": {
+                      "format": "int32",
+                      "type": "integer"
+                    },
+                    "started": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    },
+                    "state": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "running": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "startedAt": {
+                              "format": "date-time",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "type": [
+                            "object",
+                            "null"
+                          ]
+                        },
+                        "terminated": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "containerID": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "exitCode": {
+                              "format": "int32",
+                              "type": "integer"
+                            },
+                            "finishedAt": {
+                              "format": "date-time",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "message": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "reason": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "signal": {
+                              "format": "int32",
+                              "type": [
+                                "integer",
+                                "null"
+                              ]
+                            },
+                            "startedAt": {
+                              "format": "date-time",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "exitCode"
+                          ],
+                          "type": [
+                            "object",
+                            "null"
+                          ]
+                        },
+                        "waiting": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "message": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "reason": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "type": [
+                            "object",
+                            "null"
+                          ]
+                        }
+                      },
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
+                    "stopSignal": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "user": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "linux": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "gid": {
+                              "format": "int64",
+                              "type": "integer"
+                            },
+                            "supplementalGroups": {
+                              "items": {
+                                "format": "int64",
+                                "type": "integer"
+                              },
+                              "type": [
+                                "array",
+                                "null"
+                              ]
+                            },
+                            "uid": {
+                              "format": "int64",
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "uid",
+                            "gid"
+                          ],
+                          "type": [
+                            "object",
+                            "null"
+                          ]
+                        }
+                      },
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
+                    "volumeMounts": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "mountPath": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "readOnly": {
+                            "type": [
+                              "boolean",
+                              "null"
+                            ]
+                          },
+                          "recursiveReadOnly": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "volumeStatus": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "image": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "imageRef": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "imageRef"
+                                ],
+                                "type": [
+                                  "object",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "type": [
+                              "object",
                               "null"
                             ]
                           }
@@ -9439,6 +9489,12 @@
                                     "null"
                                   ]
                                 },
+                                "message": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
                                 "resourceID": {
                                   "type": "string"
                                 }
@@ -9812,6 +9868,30 @@
                               "string",
                               "null"
                             ]
+                          },
+                          "volumeStatus": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "image": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "imageRef": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "imageRef"
+                                ],
+                                "type": [
+                                  "object",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "type": [
+                              "object",
+                              "null"
+                            ]
                           }
                         },
                         "required": [
@@ -9843,6 +9923,40 @@
               "message": {
                 "type": [
                   "string",
+                  "null"
+                ]
+              },
+              "nodeAllocatableResourceClaimStatuses": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "containers": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": [
+                        "array",
+                        "null"
+                      ]
+                    },
+                    "resourceClaimName": {
+                      "type": "string"
+                    },
+                    "resources": {
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "resourceClaimName",
+                    "resources"
+                  ],
+                  "type": "object"
+                },
+                "type": [
+                  "array",
                   "null"
                 ]
               },
@@ -10028,6 +10142,21 @@
         "selfLink": {
           "type": [
             "string",
+            "null"
+          ]
+        },
+        "shardInfo": {
+          "additionalProperties": false,
+          "properties": {
+            "selector": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "selector"
+          ],
+          "type": [
+            "object",
             "null"
           ]
         }

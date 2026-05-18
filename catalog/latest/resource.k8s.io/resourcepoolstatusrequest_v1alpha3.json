@@ -199,86 +199,70 @@
           ]
         }
       },
-      "type": [
-        "object",
-        "null"
-      ]
+      "type": "object"
     },
     "spec": {
       "additionalProperties": false,
       "properties": {
-        "attachRequired": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+        "driver": {
+          "type": "string"
         },
-        "fsGroupPolicy": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "nodeAllocatableUpdatePeriodSeconds": {
-          "format": "int64",
+        "limit": {
+          "format": "int32",
           "type": [
             "integer",
             "null"
           ]
         },
-        "podInfoOnMount": {
+        "poolName": {
           "type": [
-            "boolean",
+            "string",
             "null"
           ]
-        },
-        "preventPodSchedulingIfMissing": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "requiresRepublish": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "seLinuxMount": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "serviceAccountTokenInSecrets": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "storageCapacity": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "tokenRequests": {
+        }
+      },
+      "required": [
+        "driver"
+      ],
+      "type": "object"
+    },
+    "status": {
+      "additionalProperties": false,
+      "properties": {
+        "conditions": {
           "items": {
             "additionalProperties": false,
             "properties": {
-              "audience": {
+              "lastTransitionTime": {
+                "format": "date-time",
                 "type": "string"
               },
-              "expirationSeconds": {
+              "message": {
+                "type": "string"
+              },
+              "observedGeneration": {
                 "format": "int64",
                 "type": [
                   "integer",
                   "null"
                 ]
+              },
+              "reason": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
               }
             },
             "required": [
-              "audience"
+              "type",
+              "status",
+              "lastTransitionTime",
+              "reason",
+              "message"
             ],
             "type": "object"
           },
@@ -287,9 +271,78 @@
             "null"
           ]
         },
-        "volumeLifecycleModes": {
+        "poolCount": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "pools": {
           "items": {
-            "type": "string"
+            "additionalProperties": false,
+            "properties": {
+              "allocatedDevices": {
+                "format": "int32",
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "availableDevices": {
+                "format": "int32",
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "driver": {
+                "type": "string"
+              },
+              "generation": {
+                "format": "int64",
+                "type": "integer"
+              },
+              "nodeName": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "poolName": {
+                "type": "string"
+              },
+              "resourceSliceCount": {
+                "format": "int32",
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "totalDevices": {
+                "format": "int32",
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "unavailableDevices": {
+                "format": "int32",
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "validationError": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "driver",
+              "poolName",
+              "generation"
+            ],
+            "type": "object"
           },
           "type": [
             "array",
@@ -297,10 +350,17 @@
           ]
         }
       },
-      "type": "object"
+      "required": [
+        "poolCount"
+      ],
+      "type": [
+        "object",
+        "null"
+      ]
     }
   },
   "required": [
+    "metadata",
     "spec",
     "apiVersion",
     "kind"

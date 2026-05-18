@@ -183,7 +183,10 @@
               ],
               "type": "object"
             },
-            "type": "array"
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "kind": {
             "type": [
@@ -427,8 +430,7 @@
           }
         },
         "required": [
-          "addressType",
-          "endpoints"
+          "addressType"
         ],
         "type": "object"
       },
@@ -462,6 +464,21 @@
         "selfLink": {
           "type": [
             "string",
+            "null"
+          ]
+        },
+        "shardInfo": {
+          "additionalProperties": false,
+          "properties": {
+            "selector": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "selector"
+          ],
+          "type": [
+            "object",
             "null"
           ]
         }

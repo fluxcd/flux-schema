@@ -217,12 +217,12 @@
           ]
         },
         "token": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": "string"
         }
       },
+      "required": [
+        "token"
+      ],
       "type": "object"
     },
     "status": {

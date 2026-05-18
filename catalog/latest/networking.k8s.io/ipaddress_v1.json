@@ -239,13 +239,11 @@
       "required": [
         "parentRef"
       ],
-      "type": [
-        "object",
-        "null"
-      ]
+      "type": "object"
     }
   },
   "required": [
+    "spec",
     "apiVersion",
     "kind"
   ],

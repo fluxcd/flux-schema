@@ -536,27 +536,25 @@
                 ]
               },
               "policyName": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": "string"
               },
               "validationActions": {
                 "items": {
                   "type": "string"
                 },
-                "type": [
-                  "array",
-                  "null"
-                ]
+                "type": "array"
               }
             },
-            "type": [
-              "object",
-              "null"
-            ]
+            "required": [
+              "policyName",
+              "validationActions"
+            ],
+            "type": "object"
           }
         },
+        "required": [
+          "spec"
+        ],
         "type": "object"
       },
       "type": "array"
@@ -589,6 +587,21 @@
         "selfLink": {
           "type": [
             "string",
+            "null"
+          ]
+        },
+        "shardInfo": {
+          "additionalProperties": false,
+          "properties": {
+            "selector": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "selector"
+          ],
+          "type": [
+            "object",
             "null"
           ]
         }

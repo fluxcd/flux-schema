@@ -211,7 +211,10 @@
           "items": {
             "type": "string"
           },
-          "type": "array"
+          "type": [
+            "array",
+            "null"
+          ]
         },
         "boundObjectRef": {
           "additionalProperties": false,
@@ -254,26 +257,28 @@
           ]
         }
       },
-      "required": [
-        "audiences"
-      ],
-      "type": "object"
+      "type": [
+        "object",
+        "null"
+      ]
     },
     "status": {
       "additionalProperties": false,
       "properties": {
         "expirationTimestamp": {
           "format": "date-time",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "token": {
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
-      "required": [
-        "token",
-        "expirationTimestamp"
-      ],
       "type": [
         "object",
         "null"
@@ -281,7 +286,6 @@
     }
   },
   "required": [
-    "spec",
     "apiVersion",
     "kind"
   ],

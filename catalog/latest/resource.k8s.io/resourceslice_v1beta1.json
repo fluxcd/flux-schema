@@ -242,10 +242,29 @@
                             "null"
                           ]
                         },
+                        "bools": {
+                          "items": {
+                            "type": "boolean"
+                          },
+                          "type": [
+                            "array",
+                            "null"
+                          ]
+                        },
                         "int": {
                           "format": "int64",
                           "type": [
                             "integer",
+                            "null"
+                          ]
+                        },
+                        "ints": {
+                          "items": {
+                            "format": "int64",
+                            "type": "integer"
+                          },
+                          "type": [
+                            "array",
                             "null"
                           ]
                         },
@@ -255,9 +274,27 @@
                             "null"
                           ]
                         },
+                        "strings": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": [
+                            "array",
+                            "null"
+                          ]
+                        },
                         "version": {
                           "type": [
                             "string",
+                            "null"
+                          ]
+                        },
+                        "versions": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": [
+                            "array",
                             "null"
                           ]
                         }
@@ -393,6 +430,30 @@
                     },
                     "type": [
                       "array",
+                      "null"
+                    ]
+                  },
+                  "nodeAllocatableResourceMappings": {
+                    "additionalProperties": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "allocationMultiplier": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "capacityKey": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "type": [
+                      "object",
                       "null"
                     ]
                   },
