@@ -207,80 +207,118 @@
     "spec": {
       "additionalProperties": false,
       "properties": {
-        "controllerRef": {
+        "deviceSelector": {
           "additionalProperties": false,
           "properties": {
-            "apiGroup": {
+            "device": {
               "type": [
                 "string",
                 "null"
               ]
             },
-            "kind": {
-              "type": "string"
+            "driver": {
+              "type": [
+                "string",
+                "null"
+              ]
             },
-            "name": {
-              "type": "string"
+            "pool": {
+              "type": [
+                "string",
+                "null"
+              ]
             }
           },
-          "required": [
-            "kind",
-            "name"
-          ],
           "type": [
             "object",
             "null"
           ]
         },
-        "podGroups": {
-          "items": {
-            "additionalProperties": false,
-            "properties": {
-              "name": {
-                "type": "string"
-              },
-              "policy": {
-                "additionalProperties": false,
-                "properties": {
-                  "basic": {
-                    "type": [
-                      "object",
-                      "null"
-                    ]
-                  },
-                  "gang": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "minCount": {
-                        "format": "int32",
-                        "type": "integer"
-                      }
-                    },
-                    "required": [
-                      "minCount"
-                    ],
-                    "type": [
-                      "object",
-                      "null"
-                    ]
-                  }
-                },
-                "type": "object"
-              }
+        "taint": {
+          "additionalProperties": false,
+          "properties": {
+            "effect": {
+              "type": "string"
             },
-            "required": [
-              "name",
-              "policy"
-            ],
-            "type": "object"
+            "key": {
+              "type": "string"
+            },
+            "timeAdded": {
+              "format": "date-time",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "value": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
           },
-          "type": "array"
+          "required": [
+            "key",
+            "effect"
+          ],
+          "type": "object"
         }
       },
       "required": [
-        "podGroups"
+        "taint"
       ],
       "type": "object"
+    },
+    "status": {
+      "additionalProperties": false,
+      "properties": {
+        "conditions": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "lastTransitionTime": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "observedGeneration": {
+                "format": "int64",
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "reason": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "status",
+              "lastTransitionTime",
+              "reason",
+              "message"
+            ],
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        }
+      },
+      "type": [
+        "object",
+        "null"
+      ]
     }
   },
   "required": [

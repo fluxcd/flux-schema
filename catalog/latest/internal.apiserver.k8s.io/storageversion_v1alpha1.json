@@ -199,13 +199,13 @@
           ]
         }
       },
+      "type": "object"
+    },
+    "spec": {
       "type": [
         "object",
         "null"
       ]
-    },
-    "spec": {
-      "type": "object"
     },
     "status": {
       "additionalProperties": false,
@@ -265,25 +265,16 @@
             "additionalProperties": false,
             "properties": {
               "apiServerID": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": "string"
               },
               "decodableVersions": {
                 "items": {
                   "type": "string"
                 },
-                "type": [
-                  "array",
-                  "null"
-                ]
+                "type": "array"
               },
               "encodingVersion": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": "string"
               },
               "servedVersions": {
                 "items": {
@@ -295,6 +286,11 @@
                 ]
               }
             },
+            "required": [
+              "apiServerID",
+              "encodingVersion",
+              "decodableVersions"
+            ],
             "type": "object"
           },
           "type": [
@@ -303,12 +299,14 @@
           ]
         }
       },
-      "type": "object"
+      "type": [
+        "object",
+        "null"
+      ]
     }
   },
   "required": [
-    "spec",
-    "status",
+    "metadata",
     "apiVersion",
     "kind"
   ],

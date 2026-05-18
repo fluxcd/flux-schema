@@ -207,7 +207,35 @@
     "spec": {
       "additionalProperties": false,
       "properties": {
-        "matchResources": {
+        "failurePolicy": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "matchConditions": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "expression": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "expression"
+            ],
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "matchConstraints": {
           "additionalProperties": false,
           "properties": {
             "excludeResourceRules": {
@@ -446,73 +474,66 @@
             "null"
           ]
         },
-        "paramRef": {
+        "mutations": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "applyConfiguration": {
+                "additionalProperties": false,
+                "properties": {
+                  "expression": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "jsonPatch": {
+                "additionalProperties": false,
+                "properties": {
+                  "expression": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "patchType": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "patchType"
+            ],
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "paramKind": {
           "additionalProperties": false,
           "properties": {
-            "name": {
+            "apiVersion": {
               "type": [
                 "string",
                 "null"
               ]
             },
-            "namespace": {
+            "kind": {
               "type": [
                 "string",
-                "null"
-              ]
-            },
-            "parameterNotFoundAction": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "selector": {
-              "additionalProperties": false,
-              "properties": {
-                "matchExpressions": {
-                  "items": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "key": {
-                        "type": "string"
-                      },
-                      "operator": {
-                        "type": "string"
-                      },
-                      "values": {
-                        "items": {
-                          "type": "string"
-                        },
-                        "type": [
-                          "array",
-                          "null"
-                        ]
-                      }
-                    },
-                    "required": [
-                      "key",
-                      "operator"
-                    ],
-                    "type": "object"
-                  },
-                  "type": [
-                    "array",
-                    "null"
-                  ]
-                },
-                "matchLabels": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "type": [
-                    "object",
-                    "null"
-                  ]
-                }
-              },
-              "type": [
-                "object",
                 "null"
               ]
             }
@@ -522,25 +543,42 @@
             "null"
           ]
         },
-        "policyName": {
-          "type": "string"
+        "reinvocationPolicy": {
+          "type": [
+            "string",
+            "null"
+          ]
         },
-        "validationActions": {
+        "variables": {
           "items": {
-            "type": "string"
+            "additionalProperties": false,
+            "properties": {
+              "expression": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "expression"
+            ],
+            "type": "object"
           },
-          "type": "array"
+          "type": [
+            "array",
+            "null"
+          ]
         }
       },
-      "required": [
-        "policyName",
-        "validationActions"
-      ],
-      "type": "object"
+      "type": [
+        "object",
+        "null"
+      ]
     }
   },
   "required": [
-    "spec",
     "apiVersion",
     "kind"
   ],

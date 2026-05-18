@@ -8,63 +8,11 @@
       "items": {
         "additionalProperties": false,
         "properties": {
-          "action": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
           "apiVersion": {
             "type": [
               "string",
               "null"
             ]
-          },
-          "deprecatedCount": {
-            "format": "int32",
-            "type": [
-              "integer",
-              "null"
-            ]
-          },
-          "deprecatedFirstTimestamp": {
-            "format": "date-time",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "deprecatedLastTimestamp": {
-            "format": "date-time",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "deprecatedSource": {
-            "additionalProperties": false,
-            "properties": {
-              "component": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "host": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              }
-            },
-            "type": [
-              "object",
-              "null"
-            ]
-          },
-          "eventTime": {
-            "format": "date-time",
-            "type": "string"
           },
           "kind": {
             "type": [
@@ -269,162 +217,225 @@
               "null"
             ]
           },
-          "note": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "reason": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "regarding": {
+          "spec": {
             "additionalProperties": false,
             "properties": {
-              "apiVersion": {
+              "disruptionMode": {
                 "type": [
                   "string",
                   "null"
                 ]
               },
-              "fieldPath": {
+              "podGroupTemplateRef": {
+                "additionalProperties": false,
+                "properties": {
+                  "workload": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "podGroupTemplateName": {
+                        "type": "string"
+                      },
+                      "workloadName": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "workloadName",
+                      "podGroupTemplateName"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  }
+                },
                 "type": [
-                  "string",
+                  "object",
                   "null"
                 ]
               },
-              "kind": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "name": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "namespace": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "resourceVersion": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "uid": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              }
-            },
-            "type": [
-              "object",
-              "null"
-            ]
-          },
-          "related": {
-            "additionalProperties": false,
-            "properties": {
-              "apiVersion": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "fieldPath": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "kind": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "name": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "namespace": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "resourceVersion": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "uid": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              }
-            },
-            "type": [
-              "object",
-              "null"
-            ]
-          },
-          "reportingController": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "reportingInstance": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "series": {
-            "additionalProperties": false,
-            "properties": {
-              "count": {
+              "priority": {
                 "format": "int32",
-                "type": "integer"
+                "type": [
+                  "integer",
+                  "null"
+                ]
               },
-              "lastObservedTime": {
-                "format": "date-time",
-                "type": "string"
+              "priorityClassName": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "resourceClaims": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "resourceClaimName": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "resourceClaimTemplateName": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "name"
+                  ],
+                  "type": "object"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ]
+              },
+              "schedulingConstraints": {
+                "additionalProperties": false,
+                "properties": {
+                  "topology": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "key": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "key"
+                      ],
+                      "type": "object"
+                    },
+                    "type": [
+                      "array",
+                      "null"
+                    ]
+                  }
+                },
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "schedulingPolicy": {
+                "additionalProperties": false,
+                "properties": {
+                  "basic": {
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "gang": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "minCount": {
+                        "format": "int32",
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "minCount"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  }
+                },
+                "type": "object"
               }
             },
             "required": [
-              "count",
-              "lastObservedTime"
+              "schedulingPolicy"
             ],
+            "type": "object"
+          },
+          "status": {
+            "additionalProperties": false,
+            "properties": {
+              "conditions": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "lastTransitionTime": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "observedGeneration": {
+                      "format": "int64",
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "reason": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "status",
+                    "lastTransitionTime",
+                    "reason",
+                    "message"
+                  ],
+                  "type": "object"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ]
+              },
+              "resourceClaimStatuses": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "resourceClaimName": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "name"
+                  ],
+                  "type": "object"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ]
+              }
+            },
             "type": [
               "object",
-              "null"
-            ]
-          },
-          "type": {
-            "type": [
-              "string",
               "null"
             ]
           }
         },
         "required": [
-          "eventTime"
+          "spec"
         ],
         "type": "object"
       },

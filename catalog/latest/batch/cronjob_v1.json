@@ -6701,6 +6701,21 @@
                             "null"
                           ]
                         },
+                        "schedulingGroup": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "podGroupName": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "type": [
+                            "object",
+                            "null"
+                          ]
+                        },
                         "securityContext": {
                           "additionalProperties": false,
                           "properties": {
@@ -9023,31 +9038,6 @@
                             "array",
                             "null"
                           ]
-                        },
-                        "workloadRef": {
-                          "additionalProperties": false,
-                          "properties": {
-                            "name": {
-                              "type": "string"
-                            },
-                            "podGroup": {
-                              "type": "string"
-                            },
-                            "podGroupReplicaKey": {
-                              "type": [
-                                "string",
-                                "null"
-                              ]
-                            }
-                          },
-                          "required": [
-                            "name",
-                            "podGroup"
-                          ],
-                          "type": [
-                            "object",
-                            "null"
-                          ]
                         }
                       },
                       "required": [
@@ -9114,10 +9104,7 @@
         "schedule",
         "jobTemplate"
       ],
-      "type": [
-        "object",
-        "null"
-      ]
+      "type": "object"
     },
     "status": {
       "additionalProperties": false,
@@ -9198,6 +9185,7 @@
     }
   },
   "required": [
+    "spec",
     "apiVersion",
     "kind"
   ],

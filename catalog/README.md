@@ -6,12 +6,12 @@ and the GitHub Action [fluxcd/flux-schema/actions/validate](../actions/validate)
 <!-- versions:start -->
 | Source | Version |
 | --- | --- |
-| [kubernetes/kubernetes](https://github.com/kubernetes/kubernetes) | v1.35.4 |
+| [kubernetes/kubernetes](https://github.com/kubernetes/kubernetes) | v1.36.1 |
 | [kubernetes-sigs/gateway-api](https://github.com/kubernetes-sigs/gateway-api) | v1.5.1 |
 | [openshift/api](https://github.com/openshift/api) | v4.20 |
-| [fluxcd/flux2](https://github.com/fluxcd/flux2) | v2.8.6 |
+| [fluxcd/flux2](https://github.com/fluxcd/flux2) | v2.8.7 |
 | [fluxcd/flagger](https://github.com/fluxcd/flagger) | v1.43.0 |
-| [controlplaneio-fluxcd/flux-operator](https://github.com/controlplaneio-fluxcd/flux-operator) | v0.48.0 |
+| [controlplaneio-fluxcd/flux-operator](https://github.com/controlplaneio-fluxcd/flux-operator) | v0.49.0 |
 <!-- versions:end -->
 
 ## Flux APIs

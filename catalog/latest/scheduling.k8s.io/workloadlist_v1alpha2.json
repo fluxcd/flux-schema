@@ -245,14 +245,90 @@
                   "null"
                 ]
               },
-              "podGroups": {
+              "podGroupTemplates": {
                 "items": {
                   "additionalProperties": false,
                   "properties": {
+                    "disruptionMode": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "name": {
                       "type": "string"
                     },
-                    "policy": {
+                    "priority": {
+                      "format": "int32",
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "priorityClassName": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "resourceClaims": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "resourceClaimName": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "resourceClaimTemplateName": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "name"
+                        ],
+                        "type": "object"
+                      },
+                      "type": [
+                        "array",
+                        "null"
+                      ]
+                    },
+                    "schedulingConstraints": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "topology": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "key": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "key"
+                            ],
+                            "type": "object"
+                          },
+                          "type": [
+                            "array",
+                            "null"
+                          ]
+                        }
+                      },
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
+                    "schedulingPolicy": {
                       "additionalProperties": false,
                       "properties": {
                         "basic": {
@@ -283,7 +359,7 @@
                   },
                   "required": [
                     "name",
-                    "policy"
+                    "schedulingPolicy"
                   ],
                   "type": "object"
                 },
@@ -291,7 +367,7 @@
               }
             },
             "required": [
-              "podGroups"
+              "podGroupTemplates"
             ],
             "type": "object"
           }
@@ -331,6 +407,21 @@
         "selfLink": {
           "type": [
             "string",
+            "null"
+          ]
+        },
+        "shardInfo": {
+          "additionalProperties": false,
+          "properties": {
+            "selector": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "selector"
+          ],
+          "type": [
+            "object",
             "null"
           ]
         }

@@ -309,6 +309,21 @@
             "string",
             "null"
           ]
+        },
+        "shardInfo": {
+          "additionalProperties": false,
+          "properties": {
+            "selector": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "selector"
+          ],
+          "type": [
+            "object",
+            "null"
+          ]
         }
       },
       "type": [

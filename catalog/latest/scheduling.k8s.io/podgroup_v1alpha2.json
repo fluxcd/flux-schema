@@ -207,78 +207,75 @@
     "spec": {
       "additionalProperties": false,
       "properties": {
-        "attachRequired": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "fsGroupPolicy": {
+        "disruptionMode": {
           "type": [
             "string",
             "null"
           ]
         },
-        "nodeAllocatableUpdatePeriodSeconds": {
-          "format": "int64",
+        "podGroupTemplateRef": {
+          "additionalProperties": false,
+          "properties": {
+            "workload": {
+              "additionalProperties": false,
+              "properties": {
+                "podGroupTemplateName": {
+                  "type": "string"
+                },
+                "workloadName": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "workloadName",
+                "podGroupTemplateName"
+              ],
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "priority": {
+          "format": "int32",
           "type": [
             "integer",
             "null"
           ]
         },
-        "podInfoOnMount": {
+        "priorityClassName": {
           "type": [
-            "boolean",
+            "string",
             "null"
           ]
         },
-        "preventPodSchedulingIfMissing": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "requiresRepublish": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "seLinuxMount": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "serviceAccountTokenInSecrets": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "storageCapacity": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "tokenRequests": {
+        "resourceClaims": {
           "items": {
             "additionalProperties": false,
             "properties": {
-              "audience": {
+              "name": {
                 "type": "string"
               },
-              "expirationSeconds": {
-                "format": "int64",
+              "resourceClaimName": {
                 "type": [
-                  "integer",
+                  "string",
+                  "null"
+                ]
+              },
+              "resourceClaimTemplateName": {
+                "type": [
+                  "string",
                   "null"
                 ]
               }
             },
             "required": [
-              "audience"
+              "name"
             ],
             "type": "object"
           },
@@ -287,9 +284,130 @@
             "null"
           ]
         },
-        "volumeLifecycleModes": {
+        "schedulingConstraints": {
+          "additionalProperties": false,
+          "properties": {
+            "topology": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "key"
+                ],
+                "type": "object"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            }
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "schedulingPolicy": {
+          "additionalProperties": false,
+          "properties": {
+            "basic": {
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "gang": {
+              "additionalProperties": false,
+              "properties": {
+                "minCount": {
+                  "format": "int32",
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "minCount"
+              ],
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "schedulingPolicy"
+      ],
+      "type": "object"
+    },
+    "status": {
+      "additionalProperties": false,
+      "properties": {
+        "conditions": {
           "items": {
-            "type": "string"
+            "additionalProperties": false,
+            "properties": {
+              "lastTransitionTime": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "observedGeneration": {
+                "format": "int64",
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "reason": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "status",
+              "lastTransitionTime",
+              "reason",
+              "message"
+            ],
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "resourceClaimStatuses": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "resourceClaimName": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "type": "object"
           },
           "type": [
             "array",
@@ -297,7 +415,10 @@
           ]
         }
       },
-      "type": "object"
+      "type": [
+        "object",
+        "null"
+      ]
     }
   },
   "required": [

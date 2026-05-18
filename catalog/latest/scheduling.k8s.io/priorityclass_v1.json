@@ -224,11 +224,13 @@
     },
     "value": {
       "format": "int32",
-      "type": "integer"
+      "type": [
+        "integer",
+        "null"
+      ]
     }
   },
   "required": [
-    "value",
     "apiVersion",
     "kind"
   ],
