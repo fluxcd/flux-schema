@@ -12,6 +12,10 @@ inputs:
   bindir:
     description: Alternative location for the CLI binary, defaults to path relative to $RUNNER_TOOL_CACHE.
     required: false
+  verify-attestation:
+    description: Verify the release attestation with gh attestation verify.
+    default: "true"
+    required: false
 outputs:
   version:
     description: Flux Schema version
@@ -26,6 +30,8 @@ runs:
         FLUX_SCHEMA_VERSION: ${{ inputs.version }}
         FLUX_SCHEMA_URL: "https://github.com/fluxcd/flux-schema/releases/latest"
         BIN_DIR: ${{ inputs.bindir }}
+        VERIFY_ATTESTATION: ${{ inputs.verify-attestation }}
+        GH_TOKEN: ${{ github.token }}
       run: |
         if [[ -z "$FLUX_SCHEMA_VERSION" ]] || [[ "$FLUX_SCHEMA_VERSION" = "latest" ]]; then
           FLUX_SCHEMA_VERSION=$(curl -fsSL -I -w '%{url_effective}' -o /dev/null ${FLUX_SCHEMA_URL} | grep -o 'v[0-9].*')
@@ -93,6 +99,11 @@ runs:
           if [ "$sum" != "$expected_sum" ]; then
             echo "SHA sum of ${FLUX_SCHEMA_TARGET_FILE} does not match. Aborting."
             exit 1
+          fi
+
+          if [[ "$VERIFY_ATTESTATION" != "false" ]]; then
+            echo "Verifying release attestation"
+            gh attestation verify "$DL_DIR/$FLUX_SCHEMA_TARGET_FILE" -R fluxcd/flux-schema
           fi
 
           echo "Installing flux-schema to ${FLUX_SCHEMA_TOOL_DIR}"

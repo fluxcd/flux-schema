@@ -30,10 +30,11 @@ jobs:
 
 ## Action Inputs
 
-| Name               | Description                      | Default                   |
-|--------------------|----------------------------------|---------------------------|
-| `version`          | Flux Schema version              | The latest stable release |
-| `bindir`           | Alternative location for the CLI | `$RUNNER_TOOL_CACHE`      |
+| Name                 | Description                              | Default                   |
+|----------------------|------------------------------------------|---------------------------|
+| `version`            | Flux Schema version                      | The latest stable release |
+| `bindir`             | Alternative location for the CLI         | `$RUNNER_TOOL_CACHE`      |
+| `verify-attestation` | Verify the release attestation with `gh` | `true`                    |
 
 ## Action Outputs
 
