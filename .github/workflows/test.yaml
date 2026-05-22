@@ -14,13 +14,10 @@ jobs:
   test-and-lint:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - name: Setup Go
-        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+      - name: Test suite setup
+        uses: fluxcd/gha-workflows/.github/actions/setup-kubernetes@v0.10.0
         with:
-          go-version-file: go.mod
-          cache-dependency-path: go.sum
+          go-version: 1.26.x
       - name: Setup Flux CLI
         uses: fluxcd/flux2/action@04acaec6161ac4fb1a82ffafa88901c03271d34f # v2.8.6
       - name: Run tests
