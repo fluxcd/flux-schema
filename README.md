@@ -152,12 +152,13 @@ validation guide for details on running the CLI in CI using the container image.
 
 ## Commands
 
-| Command                                   | Description                                                 |
-|-------------------------------------------|-------------------------------------------------------------|
-| `flux-schema validate [paths...]`         | Validate Kubernetes YAML against JSON Schema and CEL rules. |
-| `flux-schema extract crd [files...]`      | Extract JSON Schemas from CRD YAMLs.                        |
-| `flux-schema extract k8s [swagger]`       | Extract JSON Schemas from Kubernetes OpenAPI v2 swagger.    |
-| `flux-schema extract openshift [swagger]` | Extract JSON Schemas from OpenShift OpenAPI v2 swagger.     |
+| Command                                   | Description                                                   |
+|-------------------------------------------|---------------------------------------------------------------|
+| `flux-schema validate [paths...]`         | Validate Kubernetes YAML against JSON Schema and CEL rules.   |
+| `flux-schema extract crd [files...]`      | Extract JSON Schemas from CRD YAMLs.                          |
+| `flux-schema extract k8s [swagger]`       | Extract JSON Schemas from Kubernetes OpenAPI v2 swagger.      |
+| `flux-schema extract openshift [swagger]` | Extract JSON Schemas from OpenShift OpenAPI v2 swagger.       |
+| `flux-schema completion`                  | Generate shell completion for bash, fish, powershell and zsh. |
 
 Run `flux-schema <command> --help` for the full flag list.
 
