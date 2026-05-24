@@ -103,7 +103,11 @@ runs:
 
           if [[ "$VERIFY_ATTESTATION" != "false" ]]; then
             echo "Verifying release attestation"
-            gh attestation verify "$DL_DIR/$FLUX_SCHEMA_TARGET_FILE" -R fluxcd/flux-schema
+            # Releases are built + signed by the shared reusable workflow in
+            # fluxcd/gha-workflows, so verifying against the fluxcd org (as
+            # GitHub recommends on the attestation page) rather than the
+            # flux-schema repo alone.
+            gh attestation verify "$DL_DIR/$FLUX_SCHEMA_TARGET_FILE" --owner fluxcd
           fi
 
           echo "Installing flux-schema to ${FLUX_SCHEMA_TOOL_DIR}"
