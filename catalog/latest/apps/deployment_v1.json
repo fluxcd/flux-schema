@@ -6380,6 +6380,21 @@
                     "null"
                   ]
                 },
+                "schedulingGroup": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "podGroupName": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "type": [
+                    "object",
+                    "null"
+                  ]
+                },
                 "securityContext": {
                   "additionalProperties": false,
                   "properties": {
@@ -8700,31 +8715,6 @@
                   },
                   "type": [
                     "array",
-                    "null"
-                  ]
-                },
-                "workloadRef": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "name": {
-                      "type": "string"
-                    },
-                    "podGroup": {
-                      "type": "string"
-                    },
-                    "podGroupReplicaKey": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "name",
-                    "podGroup"
-                  ],
-                  "type": [
-                    "object",
                     "null"
                   ]
                 }

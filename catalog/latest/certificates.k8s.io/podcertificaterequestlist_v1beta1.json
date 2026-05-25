@@ -235,7 +235,10 @@
               },
               "pkixPublicKey": {
                 "format": "byte",
-                "type": "string"
+                "type": [
+                  "string",
+                  "null"
+                ]
               },
               "podName": {
                 "type": "string"
@@ -245,7 +248,10 @@
               },
               "proofOfPossession": {
                 "format": "byte",
-                "type": "string"
+                "type": [
+                  "string",
+                  "null"
+                ]
               },
               "serviceAccountName": {
                 "type": "string"
@@ -254,6 +260,10 @@
                 "type": "string"
               },
               "signerName": {
+                "type": "string"
+              },
+              "stubPKCS10Request": {
+                "format": "byte",
                 "type": "string"
               },
               "unverifiedUserAnnotations": {
@@ -274,8 +284,7 @@
               "serviceAccountUID",
               "nodeName",
               "nodeUID",
-              "pkixPublicKey",
-              "proofOfPossession"
+              "stubPKCS10Request"
             ],
             "type": "object"
           },
@@ -393,6 +402,21 @@
         "selfLink": {
           "type": [
             "string",
+            "null"
+          ]
+        },
+        "shardInfo": {
+          "additionalProperties": false,
+          "properties": {
+            "selector": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "selector"
+          ],
+          "type": [
+            "object",
             "null"
           ]
         }

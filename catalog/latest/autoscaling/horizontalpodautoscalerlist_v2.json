@@ -833,10 +833,7 @@
               "scaleTargetRef",
               "maxReplicas"
             ],
-            "type": [
-              "object",
-              "null"
-            ]
+            "type": "object"
           },
           "status": {
             "additionalProperties": false,
@@ -1341,6 +1338,9 @@
             ]
           }
         },
+        "required": [
+          "spec"
+        ],
         "type": "object"
       },
       "type": "array"
@@ -1373,6 +1373,21 @@
         "selfLink": {
           "type": [
             "string",
+            "null"
+          ]
+        },
+        "shardInfo": {
+          "additionalProperties": false,
+          "properties": {
+            "selector": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "selector"
+          ],
+          "type": [
+            "object",
             "null"
           ]
         }

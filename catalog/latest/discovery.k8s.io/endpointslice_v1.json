@@ -173,7 +173,10 @@
         ],
         "type": "object"
       },
-      "type": "array"
+      "type": [
+        "array",
+        "null"
+      ]
     },
     "kind": {
       "type": "string"
@@ -415,7 +418,6 @@
   },
   "required": [
     "addressType",
-    "endpoints",
     "apiVersion",
     "kind"
   ],

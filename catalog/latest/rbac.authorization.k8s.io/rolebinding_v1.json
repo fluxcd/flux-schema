@@ -208,7 +208,10 @@
       "additionalProperties": false,
       "properties": {
         "apiGroup": {
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "kind": {
           "type": "string"
@@ -218,7 +221,6 @@
         }
       },
       "required": [
-        "apiGroup",
         "kind",
         "name"
       ],
