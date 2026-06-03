@@ -18,11 +18,11 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       - name: Setup flux-schema
         uses: ./actions/setup
       - name: Setup flux-operator
-        uses: controlplaneio-fluxcd/flux-operator/actions/setup@8fc996ab460c0aee9e02397fefaad1ff78f4e7bb # v0.48.0
+        uses: controlplaneio-fluxcd/flux-operator/actions/setup@5836c14559f39a466a7c413e55e0ee35480a0250 # v0.50.0
       - name: Reset catalog directory
         run: rm -rf ./catalog/latest && mkdir -p ./catalog/latest
       - name: Update Kubernetes schemas
