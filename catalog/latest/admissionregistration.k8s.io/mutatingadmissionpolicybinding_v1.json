@@ -523,24 +523,19 @@
           ]
         },
         "policyName": {
-          "type": "string"
-        },
-        "validationActions": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
-      "required": [
-        "policyName",
-        "validationActions"
-      ],
-      "type": "object"
+      "type": [
+        "object",
+        "null"
+      ]
     }
   },
   "required": [
-    "spec",
     "apiVersion",
     "kind"
   ],

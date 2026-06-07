@@ -354,11 +354,17 @@
               },
               "currentHealthy": {
                 "format": "int32",
-                "type": "integer"
+                "type": [
+                  "integer",
+                  "null"
+                ]
               },
               "desiredHealthy": {
                 "format": "int32",
-                "type": "integer"
+                "type": [
+                  "integer",
+                  "null"
+                ]
               },
               "disruptedPods": {
                 "additionalProperties": {
@@ -372,11 +378,17 @@
               },
               "disruptionsAllowed": {
                 "format": "int32",
-                "type": "integer"
+                "type": [
+                  "integer",
+                  "null"
+                ]
               },
               "expectedPods": {
                 "format": "int32",
-                "type": "integer"
+                "type": [
+                  "integer",
+                  "null"
+                ]
               },
               "observedGeneration": {
                 "format": "int64",
@@ -386,12 +398,6 @@
                 ]
               }
             },
-            "required": [
-              "disruptionsAllowed",
-              "currentHealthy",
-              "desiredHealthy",
-              "expectedPods"
-            ],
             "type": [
               "object",
               "null"
@@ -430,6 +436,21 @@
         "selfLink": {
           "type": [
             "string",
+            "null"
+          ]
+        },
+        "shardInfo": {
+          "additionalProperties": false,
+          "properties": {
+            "selector": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "selector"
+          ],
+          "type": [
+            "object",
             "null"
           ]
         }

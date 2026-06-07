@@ -242,13 +242,11 @@
         "binaryVersion",
         "strategy"
       ],
-      "type": [
-        "object",
-        "null"
-      ]
+      "type": "object"
     }
   },
   "required": [
+    "spec",
     "apiVersion",
     "kind"
   ],
