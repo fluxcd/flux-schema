@@ -237,11 +237,13 @@ out of CI scripts and makes validation reproducible across environments.
 flux-schema validate ./manifests --config .fluxschema.yml
 ```
 
-The file has a `version` (required, must be `"1"`) and a `validate` section
-whose keys mirror the CLI flag names:
+The file is wrapped in a `Config` API envelope and has a `validate` section
+whose keys mirror the CLI flag names. The shape is documented by the
+[Config JSON Schema](../config/config-v1beta1.json).
 
 ```yaml
-version: "1"
+apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
 validate:
   schema-location:
     - default

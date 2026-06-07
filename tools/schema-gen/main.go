@@ -29,6 +29,7 @@ func main() {
 	apiType := flag.String("type", "", "Go API type to wrap, in import/path.Type form")
 	field := flag.String("field", "", "JSON field name for the wrapped API type")
 	scope := flag.String("scope", "Cluster", "CRD resource scope")
+	schemaField := flag.Bool("schema-field", false, "include optional root $schema field")
 	schemaID := flag.String("id", "", "JSON Schema $id")
 	flag.Parse()
 
@@ -46,6 +47,7 @@ func main() {
 		apiType:          *apiType,
 		field:            *field,
 		scope:            *scope,
+		schemaField:      *schemaField,
 		id:               *schemaID,
 		controllerGenYML: *inputPath,
 	}
@@ -94,6 +96,7 @@ type schemaOptions struct {
 	apiType          string
 	field            string
 	scope            string
+	schemaField      bool
 	id               string
 	controllerGenYML string
 }
@@ -162,6 +165,13 @@ func (o schemaOptions) writeWrapperPackage(dir string) error {
 	}
 	fieldName := exportName(o.field)
 	plural := strings.ToLower(o.kind) + "s"
+	schemaField := ""
+	if o.schemaField {
+		schemaField = `
+	// +optional
+	Schema string ` + "`json:\"$schema,omitempty\"`" + `
+`
+	}
 	doc := fmt.Sprintf(`// Copyright 2026 The Flux Authors
 // SPDX-License-Identifier: Apache-2.0
 
@@ -170,7 +180,9 @@ func (o schemaOptions) writeWrapperPackage(dir string) error {
 // +kubebuilder:object:generate=false
 package schemagen
 `, o.group, o.version)
-	types := fmt.Sprintf(`
+	types := fmt.Sprintf(`// Copyright 2026 The Flux Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package schemagen
 
 import (
@@ -183,13 +195,10 @@ import (
 type %s struct {
 	metav1.TypeMeta   `+"`json:\",inline\"`"+`
 	metav1.ObjectMeta `+"`json:\"metadata,omitempty\"`"+`
-
-	// +optional
-	Schema string `+"`json:\"$schema,omitempty\"`"+`
-
+%s
 	%s api.%s `+"`json:\"%s\"`"+`
 }
-`, importPath, plural, o.scope, o.kind, fieldName, typeName, o.field)
+`, importPath, plural, o.scope, o.kind, schemaField, fieldName, typeName, o.field)
 	if err := os.WriteFile(filepath.Join(dir, "doc.go"), []byte(doc), 0o644); err != nil {
 		return fmt.Errorf("write wrapper doc.go: %w", err)
 	}
@@ -342,11 +351,13 @@ func rewriteRootSchema(schema map[string]any, identity crdIdentity, opts schemaO
 	kind["const"] = identity.kind
 	delete(kind, "description")
 
-	schemaProp, err := requiredMap(props, "$schema")
-	if err != nil {
-		return fmt.Errorf("properties: %w", err)
+	if opts.schemaField {
+		schemaProp, err := requiredMap(props, "$schema")
+		if err != nil {
+			return fmt.Errorf("properties: %w", err)
+		}
+		schemaProp["format"] = "uri"
 	}
-	schemaProp["format"] = "uri"
 
 	schema["$schema"] = "https://json-schema.org/draft/2020-12/schema"
 	schema["$id"] = opts.id

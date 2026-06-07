@@ -171,6 +171,8 @@ Run `flux-schema <command> --help` for the full flag list.
   layout, host, and refresh your own catalog with the `extract` commands.
 - [Validation report reference](docs/report/README.md) — envelope shape and
   JSON Schema for `-o json` / `-o yaml` output.
+- [Configuration reference](docs/config/README.md) — config file envelope and
+  JSON Schema for `--config`.
 - [Built-in catalog](catalog/README.md) — Kubernetes, OpenShift, Gateway
   API, and Flux ecosystem CRDs covered by the default `default` schema location.
 

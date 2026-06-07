@@ -420,7 +420,7 @@ func loadValidateConfig(cmd *cobra.Command) error {
 	if err != nil {
 		return err
 	}
-	return applyValidateConfig(cmd, cfg.Validate, &validateArgs)
+	return applyValidateConfig(cmd, &cfg.Validate, &validateArgs)
 }
 
 // buildValidatorOptions expands --schema-location values, validates flag

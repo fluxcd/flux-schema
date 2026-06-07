@@ -1,0 +1,91 @@
+{
+  "$id": "https://raw.githubusercontent.com/fluxcd/flux-schema/main/docs/config/config-v1beta1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": {
+      "const": "schema.plugin.fluxcd.io/v1beta1",
+      "type": "string"
+    },
+    "kind": {
+      "const": "Config",
+      "type": "string"
+    },
+    "validate": {
+      "additionalProperties": false,
+      "description": "ValidateConfig defines defaults for validation options.",
+      "properties": {
+        "concurrent": {
+          "description": "Concurrent is the number of concurrent validation workers.",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "fail-fast": {
+          "description": "FailFast exits after the first invalid document.",
+          "type": "boolean"
+        },
+        "insecure-skip-tls-verify": {
+          "description": "InsecureSkipTLSVerify disables TLS certificate verification for HTTPS schemas.",
+          "type": "boolean"
+        },
+        "output": {
+          "description": "Output selects the command output format.",
+          "enum": [
+            "json",
+            "text",
+            "yaml"
+          ],
+          "type": "string"
+        },
+        "schema-location": {
+          "description": "SchemaLocations contains schema URLs, file paths, or templates to try in order.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "skip-cel-rules": {
+          "description": "SkipCELRules disables evaluation of x-kubernetes-validations CEL rules.",
+          "type": "boolean"
+        },
+        "skip-file": {
+          "description": "SkipFiles contains basename glob patterns excluded from validation.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "skip-json-path": {
+          "description": "SkipJSONPaths contains JSON Pointers stripped before validation.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "skip-kind": {
+          "description": "SkipKinds contains kind or apiVersion/kind patterns excluded from validation.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "skip-missing-schemas": {
+          "description": "SkipMissingSchemas skips documents for which no schema can be found.",
+          "type": "boolean"
+        },
+        "verbose": {
+          "description": "Verbose prints a line for every document, including valid and skipped documents.",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "required": [
+    "apiVersion",
+    "kind",
+    "validate"
+  ],
+  "title": "ValidateConfig defines defaults for validation options.",
+  "type": "object"
+}

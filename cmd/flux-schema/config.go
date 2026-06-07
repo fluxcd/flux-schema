@@ -9,45 +9,30 @@ import (
 
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
-)
 
-const supportedConfigVersion = "1"
+	apiv1 "github.com/fluxcd/flux-schema/api/v1beta1"
+)
 
 // envConfigFile names the environment variable that points at a default
 // --config path. The CLI flag wins when both are set.
 const envConfigFile = "FLUX_SCHEMA_CONFIG"
 
-type configFile struct {
-	Version  string          `json:"version"`
-	Validate *validateConfig `json:"validate,omitempty"`
-}
-
-type validateConfig struct {
-	SchemaLocations       []string `json:"schema-location,omitempty"`
-	SkipMissingSchemas    bool     `json:"skip-missing-schemas,omitempty"`
-	SkipKinds             []string `json:"skip-kind,omitempty"`
-	SkipJSONPaths         []string `json:"skip-json-path,omitempty"`
-	SkipFiles             []string `json:"skip-file,omitempty"`
-	SkipCELRules          bool     `json:"skip-cel-rules,omitempty"`
-	Verbose               bool     `json:"verbose,omitempty"`
-	FailFast              bool     `json:"fail-fast,omitempty"`
-	Concurrent            *int     `json:"concurrent,omitempty"`
-	InsecureSkipTLSVerify bool     `json:"insecure-skip-tls-verify,omitempty"`
-	Output                string   `json:"output,omitempty"`
-}
-
-func loadConfigFile(path string) (*configFile, error) {
+func loadConfigFile(path string) (*apiv1.Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("read %s: %w", path, err)
 	}
-	var cfg configFile
+	var cfg apiv1.Config
 	if err := yaml.UnmarshalStrict(data, &cfg); err != nil {
 		return nil, fmt.Errorf("parse %s: %w", path, err)
 	}
-	if cfg.Version != supportedConfigVersion {
-		return nil, fmt.Errorf("config %s: unsupported version %q (want %q)",
-			path, cfg.Version, supportedConfigVersion)
+	if cfg.APIVersion != apiv1.GroupVersion.String() {
+		return nil, fmt.Errorf("config %s: unsupported apiVersion %q (want %q)",
+			path, cfg.APIVersion, apiv1.GroupVersion.String())
+	}
+	if cfg.Kind != apiv1.ConfigKind {
+		return nil, fmt.Errorf("config %s: unsupported kind %q (want %q)",
+			path, cfg.Kind, apiv1.ConfigKind)
 	}
 	return &cfg, nil
 }
@@ -58,7 +43,7 @@ func loadConfigFile(path string) (*configFile, error) {
 // config value fails the same validation the CLI flag would apply (e.g. an
 // invalid output format), so bad config is caught up-front rather than
 // silently ignored.
-func applyValidateConfig(cmd *cobra.Command, cfg *validateConfig, args *validateFlags) error {
+func applyValidateConfig(cmd *cobra.Command, cfg *apiv1.ValidateConfig, args *validateFlags) error {
 	if cfg == nil {
 		return nil
 	}
@@ -95,7 +80,7 @@ func applyValidateConfig(cmd *cobra.Command, cfg *validateConfig, args *validate
 		args.insecureSkipTLSVerify = cfg.InsecureSkipTLSVerify
 	}
 	if cfg.Output != "" && !flags.Changed("output") {
-		if err := args.output.Set(cfg.Output); err != nil {
+		if err := args.output.Set(string(cfg.Output)); err != nil {
 			return fmt.Errorf("config output: %w", err)
 		}
 	}

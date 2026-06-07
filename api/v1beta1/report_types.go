@@ -6,7 +6,7 @@ package v1beta1
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 const (
-	// ReportKind is the Kubernetes kind used by validation report envelopes.
+	// ReportKind is the kind used by validation report envelopes.
 	ReportKind = "Report"
 
 	// ReportSchema is the canonical URL of the JSON Schema describing the Report shape.

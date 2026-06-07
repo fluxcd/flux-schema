@@ -52,7 +52,8 @@ Commit a `.fluxschema.yml` to your repository root to control the validation:
 
 ```yaml
 # .fluxschema.yml
-version: "1"
+apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
 validate:
   schema-location:
     - default

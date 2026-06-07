@@ -555,7 +555,8 @@ func TestValidateCmd_Config_AppliesFlagValues(t *testing.T) {
 	manifestDir := t.TempDir()
 	writeManifest(t, manifestDir, "ok.yaml", validWidget)
 
-	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
 validate:
   verbose: true
   skip-kind:
@@ -578,7 +579,8 @@ func TestValidateCmd_Config_CLIOverridesBool(t *testing.T) {
 	manifestDir := t.TempDir()
 	writeManifest(t, manifestDir, "ok.yaml", validWidget)
 
-	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
 validate:
   verbose: true
 `)
@@ -598,7 +600,8 @@ validate:
 func TestValidateCmd_Config_SkipJSONPath(t *testing.T) {
 	g := NewWithT(t)
 
-	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
 validate:
   skip-json-path:
     - Secret:/sops
@@ -619,7 +622,8 @@ func TestValidateCmd_Config_CLIOverridesSkipJSONPath(t *testing.T) {
 
 	// Config strips /sops; CLI replaces the list with a different pointer
 	// that doesn't match anything in the doc, so SOPS validation fails.
-	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
 validate:
   skip-json-path:
     - Secret:/sops
@@ -642,7 +646,8 @@ func TestValidateCmd_Config_SkipFile(t *testing.T) {
 	writeManifest(t, manifestDir, "ok.yaml", validWidget)
 	writeManifest(t, manifestDir, "kustomization.yaml", invalidWidget)
 
-	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
 validate:
   skip-file:
     - kustomization.yaml
@@ -663,7 +668,8 @@ func TestValidateCmd_Config_CLIOverridesSlice(t *testing.T) {
 	manifestDir := t.TempDir()
 	writeManifest(t, manifestDir, "ok.yaml", validWidget)
 
-	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
 validate:
   skip-kind:
     - Widget
@@ -687,7 +693,8 @@ func TestValidateCmd_Config_Concurrent(t *testing.T) {
 	manifestDir := t.TempDir()
 	writeManifest(t, manifestDir, "ok.yaml", validWidget)
 
-	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
 validate:
   verbose: true
 `)
@@ -698,7 +705,8 @@ validate:
 	})
 	g.Expect(err).ToNot(HaveOccurred())
 
-	cfgZero := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
+	cfgZero := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
 validate:
   concurrent: 0
 `)
@@ -710,13 +718,15 @@ validate:
 	g.Expect(err).To(MatchError(ContainSubstring("--concurrent must be >= 1")))
 }
 
-func TestValidateCmd_Config_NoValidateSection(t *testing.T) {
+func TestValidateCmd_Config_EmptyValidateSection(t *testing.T) {
 	g := NewWithT(t)
 	schemaDir := extractWidgetSchema(t)
 	manifestDir := t.TempDir()
 	writeManifest(t, manifestDir, "ok.yaml", validWidget)
 
-	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
+validate: {}
 `)
 	out, err := executeCommand([]string{
 		"validate", manifestDir,
@@ -727,28 +737,30 @@ func TestValidateCmd_Config_NoValidateSection(t *testing.T) {
 	g.Expect(out).To(ContainSubstring("Valid: 1"))
 }
 
-func TestValidateCmd_Config_VersionMissing(t *testing.T) {
+func TestValidateCmd_Config_APIVersionMissing(t *testing.T) {
 	g := NewWithT(t)
 	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `validate:
   verbose: true
 `)
 	_, err := executeCommand([]string{"validate", "--config", cfg})
-	g.Expect(err).To(MatchError(ContainSubstring(`unsupported version ""`)))
+	g.Expect(err).To(MatchError(ContainSubstring(`unsupported apiVersion ""`)))
 }
 
-func TestValidateCmd_Config_VersionUnsupported(t *testing.T) {
+func TestValidateCmd_Config_APIVersionUnsupported(t *testing.T) {
 	g := NewWithT(t)
-	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "2"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v2
+kind: Config
 validate:
   verbose: true
 `)
 	_, err := executeCommand([]string{"validate", "--config", cfg})
-	g.Expect(err).To(MatchError(ContainSubstring(`unsupported version "2"`)))
+	g.Expect(err).To(MatchError(ContainSubstring(`unsupported apiVersion "schema.plugin.fluxcd.io/v2"`)))
 }
 
 func TestValidateCmd_Config_StrictUnknownKey(t *testing.T) {
 	g := NewWithT(t)
-	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
 validate:
   skip_kind:
     - Secret
@@ -760,7 +772,8 @@ validate:
 
 func TestValidateCmd_Config_StrictUnknownSection(t *testing.T) {
 	g := NewWithT(t)
-	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
 extracft:
   verbose: true
 `)
@@ -783,7 +796,8 @@ func TestValidateCmd_Config_EnvVar(t *testing.T) {
 	manifestDir := t.TempDir()
 	writeManifest(t, manifestDir, "ok.yaml", validWidget)
 
-	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
 validate:
   skip-kind:
     - Widget
@@ -805,11 +819,13 @@ func TestValidateCmd_Config_FlagBeatsEnvVar(t *testing.T) {
 	manifestDir := t.TempDir()
 	writeManifest(t, manifestDir, "ok.yaml", validWidget)
 
-	// Env var config has unsupported version — must not be read.
-	envCfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "99"`)
+	// Env var config has unsupported apiVersion — must not be read.
+	envCfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v99
+kind: Config`)
 	t.Setenv("FLUX_SCHEMA_CONFIG", envCfg)
 
-	flagCfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
+	flagCfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
 validate:
   skip-kind:
     - Widget
@@ -826,7 +842,7 @@ validate:
 func TestValidateCmd_Config_MalformedYAML(t *testing.T) {
 	g := NewWithT(t)
 	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml",
-		"version: \"1\"\nvalidate:\n\tverbose: true\n") // tabs are illegal indent
+		"apiVersion: schema.plugin.fluxcd.io/v1beta1\nkind: Config\nvalidate:\n\tverbose: true\n") // tabs are illegal indent
 	_, err := executeCommand([]string{"validate", "--config", cfg})
 	g.Expect(err).To(MatchError(ContainSubstring("parse " + cfg)))
 }
@@ -918,6 +934,45 @@ func validateReportSchema(t *testing.T, raw string) {
 	schema, err := compiler.Compile("file://" + filepath.ToSlash(abs))
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(schema.Validate(doc)).To(Succeed())
+}
+
+func validateConfigSchema(t *testing.T, raw string) {
+	t.Helper()
+	g := NewWithT(t)
+
+	var doc any
+	g.Expect(k8syaml.Unmarshal([]byte(raw), &doc)).To(Succeed())
+
+	abs, err := filepath.Abs(filepath.Join("..", "..", "docs", "config", "config-v1beta1.json"))
+	g.Expect(err).ToNot(HaveOccurred())
+
+	compiler := jsonschema.NewCompiler()
+	compiler.DefaultDraft(jsonschema.Draft2020)
+	schema, err := compiler.Compile("file://" + filepath.ToSlash(abs))
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(schema.Validate(doc)).To(Succeed())
+}
+
+func TestValidateCmd_Config_Schema(t *testing.T) {
+	validateConfigSchema(t, `apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
+validate:
+  schema-location:
+    - default
+  skip-kind:
+    - Widget
+  skip-json-path:
+    - Secret:/sops
+  skip-file:
+    - '.*'
+  skip-cel-rules: true
+  skip-missing-schemas: true
+  verbose: true
+  fail-fast: true
+  concurrent: 8
+  insecure-skip-tls-verify: true
+  output: json
+`)
 }
 
 func TestValidateCmd_Output_JSON_ValidManifest(t *testing.T) {
@@ -1151,7 +1206,8 @@ func TestValidateCmd_Output_JSON_Config(t *testing.T) {
 	manifestDir := t.TempDir()
 	writeManifest(t, manifestDir, "ok.yaml", validWidget)
 
-	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
 validate:
   output: json
 `)
@@ -1177,7 +1233,8 @@ func TestValidateCmd_Output_Unsupported(t *testing.T) {
 
 func TestValidateCmd_Config_InvalidOutput(t *testing.T) {
 	g := NewWithT(t)
-	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
 validate:
   output: toml
 `)
@@ -1289,7 +1346,8 @@ func TestValidateCmd_CELRule_ConfigFile(t *testing.T) {
 	schemaDir := extractCRDSchema(t, celGadgetCRDYAML)
 	manifestDir := t.TempDir()
 	writeManifest(t, manifestDir, "bad.yaml", celViolatingGadget)
-	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
 validate:
   skip-cel-rules: true
 `)
