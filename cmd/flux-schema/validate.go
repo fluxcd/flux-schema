@@ -16,6 +16,7 @@ import (
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
 
+	apiv1 "github.com/fluxcd/flux-schema/api/v1beta1"
 	"github.com/fluxcd/flux-schema/internal/flags"
 	"github.com/fluxcd/flux-schema/internal/validator"
 )
@@ -261,7 +262,7 @@ func validateCmdRun(cmd *cobra.Command, args []string) error {
 	}
 
 	if mode != "text" {
-		summary := validator.ReportSummary{
+		summary := apiv1.ReportSummary{
 			Total:   nValid + nInvalid + nSkipped,
 			Valid:   nValid,
 			Invalid: nInvalid,
@@ -286,7 +287,7 @@ func validateCmdRun(cmd *cobra.Command, args []string) error {
 // writeReport streams report to cmd's output as JSON or YAML. The `$schema`
 // key is JSON-only: it points at a JSON Schema document and carries no
 // meaning for YAML consumers, so we drop it in YAML mode.
-func writeReport(cmd *cobra.Command, mode string, report validator.Report) error {
+func writeReport(cmd *cobra.Command, mode string, report apiv1.Report) error {
 	switch mode {
 	case "json":
 		enc := json.NewEncoder(cmd.OutOrStdout())

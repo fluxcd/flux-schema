@@ -3,6 +3,8 @@
 The `flux-schema validate` command can emit a structured report of the
 validation results by setting `--output` to `json` or `yaml`. The envelope
 shape is versioned and documented by the JSON Schema in
+[`report-v1beta1.json`](./report-v1beta1.json).
+The legacy `version: "1.0.0"` envelope schema remains available at
 [`schema-1.0.0.json`](./schema-1.0.0.json).
 
 ## Usage
@@ -21,7 +23,8 @@ Every report is wrapped in a top-level envelope:
 
 | Key                | Description                                               |
 |--------------------|-----------------------------------------------------------|
-| `version`          | Wire format version. Currently `"1.0.0"`.                 |
+| `apiVersion`       | Report API version. Currently `schema.plugin.fluxcd.io/v1beta1`. |
+| `kind`             | Report API kind. Currently `Report`.                      |
 | `$schema`          | URL of the JSON Schema describing the envelope.           |
 | `report.reporter`  | Identity of the producer, e.g. `flux-schema/0.1.0`.       |
 | `report.timestamp` | RFC 3339 UTC timestamp of the run.                        |
@@ -55,8 +58,9 @@ Every report is wrapped in a top-level envelope:
 
 ```json
 {
-  "version": "1.0.0",
-  "$schema": "https://raw.githubusercontent.com/fluxcd/flux-schema/main/docs/report/schema-1.0.0.json",
+  "apiVersion": "schema.plugin.fluxcd.io/v1beta1",
+  "kind": "Report",
+  "$schema": "https://raw.githubusercontent.com/fluxcd/flux-schema/main/docs/report/report-v1beta1.json",
   "report": {
     "reporter": "flux-schema/v0.1.0",
     "timestamp": "2026-06-01T12:00:00Z",

@@ -12,8 +12,10 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
+	"github.com/santhosh-tekuri/jsonschema/v6"
 	k8syaml "sigs.k8s.io/yaml"
 
+	apiv1 "github.com/fluxcd/flux-schema/api/v1beta1"
 	"github.com/fluxcd/flux-schema/internal/validator"
 )
 
@@ -892,13 +894,30 @@ func TestExpandSchemaLocations(t *testing.T) {
 
 // decodeReport parses the envelope emitted by --output json and returns the
 // inner body for convenient assertions.
-func decodeReport(t *testing.T, raw string) validator.Report {
+func decodeReport(t *testing.T, raw string) apiv1.Report {
 	t.Helper()
-	var env validator.Report
+	var env apiv1.Report
 	if err := json.Unmarshal([]byte(raw), &env); err != nil {
 		t.Fatalf("decode report: %v\nraw: %s", err, raw)
 	}
 	return env
+}
+
+func validateReportSchema(t *testing.T, raw string) {
+	t.Helper()
+	g := NewWithT(t)
+
+	var doc any
+	g.Expect(json.Unmarshal([]byte(raw), &doc)).To(Succeed())
+
+	abs, err := filepath.Abs(filepath.Join("..", "..", "docs", "report", "report-v1beta1.json"))
+	g.Expect(err).ToNot(HaveOccurred())
+
+	compiler := jsonschema.NewCompiler()
+	compiler.DefaultDraft(jsonschema.Draft2020)
+	schema, err := compiler.Compile("file://" + filepath.ToSlash(abs))
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(schema.Validate(doc)).To(Succeed())
 }
 
 func TestValidateCmd_Output_JSON_ValidManifest(t *testing.T) {
@@ -914,22 +933,24 @@ func TestValidateCmd_Output_JSON_ValidManifest(t *testing.T) {
 	})
 	g.Expect(err).ToNot(HaveOccurred())
 
+	validateReportSchema(t, out)
 	env := decodeReport(t, out)
-	g.Expect(env.Version).To(Equal(validator.ReportVersion))
-	g.Expect(env.Schema).To(Equal(validator.ReportSchema))
+	g.Expect(env.APIVersion).To(Equal(apiv1.GroupVersion.String()))
+	g.Expect(env.Kind).To(Equal(apiv1.ReportKind))
+	g.Expect(env.Schema).To(Equal(apiv1.ReportSchema))
 	g.Expect(env.Report.Reporter).To(HavePrefix("flux-schema/"))
 	g.Expect(env.Report.Timestamp).ToNot(BeEmpty())
-	g.Expect(env.Report.Summary).To(Equal(validator.ReportSummary{Total: 1, Valid: 1, Invalid: 0, Skipped: 0}))
+	g.Expect(env.Report.Summary).To(Equal(apiv1.ReportSummary{Total: 1, Valid: 1, Invalid: 0, Skipped: 0}))
 	g.Expect(env.Report.Results).To(HaveLen(1))
 
 	res := env.Report.Results[0]
 	g.Expect(res.Source).To(Equal(path))
 	g.Expect(res.Idx).To(Equal(1))
 	g.Expect(res.Status).To(Equal("valid"))
-	g.Expect(res.Reason).To(Equal(validator.ReasonNone))
+	g.Expect(res.Reason).To(BeEmpty())
 	g.Expect(res.Violations).To(BeEmpty())
 	g.Expect(res.Resource).ToNot(BeNil())
-	g.Expect(*res.Resource).To(Equal(validator.ReportResource{
+	g.Expect(*res.Resource).To(Equal(apiv1.ReportResource{
 		APIVersion: "example.com/v1",
 		Kind:       "Widget",
 		Namespace:  "default",
@@ -956,11 +977,11 @@ func TestValidateCmd_Output_JSON_SchemaViolation(t *testing.T) {
 	g.Expect(err).To(HaveOccurred())
 
 	env := decodeReport(t, out)
-	g.Expect(env.Report.Summary).To(Equal(validator.ReportSummary{Total: 1, Valid: 0, Invalid: 1, Skipped: 0}))
+	g.Expect(env.Report.Summary).To(Equal(apiv1.ReportSummary{Total: 1, Valid: 0, Invalid: 1, Skipped: 0}))
 	g.Expect(env.Report.Results).To(HaveLen(1))
 	res := env.Report.Results[0]
 	g.Expect(res.Status).To(Equal("invalid"))
-	g.Expect(res.Reason).To(Equal(validator.ReasonSchemaViolation))
+	g.Expect(res.Reason).To(Equal(apiv1.ReportReason(validator.ReasonSchemaViolation)))
 	g.Expect(res.Violations).ToNot(BeEmpty())
 	g.Expect(res.Violations[0].Path).To(Equal("/spec/name"))
 	g.Expect(res.Violations[0].Message).ToNot(BeEmpty())
@@ -982,11 +1003,12 @@ spec:
 	})
 	g.Expect(err).To(HaveOccurred())
 
+	validateReportSchema(t, out)
 	env := decodeReport(t, out)
 	g.Expect(env.Report.Results).To(HaveLen(1))
 	res := env.Report.Results[0]
 	g.Expect(res.Status).To(Equal("invalid"))
-	g.Expect(res.Reason).To(Equal(validator.ReasonSchemaViolation))
+	g.Expect(res.Reason).To(Equal(apiv1.ReportReason(validator.ReasonSchemaViolation)))
 	paths := make([]string, 0, len(res.Violations))
 	for _, v := range res.Violations {
 		paths = append(paths, v.Path)
@@ -1012,11 +1034,11 @@ func TestValidateCmd_Output_JSON_KindSkipped(t *testing.T) {
 	g.Expect(err).ToNot(HaveOccurred())
 
 	env := decodeReport(t, out)
-	g.Expect(env.Report.Summary).To(Equal(validator.ReportSummary{Total: 1, Valid: 0, Invalid: 0, Skipped: 1}))
+	g.Expect(env.Report.Summary).To(Equal(apiv1.ReportSummary{Total: 1, Valid: 0, Invalid: 0, Skipped: 1}))
 	g.Expect(env.Report.Results).To(HaveLen(1))
 	res := env.Report.Results[0]
 	g.Expect(res.Status).To(Equal("skipped"))
-	g.Expect(res.Reason).To(Equal(validator.ReasonKindSkipped))
+	g.Expect(res.Reason).To(Equal(apiv1.ReportReason(validator.ReasonKindSkipped)))
 	g.Expect(res.Violations).To(BeEmpty())
 }
 
@@ -1034,10 +1056,10 @@ func TestValidateCmd_Output_JSON_SchemaNotFound(t *testing.T) {
 	g.Expect(err).ToNot(HaveOccurred())
 
 	env := decodeReport(t, out)
-	g.Expect(env.Report.Summary).To(Equal(validator.ReportSummary{Total: 1, Valid: 0, Invalid: 0, Skipped: 1}))
+	g.Expect(env.Report.Summary).To(Equal(apiv1.ReportSummary{Total: 1, Valid: 0, Invalid: 0, Skipped: 1}))
 	res := env.Report.Results[0]
 	g.Expect(res.Status).To(Equal("skipped"))
-	g.Expect(res.Reason).To(Equal(validator.ReasonSchemaNotFound))
+	g.Expect(res.Reason).To(Equal(apiv1.ReportReason(validator.ReasonSchemaNotFound)))
 	g.Expect(res.Violations).To(HaveLen(1))
 	g.Expect(res.Violations[0].Path).To(BeEmpty())
 	g.Expect(res.Violations[0].Message).To(ContainSubstring(`no schema for kind "Widget"`))
@@ -1054,12 +1076,13 @@ func TestValidateCmd_Output_JSON_SourceLoadError(t *testing.T) {
 	})
 	g.Expect(err).To(HaveOccurred())
 
+	validateReportSchema(t, out)
 	env := decodeReport(t, out)
 	g.Expect(env.Report.Results).To(HaveLen(1))
 	res := env.Report.Results[0]
 	g.Expect(res.Resource).To(BeNil())
 	g.Expect(res.Status).To(Equal("invalid"))
-	g.Expect(res.Reason).To(Equal(validator.ReasonSourceLoadError))
+	g.Expect(res.Reason).To(Equal(apiv1.ReportReason(validator.ReasonSourceLoadError)))
 	g.Expect(res.Violations).To(HaveLen(1))
 	g.Expect(res.Violations[0].Message).To(ContainSubstring("no such file or directory"))
 
@@ -1080,18 +1103,21 @@ func TestValidateCmd_Output_YAML_SmokeTest(t *testing.T) {
 		"-o", "yaml",
 	})
 	g.Expect(err).ToNot(HaveOccurred())
-	g.Expect(out).To(ContainSubstring("version: 1.0.0"))
+	g.Expect(out).To(ContainSubstring("apiVersion: schema.plugin.fluxcd.io/v1beta1"))
+	g.Expect(out).To(ContainSubstring("kind: Report"))
 	g.Expect(out).To(ContainSubstring("reporter: flux-schema/"))
 	g.Expect(out).To(ContainSubstring("status: valid"))
+	g.Expect(out).ToNot(ContainSubstring("version: 1.0.0"))
 	// $schema is a JSON-only pointer; dropping it keeps YAML output clean
 	// for consumers like yq that don't care about the envelope schema URL.
 	g.Expect(out).ToNot(ContainSubstring("$schema"))
 
-	var env validator.Report
+	var env apiv1.Report
 	// sigs.k8s.io/yaml re-encodes through JSON; json.Unmarshal is not
 	// appropriate here. Use sigs.k8s.io/yaml.Unmarshal for parity.
 	g.Expect(k8syaml.Unmarshal([]byte(out), &env)).To(Succeed())
-	g.Expect(env.Version).To(Equal(validator.ReportVersion))
+	g.Expect(env.APIVersion).To(Equal(apiv1.GroupVersion.String()))
+	g.Expect(env.Kind).To(Equal(apiv1.ReportKind))
 	g.Expect(env.Schema).To(BeEmpty())
 	g.Expect(env.Report.Summary.Valid).To(Equal(1))
 }
@@ -1112,7 +1138,7 @@ func TestValidateCmd_Output_JSON_IgnoresVerbose(t *testing.T) {
 	g.Expect(err).To(HaveOccurred())
 
 	env := decodeReport(t, out)
-	g.Expect(env.Report.Summary).To(Equal(validator.ReportSummary{Total: 2, Valid: 1, Invalid: 1, Skipped: 0}))
+	g.Expect(env.Report.Summary).To(Equal(apiv1.ReportSummary{Total: 2, Valid: 1, Invalid: 1, Skipped: 0}))
 	g.Expect(env.Report.Results).To(HaveLen(2))
 
 	statuses := []string{env.Report.Results[0].Status, env.Report.Results[1].Status}
@@ -1138,7 +1164,8 @@ validate:
 	g.Expect(err).ToNot(HaveOccurred())
 
 	env := decodeReport(t, out)
-	g.Expect(env.Version).To(Equal(validator.ReportVersion))
+	g.Expect(env.APIVersion).To(Equal(apiv1.GroupVersion.String()))
+	g.Expect(env.Kind).To(Equal(apiv1.ReportKind))
 	g.Expect(env.Report.Summary.Valid).To(Equal(1))
 }
 
@@ -1217,12 +1244,12 @@ func TestValidateCmd_CELRule_Invalid(t *testing.T) {
 	g.Expect(err).To(HaveOccurred())
 
 	env := decodeReport(t, out)
-	g.Expect(env.Report.Summary).To(Equal(validator.ReportSummary{Total: 1, Valid: 0, Invalid: 1, Skipped: 0}))
+	g.Expect(env.Report.Summary).To(Equal(apiv1.ReportSummary{Total: 1, Valid: 0, Invalid: 1, Skipped: 0}))
 	g.Expect(env.Report.Results).To(HaveLen(1))
 	res := env.Report.Results[0]
 	g.Expect(res.Source).To(Equal(path))
 	g.Expect(res.Status).To(Equal("invalid"))
-	g.Expect(res.Reason).To(Equal(validator.ReasonCELViolation))
+	g.Expect(res.Reason).To(Equal(apiv1.ReportReason(validator.ReasonCELViolation)))
 	g.Expect(res.Violations).ToNot(BeEmpty())
 	g.Expect(res.Violations[0].Path).To(Equal("/spec"))
 	g.Expect(res.Violations[0].Message).To(ContainSubstring("spec.mode must be ok"))
@@ -1326,6 +1353,6 @@ func TestValidateCmd_CELRule_SkipJSONPath(t *testing.T) {
 
 	env := decodeReport(t, out)
 	res := env.Report.Results[0]
-	g.Expect(res.Reason).To(Equal(validator.ReasonCELViolation))
+	g.Expect(res.Reason).To(Equal(apiv1.ReportReason(validator.ReasonCELViolation)))
 	g.Expect(res.Violations[0].Message).ToNot(BeEmpty())
 }

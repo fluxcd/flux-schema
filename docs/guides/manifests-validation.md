@@ -128,8 +128,9 @@ Example JSON output:
 
 ```json
 {
-  "version": "1.0.0",
-  "$schema": "https://raw.githubusercontent.com/fluxcd/flux-schema/main/docs/report/schema-1.0.0.json",
+  "apiVersion": "schema.plugin.fluxcd.io/v1beta1",
+  "kind": "Report",
+  "$schema": "https://raw.githubusercontent.com/fluxcd/flux-schema/main/docs/report/report-v1beta1.json",
   "report": {
     "reporter": "flux-schema/v0.1.0",
     "timestamp": "2026-05-20T12:00:00Z",
@@ -197,7 +198,7 @@ Example JSON output:
 
 See the [validation report reference](../report/README.md) for the full envelope
 shape, the `reason` enum, and an example covering every result type. The
-report is versioned by a published [JSON Schema](../report/schema-1.0.0.json).
+report is versioned by a published [JSON Schema](../report/report-v1beta1.json).
 
 ## Validation rules
 
