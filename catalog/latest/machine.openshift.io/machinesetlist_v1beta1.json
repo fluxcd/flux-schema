@@ -746,6 +746,12 @@
                   "null"
                 ]
               },
+              "labelSelector": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
               "observedGeneration": {
                 "format": "int64",
                 "type": [
