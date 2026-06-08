@@ -265,8 +265,29 @@ func buildSchema(input []byte, opts schemaOptions) (map[string]any, error) {
 	return schema, nil
 }
 
+// firstVersion descends crd.spec.versions[0], returning both the spec map and
+// the first version entry. Shared by extractCRDIdentity and extractOpenAPISchema.
+func firstVersion(crd map[string]any) (spec, version map[string]any, err error) {
+	spec, err = requiredMap(crd, "spec")
+	if err != nil {
+		return nil, nil, err
+	}
+	versions, err := requiredSlice(spec, "versions")
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(versions) == 0 {
+		return nil, nil, errors.New("spec.versions is empty")
+	}
+	version, ok := versions[0].(map[string]any)
+	if !ok {
+		return nil, nil, errors.New("spec.versions[0] is not an object")
+	}
+	return spec, version, nil
+}
+
 func extractCRDIdentity(crd map[string]any) (crdIdentity, error) {
-	spec, err := requiredMap(crd, "spec")
+	spec, version, err := firstVersion(crd)
 	if err != nil {
 		return crdIdentity{}, err
 	}
@@ -282,17 +303,6 @@ func extractCRDIdentity(crd map[string]any) (crdIdentity, error) {
 	if err != nil {
 		return crdIdentity{}, fmt.Errorf("spec.names: %w", err)
 	}
-	versions, err := requiredSlice(spec, "versions")
-	if err != nil {
-		return crdIdentity{}, err
-	}
-	if len(versions) == 0 {
-		return crdIdentity{}, errors.New("spec.versions is empty")
-	}
-	version, ok := versions[0].(map[string]any)
-	if !ok {
-		return crdIdentity{}, errors.New("spec.versions[0] is not an object")
-	}
 	versionName, err := requiredString(version, "name")
 	if err != nil {
 		return crdIdentity{}, fmt.Errorf("spec.versions[0]: %w", err)
@@ -304,20 +314,9 @@ func extractCRDIdentity(crd map[string]any) (crdIdentity, error) {
 }
 
 func extractOpenAPISchema(crd map[string]any) (map[string]any, error) {
-	spec, err := requiredMap(crd, "spec")
+	_, version, err := firstVersion(crd)
 	if err != nil {
 		return nil, err
-	}
-	versions, err := requiredSlice(spec, "versions")
-	if err != nil {
-		return nil, err
-	}
-	if len(versions) == 0 {
-		return nil, errors.New("spec.versions is empty")
-	}
-	version, ok := versions[0].(map[string]any)
-	if !ok {
-		return nil, errors.New("spec.versions[0] is not an object")
 	}
 	schema, err := requiredMap(version, "schema")
 	if err != nil {

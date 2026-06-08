@@ -55,10 +55,10 @@ func Split(data []byte) [][]byte {
 // (Apache-2.0, Copyright The Kubernetes Authors).
 func SplitDocument(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	const yamlSeparator = "\n---"
+	const sep = len(yamlSeparator)
 	if atEOF && len(data) == 0 {
 		return 0, nil, nil
 	}
-	sep := len([]byte(yamlSeparator))
 	if i := bytes.Index(data, []byte(yamlSeparator)); i >= 0 {
 		i += sep
 		after := data[i:]
