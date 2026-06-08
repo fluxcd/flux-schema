@@ -665,7 +665,8 @@ func (v *Validator) validateDoc(ctx context.Context, source string, idx int, raw
 		return settle(StatusInvalid, ReasonSchemaViolation)
 	}
 
-	if !hasIdentity {
+	skipMetadata := isPluginAPI(r.APIVersion)
+	if !hasIdentity && !skipMetadata {
 		r.Errors = []ValidationError{{
 			Path: "/metadata",
 			Msg:  "missing property 'name' or 'generateName'",
@@ -702,7 +703,9 @@ func (v *Validator) validateDoc(ctx context.Context, source string, idx int, raw
 	if err := resolved.JSON.Validate(doc); err != nil {
 		errs = flattenErrors(err)
 	}
-	errs = append(errs, validateMetadata(doc)...)
+	if !skipMetadata {
+		errs = append(errs, validateMetadata(doc)...)
+	}
 	if len(errs) > 0 {
 		r.Errors = errs
 		return settle(StatusInvalid, ReasonSchemaViolation)
@@ -854,6 +857,14 @@ func computeName(metadata map[string]any, docIndex int) (string, bool) {
 		return generateName + "{{ generateName }}", true
 	}
 	return fmt.Sprintf("#%d", docIndex), false
+}
+
+func isPluginAPI(apiVersion string) bool {
+	group, _, ok := strings.Cut(apiVersion, "/")
+	if !ok {
+		return false
+	}
+	return group == "plugin.fluxcd.io" || strings.HasSuffix(group, ".plugin.fluxcd.io")
 }
 
 // applyInsecureTLS clones the retryablehttp client's underlying transport and

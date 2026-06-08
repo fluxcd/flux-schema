@@ -54,6 +54,34 @@ func writeWidgetSchema(t *testing.T, dir string) {
 	}
 }
 
+func writePluginConfigSchema(t *testing.T, dir string) {
+	t.Helper()
+	schema := map[string]any{
+		"type":                 "object",
+		"additionalProperties": false,
+		"required":             []any{"apiVersion", "kind", "validate"},
+		"properties": map[string]any{
+			"apiVersion": map[string]any{"const": "schema.plugin.fluxcd.io/v1beta1", "type": "string"},
+			"kind":       map[string]any{"const": "Config", "type": "string"},
+			"validate": map[string]any{
+				"type":                 "object",
+				"additionalProperties": false,
+				"properties": map[string]any{
+					"skip-missing-schemas": map[string]any{"type": "boolean"},
+				},
+			},
+		},
+	}
+	b, err := json.MarshalIndent(schema, "", "  ")
+	if err != nil {
+		t.Fatalf("marshal schema: %v", err)
+	}
+	path := filepath.Join(dir, "config-schema-v1beta1.json")
+	if err := os.WriteFile(path, b, 0o644); err != nil {
+		t.Fatalf("write schema: %v", err)
+	}
+}
+
 func newLocalValidator(t *testing.T, dir string, skipMissing bool) *Validator {
 	t.Helper()
 	v, err := New(Options{
@@ -475,6 +503,25 @@ spec:
 		ValidationError{Path: "/metadata", Msg: "missing property 'name' or 'generateName'"},
 	))
 	g.Expect(results[0].Name).To(Equal("#1"))
+}
+
+func TestValidateBytes_PluginAPIWithoutMetadata(t *testing.T) {
+	g := NewWithT(t)
+	dir := t.TempDir()
+	writePluginConfigSchema(t, dir)
+	v := newLocalValidator(t, dir, false)
+
+	doc := []byte(`apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
+validate:
+  skip-missing-schemas: true
+`)
+	results := v.ValidateBytes(context.Background(), "test.yaml", doc)
+	g.Expect(results).To(HaveLen(1))
+	g.Expect(results[0].Status).To(Equal(StatusValid))
+	g.Expect(results[0].Reason).To(Equal(ReasonNone))
+	g.Expect(results[0].Errors).To(BeEmpty())
+	g.Expect(results[0].Identifier()).To(Equal("Config/#1"))
 }
 
 func TestValidateBytes_DuplicateKey(t *testing.T) {

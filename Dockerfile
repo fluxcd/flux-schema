@@ -24,9 +24,9 @@ RUN go mod download
 # copy source code
 COPY cmd/flux-schema/ cmd/flux-schema/
 COPY internal/ internal/
+COPY api/ api/
 
 # build
-ENV CGO_ENABLED=0
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
     go build -ldflags="-s -w -X main.VERSION=${VERSION}" \
     -a -o /usr/local/bin/flux-schema ./cmd/flux-schema/

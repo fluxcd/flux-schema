@@ -26,7 +26,8 @@
 //     StatusSkipped before admission and schema checks.
 //  2. apiVersion/kind presence — missing either fails the document
 //     unless SkipMissingSchemas is set.
-//  3. Admission — metadata.name or metadata.generateName must be set.
+//  3. Admission — metadata.name or metadata.generateName must be set, except
+//     for Flux plugin API groups.
 //  4. Schema resolution — each location template is rendered with the
 //     document's GVK; the first hit is compiled and cached. 404 / ENOENT
 //     on every location fails unless SkipMissingSchemas is set.
@@ -34,8 +35,9 @@
 //     before schema validation.
 //  6. JSON Schema + ObjectMeta — the compiled schema runs against the
 //     document; DNS-1123 and qualified-name rules are layered on metadata
-//     since Kubernetes schemas leave it effectively unconstrained.
-//     Violations merge under ReasonSchemaViolation.
+//     since Kubernetes schemas leave it effectively unconstrained. The
+//     metadata layer is skipped for Flux plugin API groups. Violations merge
+//     under ReasonSchemaViolation.
 //  7. CEL x-kubernetes-validations — runs only after steps 1-6 pass and
 //     unless Options.SkipCELRules is set. Rule compile errors and runtime
 //     violations both surface as ReasonCELViolation; oldSelf is unbound
