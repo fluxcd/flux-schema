@@ -13,9 +13,32 @@ import (
 	apiv1 "github.com/fluxcd/flux-schema/api/v1beta1"
 )
 
-// envConfigFile names the environment variable that points at a default
-// --config path. The CLI flag wins when both are set.
+// envConfigFile names the environment variable used when --config is unset.
+// The executable-adjacent default path is consulted only when both are unset.
 const envConfigFile = "FLUX_SCHEMA_CONFIG"
+
+var executablePath = os.Executable
+
+func resolveConfigFile(flagPath string) (string, bool, error) {
+	if flagPath != "" {
+		return flagPath, true, nil
+	}
+	if envPath := os.Getenv(envConfigFile); envPath != "" {
+		return envPath, true, nil
+	}
+	exe, err := executablePath()
+	if err != nil {
+		return "", false, fmt.Errorf("resolve executable path: %w", err)
+	}
+	path := exe + ".config"
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			return "", false, nil
+		}
+		return "", false, fmt.Errorf("stat %s: %w", path, err)
+	}
+	return path, true, nil
+}
 
 func loadConfigFile(path string) (*apiv1.Config, error) {
 	data, err := os.ReadFile(path)

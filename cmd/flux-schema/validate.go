@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"slices"
 	"sort"
 	"strings"
@@ -109,7 +108,7 @@ func init() {
 		"disable TLS certificate verification when fetching schemas over HTTPS")
 	validateCmd.Flags().StringVar(&validateArgs.configFile, "config", "",
 		"path to a YAML file supplying default values for validate flags "+
-			"(env: "+envConfigFile+")")
+			"(env: "+envConfigFile+", default: <executable>.config)")
 	_ = validateCmd.MarkFlagFilename("config", "yaml", "yml")
 	validateCmd.Flags().VarP(&validateArgs.output, "output", "o", validateArgs.output.Description())
 	rootCmd.AddCommand(validateCmd)
@@ -406,14 +405,15 @@ func pluralize(word string, n int) string {
 	return word + "s"
 }
 
-// loadValidateConfig applies a config file resolved from --config or the
-// FLUX_SCHEMA_CONFIG env var; missing path is a no-op.
+// loadValidateConfig applies a config file resolved from --config,
+// FLUX_SCHEMA_CONFIG, or the executable-adjacent default path. A missing
+// default config is a no-op.
 func loadValidateConfig(cmd *cobra.Command) error {
-	configPath := validateArgs.configFile
-	if configPath == "" {
-		configPath = os.Getenv(envConfigFile)
+	configPath, ok, err := resolveConfigFile(validateArgs.configFile)
+	if err != nil {
+		return err
 	}
-	if configPath == "" {
+	if !ok {
 		return nil
 	}
 	cfg, err := loadConfigFile(configPath)

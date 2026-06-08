@@ -812,6 +812,36 @@ validate:
 	g.Expect(out).To(ContainSubstring("Skipped: 1"))
 }
 
+// When neither --config nor FLUX_SCHEMA_CONFIG is set, the CLI looks for a
+// config file next to the executable with a .config suffix.
+func TestValidateCmd_Config_ExecutableDefault(t *testing.T) {
+	g := NewWithT(t)
+	schemaDir := extractWidgetSchema(t)
+	manifestDir := t.TempDir()
+	writeManifest(t, manifestDir, "ok.yaml", validWidget)
+
+	exe := filepath.Join(t.TempDir(), "flux-schema")
+	cfg := exe + ".config"
+	g.Expect(os.WriteFile(cfg, []byte(`apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
+validate:
+  skipKind:
+    - Widget
+`), 0o644)).To(Succeed())
+
+	orig := executablePath
+	executablePath = func() (string, error) { return exe, nil }
+	t.Cleanup(func() { executablePath = orig })
+	t.Setenv(envConfigFile, "")
+
+	out, err := executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("Skipped: 1"))
+}
+
 // --config wins over FLUX_SCHEMA_CONFIG when both are set.
 func TestValidateCmd_Config_FlagBeatsEnvVar(t *testing.T) {
 	g := NewWithT(t)

@@ -35,8 +35,9 @@ Usage:
 flux-schema validate ./manifests --config .fluxschema.yml
 ```
 
-The `FLUX_SCHEMA_CONFIG` environment variable can also point at the config
-file. The `--config` flag wins when both are set.
+When `--config` is not set, the `FLUX_SCHEMA_CONFIG` environment variable is
+used. When neither is set, `flux-schema` looks for a config file at the
+executable path plus `.config`, for example `~/.fluxcd/plugins/flux-schema.config`.
 
 ## Specification
 
