@@ -12,8 +12,10 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
+	"github.com/santhosh-tekuri/jsonschema/v6"
 	k8syaml "sigs.k8s.io/yaml"
 
+	apiv1 "github.com/fluxcd/flux-schema/api/v1beta1"
 	"github.com/fluxcd/flux-schema/internal/validator"
 )
 
@@ -553,10 +555,11 @@ func TestValidateCmd_Config_AppliesFlagValues(t *testing.T) {
 	manifestDir := t.TempDir()
 	writeManifest(t, manifestDir, "ok.yaml", validWidget)
 
-	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
 validate:
   verbose: true
-  skip-kind:
+  skipKind:
     - Widget
 `)
 
@@ -576,7 +579,8 @@ func TestValidateCmd_Config_CLIOverridesBool(t *testing.T) {
 	manifestDir := t.TempDir()
 	writeManifest(t, manifestDir, "ok.yaml", validWidget)
 
-	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
 validate:
   verbose: true
 `)
@@ -596,9 +600,10 @@ validate:
 func TestValidateCmd_Config_SkipJSONPath(t *testing.T) {
 	g := NewWithT(t)
 
-	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
 validate:
-  skip-json-path:
+  skipJSONPath:
     - Secret:/sops
 `)
 	out, err := executeCommand([]string{
@@ -617,9 +622,10 @@ func TestValidateCmd_Config_CLIOverridesSkipJSONPath(t *testing.T) {
 
 	// Config strips /sops; CLI replaces the list with a different pointer
 	// that doesn't match anything in the doc, so SOPS validation fails.
-	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
 validate:
-  skip-json-path:
+  skipJSONPath:
     - Secret:/sops
 `)
 	_, err := executeCommand([]string{
@@ -640,9 +646,10 @@ func TestValidateCmd_Config_SkipFile(t *testing.T) {
 	writeManifest(t, manifestDir, "ok.yaml", validWidget)
 	writeManifest(t, manifestDir, "kustomization.yaml", invalidWidget)
 
-	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
 validate:
-  skip-file:
+  skipFile:
     - kustomization.yaml
 `)
 	out, err := executeCommand([]string{
@@ -661,9 +668,10 @@ func TestValidateCmd_Config_CLIOverridesSlice(t *testing.T) {
 	manifestDir := t.TempDir()
 	writeManifest(t, manifestDir, "ok.yaml", validWidget)
 
-	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
 validate:
-  skip-kind:
+  skipKind:
     - Widget
 `)
 
@@ -685,7 +693,8 @@ func TestValidateCmd_Config_Concurrent(t *testing.T) {
 	manifestDir := t.TempDir()
 	writeManifest(t, manifestDir, "ok.yaml", validWidget)
 
-	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
 validate:
   verbose: true
 `)
@@ -696,7 +705,8 @@ validate:
 	})
 	g.Expect(err).ToNot(HaveOccurred())
 
-	cfgZero := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
+	cfgZero := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
 validate:
   concurrent: 0
 `)
@@ -708,13 +718,15 @@ validate:
 	g.Expect(err).To(MatchError(ContainSubstring("--concurrent must be >= 1")))
 }
 
-func TestValidateCmd_Config_NoValidateSection(t *testing.T) {
+func TestValidateCmd_Config_EmptyValidateSection(t *testing.T) {
 	g := NewWithT(t)
 	schemaDir := extractWidgetSchema(t)
 	manifestDir := t.TempDir()
 	writeManifest(t, manifestDir, "ok.yaml", validWidget)
 
-	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
+validate: {}
 `)
 	out, err := executeCommand([]string{
 		"validate", manifestDir,
@@ -725,40 +737,43 @@ func TestValidateCmd_Config_NoValidateSection(t *testing.T) {
 	g.Expect(out).To(ContainSubstring("Valid: 1"))
 }
 
-func TestValidateCmd_Config_VersionMissing(t *testing.T) {
+func TestValidateCmd_Config_APIVersionMissing(t *testing.T) {
 	g := NewWithT(t)
 	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `validate:
   verbose: true
 `)
 	_, err := executeCommand([]string{"validate", "--config", cfg})
-	g.Expect(err).To(MatchError(ContainSubstring(`unsupported version ""`)))
+	g.Expect(err).To(MatchError(ContainSubstring(`unsupported apiVersion ""`)))
 }
 
-func TestValidateCmd_Config_VersionUnsupported(t *testing.T) {
+func TestValidateCmd_Config_APIVersionUnsupported(t *testing.T) {
 	g := NewWithT(t)
-	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "2"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v2
+kind: Config
 validate:
   verbose: true
 `)
 	_, err := executeCommand([]string{"validate", "--config", cfg})
-	g.Expect(err).To(MatchError(ContainSubstring(`unsupported version "2"`)))
+	g.Expect(err).To(MatchError(ContainSubstring(`unsupported apiVersion "schema.plugin.fluxcd.io/v2"`)))
 }
 
 func TestValidateCmd_Config_StrictUnknownKey(t *testing.T) {
 	g := NewWithT(t)
-	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
 validate:
-  skip_kind:
+  skip-kind:
     - Secret
 `)
 	_, err := executeCommand([]string{"validate", "--config", cfg})
 	g.Expect(err).To(HaveOccurred())
-	g.Expect(err.Error()).To(ContainSubstring("skip_kind"))
+	g.Expect(err.Error()).To(ContainSubstring("skip-kind"))
 }
 
 func TestValidateCmd_Config_StrictUnknownSection(t *testing.T) {
 	g := NewWithT(t)
-	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
 extracft:
   verbose: true
 `)
@@ -781,12 +796,43 @@ func TestValidateCmd_Config_EnvVar(t *testing.T) {
 	manifestDir := t.TempDir()
 	writeManifest(t, manifestDir, "ok.yaml", validWidget)
 
-	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
 validate:
-  skip-kind:
+  skipKind:
     - Widget
 `)
 	t.Setenv("FLUX_SCHEMA_CONFIG", cfg)
+
+	out, err := executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("Skipped: 1"))
+}
+
+// When neither --config nor FLUX_SCHEMA_CONFIG is set, the CLI looks for a
+// config file next to the executable with a .config suffix.
+func TestValidateCmd_Config_ExecutableDefault(t *testing.T) {
+	g := NewWithT(t)
+	schemaDir := extractWidgetSchema(t)
+	manifestDir := t.TempDir()
+	writeManifest(t, manifestDir, "ok.yaml", validWidget)
+
+	exe := filepath.Join(t.TempDir(), "flux-schema")
+	cfg := exe + ".config"
+	g.Expect(os.WriteFile(cfg, []byte(`apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
+validate:
+  skipKind:
+    - Widget
+`), 0o644)).To(Succeed())
+
+	orig := executablePath
+	executablePath = func() (string, error) { return exe, nil }
+	t.Cleanup(func() { executablePath = orig })
+	t.Setenv(envConfigFile, "")
 
 	out, err := executeCommand([]string{
 		"validate", manifestDir,
@@ -803,13 +849,15 @@ func TestValidateCmd_Config_FlagBeatsEnvVar(t *testing.T) {
 	manifestDir := t.TempDir()
 	writeManifest(t, manifestDir, "ok.yaml", validWidget)
 
-	// Env var config has unsupported version — must not be read.
-	envCfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "99"`)
+	// Env var config has unsupported apiVersion — must not be read.
+	envCfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v99
+kind: Config`)
 	t.Setenv("FLUX_SCHEMA_CONFIG", envCfg)
 
-	flagCfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
+	flagCfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
 validate:
-  skip-kind:
+  skipKind:
     - Widget
 `)
 	out, err := executeCommand([]string{
@@ -824,7 +872,7 @@ validate:
 func TestValidateCmd_Config_MalformedYAML(t *testing.T) {
 	g := NewWithT(t)
 	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml",
-		"version: \"1\"\nvalidate:\n\tverbose: true\n") // tabs are illegal indent
+		"apiVersion: schema.plugin.fluxcd.io/v1beta1\nkind: Config\nvalidate:\n\tverbose: true\n") // tabs are illegal indent
 	_, err := executeCommand([]string{"validate", "--config", cfg})
 	g.Expect(err).To(MatchError(ContainSubstring("parse " + cfg)))
 }
@@ -892,13 +940,69 @@ func TestExpandSchemaLocations(t *testing.T) {
 
 // decodeReport parses the envelope emitted by --output json and returns the
 // inner body for convenient assertions.
-func decodeReport(t *testing.T, raw string) validator.Report {
+func decodeReport(t *testing.T, raw string) apiv1.Report {
 	t.Helper()
-	var env validator.Report
+	var env apiv1.Report
 	if err := json.Unmarshal([]byte(raw), &env); err != nil {
 		t.Fatalf("decode report: %v\nraw: %s", err, raw)
 	}
 	return env
+}
+
+func validateReportSchema(t *testing.T, raw string) {
+	t.Helper()
+	g := NewWithT(t)
+
+	var doc any
+	g.Expect(json.Unmarshal([]byte(raw), &doc)).To(Succeed())
+
+	abs, err := filepath.Abs(filepath.Join("..", "..", "docs", "report", "report-v1beta1.json"))
+	g.Expect(err).ToNot(HaveOccurred())
+
+	compiler := jsonschema.NewCompiler()
+	compiler.DefaultDraft(jsonschema.Draft2020)
+	schema, err := compiler.Compile("file://" + filepath.ToSlash(abs))
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(schema.Validate(doc)).To(Succeed())
+}
+
+func validateConfigSchema(t *testing.T, raw string) {
+	t.Helper()
+	g := NewWithT(t)
+
+	var doc any
+	g.Expect(k8syaml.Unmarshal([]byte(raw), &doc)).To(Succeed())
+
+	abs, err := filepath.Abs(filepath.Join("..", "..", "docs", "config", "config-v1beta1.json"))
+	g.Expect(err).ToNot(HaveOccurred())
+
+	compiler := jsonschema.NewCompiler()
+	compiler.DefaultDraft(jsonschema.Draft2020)
+	schema, err := compiler.Compile("file://" + filepath.ToSlash(abs))
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(schema.Validate(doc)).To(Succeed())
+}
+
+func TestValidateCmd_Config_Schema(t *testing.T) {
+	validateConfigSchema(t, `apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
+validate:
+  schemaLocation:
+    - default
+  skipKind:
+    - Widget
+  skipJSONPath:
+    - Secret:/sops
+  skipFile:
+    - '.*'
+  skipCELRules: true
+  skipMissingSchemas: true
+  verbose: true
+  failFast: true
+  concurrent: 8
+  insecureSkipTLSVerify: true
+  output: json
+`)
 }
 
 func TestValidateCmd_Output_JSON_ValidManifest(t *testing.T) {
@@ -914,22 +1018,24 @@ func TestValidateCmd_Output_JSON_ValidManifest(t *testing.T) {
 	})
 	g.Expect(err).ToNot(HaveOccurred())
 
+	validateReportSchema(t, out)
 	env := decodeReport(t, out)
-	g.Expect(env.Version).To(Equal(validator.ReportVersion))
-	g.Expect(env.Schema).To(Equal(validator.ReportSchema))
+	g.Expect(env.APIVersion).To(Equal(apiv1.GroupVersion.String()))
+	g.Expect(env.Kind).To(Equal(apiv1.ReportKind))
+	g.Expect(env.Schema).To(Equal(apiv1.ReportSchema))
 	g.Expect(env.Report.Reporter).To(HavePrefix("flux-schema/"))
 	g.Expect(env.Report.Timestamp).ToNot(BeEmpty())
-	g.Expect(env.Report.Summary).To(Equal(validator.ReportSummary{Total: 1, Valid: 1, Invalid: 0, Skipped: 0}))
+	g.Expect(env.Report.Summary).To(Equal(apiv1.ReportSummary{Total: 1, Valid: 1, Invalid: 0, Skipped: 0}))
 	g.Expect(env.Report.Results).To(HaveLen(1))
 
 	res := env.Report.Results[0]
 	g.Expect(res.Source).To(Equal(path))
 	g.Expect(res.Idx).To(Equal(1))
 	g.Expect(res.Status).To(Equal("valid"))
-	g.Expect(res.Reason).To(Equal(validator.ReasonNone))
+	g.Expect(res.Reason).To(BeEmpty())
 	g.Expect(res.Violations).To(BeEmpty())
 	g.Expect(res.Resource).ToNot(BeNil())
-	g.Expect(*res.Resource).To(Equal(validator.ReportResource{
+	g.Expect(*res.Resource).To(Equal(apiv1.ReportResource{
 		APIVersion: "example.com/v1",
 		Kind:       "Widget",
 		Namespace:  "default",
@@ -956,11 +1062,11 @@ func TestValidateCmd_Output_JSON_SchemaViolation(t *testing.T) {
 	g.Expect(err).To(HaveOccurred())
 
 	env := decodeReport(t, out)
-	g.Expect(env.Report.Summary).To(Equal(validator.ReportSummary{Total: 1, Valid: 0, Invalid: 1, Skipped: 0}))
+	g.Expect(env.Report.Summary).To(Equal(apiv1.ReportSummary{Total: 1, Valid: 0, Invalid: 1, Skipped: 0}))
 	g.Expect(env.Report.Results).To(HaveLen(1))
 	res := env.Report.Results[0]
 	g.Expect(res.Status).To(Equal("invalid"))
-	g.Expect(res.Reason).To(Equal(validator.ReasonSchemaViolation))
+	g.Expect(res.Reason).To(Equal(apiv1.ReportReason(validator.ReasonSchemaViolation)))
 	g.Expect(res.Violations).ToNot(BeEmpty())
 	g.Expect(res.Violations[0].Path).To(Equal("/spec/name"))
 	g.Expect(res.Violations[0].Message).ToNot(BeEmpty())
@@ -982,11 +1088,12 @@ spec:
 	})
 	g.Expect(err).To(HaveOccurred())
 
+	validateReportSchema(t, out)
 	env := decodeReport(t, out)
 	g.Expect(env.Report.Results).To(HaveLen(1))
 	res := env.Report.Results[0]
 	g.Expect(res.Status).To(Equal("invalid"))
-	g.Expect(res.Reason).To(Equal(validator.ReasonSchemaViolation))
+	g.Expect(res.Reason).To(Equal(apiv1.ReportReason(validator.ReasonSchemaViolation)))
 	paths := make([]string, 0, len(res.Violations))
 	for _, v := range res.Violations {
 		paths = append(paths, v.Path)
@@ -1012,11 +1119,11 @@ func TestValidateCmd_Output_JSON_KindSkipped(t *testing.T) {
 	g.Expect(err).ToNot(HaveOccurred())
 
 	env := decodeReport(t, out)
-	g.Expect(env.Report.Summary).To(Equal(validator.ReportSummary{Total: 1, Valid: 0, Invalid: 0, Skipped: 1}))
+	g.Expect(env.Report.Summary).To(Equal(apiv1.ReportSummary{Total: 1, Valid: 0, Invalid: 0, Skipped: 1}))
 	g.Expect(env.Report.Results).To(HaveLen(1))
 	res := env.Report.Results[0]
 	g.Expect(res.Status).To(Equal("skipped"))
-	g.Expect(res.Reason).To(Equal(validator.ReasonKindSkipped))
+	g.Expect(res.Reason).To(Equal(apiv1.ReportReason(validator.ReasonKindSkipped)))
 	g.Expect(res.Violations).To(BeEmpty())
 }
 
@@ -1034,10 +1141,10 @@ func TestValidateCmd_Output_JSON_SchemaNotFound(t *testing.T) {
 	g.Expect(err).ToNot(HaveOccurred())
 
 	env := decodeReport(t, out)
-	g.Expect(env.Report.Summary).To(Equal(validator.ReportSummary{Total: 1, Valid: 0, Invalid: 0, Skipped: 1}))
+	g.Expect(env.Report.Summary).To(Equal(apiv1.ReportSummary{Total: 1, Valid: 0, Invalid: 0, Skipped: 1}))
 	res := env.Report.Results[0]
 	g.Expect(res.Status).To(Equal("skipped"))
-	g.Expect(res.Reason).To(Equal(validator.ReasonSchemaNotFound))
+	g.Expect(res.Reason).To(Equal(apiv1.ReportReason(validator.ReasonSchemaNotFound)))
 	g.Expect(res.Violations).To(HaveLen(1))
 	g.Expect(res.Violations[0].Path).To(BeEmpty())
 	g.Expect(res.Violations[0].Message).To(ContainSubstring(`no schema for kind "Widget"`))
@@ -1054,12 +1161,13 @@ func TestValidateCmd_Output_JSON_SourceLoadError(t *testing.T) {
 	})
 	g.Expect(err).To(HaveOccurred())
 
+	validateReportSchema(t, out)
 	env := decodeReport(t, out)
 	g.Expect(env.Report.Results).To(HaveLen(1))
 	res := env.Report.Results[0]
 	g.Expect(res.Resource).To(BeNil())
 	g.Expect(res.Status).To(Equal("invalid"))
-	g.Expect(res.Reason).To(Equal(validator.ReasonSourceLoadError))
+	g.Expect(res.Reason).To(Equal(apiv1.ReportReason(validator.ReasonSourceLoadError)))
 	g.Expect(res.Violations).To(HaveLen(1))
 	g.Expect(res.Violations[0].Message).To(ContainSubstring("no such file or directory"))
 
@@ -1080,18 +1188,21 @@ func TestValidateCmd_Output_YAML_SmokeTest(t *testing.T) {
 		"-o", "yaml",
 	})
 	g.Expect(err).ToNot(HaveOccurred())
-	g.Expect(out).To(ContainSubstring("version: 1.0.0"))
+	g.Expect(out).To(ContainSubstring("apiVersion: schema.plugin.fluxcd.io/v1beta1"))
+	g.Expect(out).To(ContainSubstring("kind: Report"))
 	g.Expect(out).To(ContainSubstring("reporter: flux-schema/"))
 	g.Expect(out).To(ContainSubstring("status: valid"))
+	g.Expect(out).ToNot(ContainSubstring("version: 1.0.0"))
 	// $schema is a JSON-only pointer; dropping it keeps YAML output clean
 	// for consumers like yq that don't care about the envelope schema URL.
 	g.Expect(out).ToNot(ContainSubstring("$schema"))
 
-	var env validator.Report
+	var env apiv1.Report
 	// sigs.k8s.io/yaml re-encodes through JSON; json.Unmarshal is not
 	// appropriate here. Use sigs.k8s.io/yaml.Unmarshal for parity.
 	g.Expect(k8syaml.Unmarshal([]byte(out), &env)).To(Succeed())
-	g.Expect(env.Version).To(Equal(validator.ReportVersion))
+	g.Expect(env.APIVersion).To(Equal(apiv1.GroupVersion.String()))
+	g.Expect(env.Kind).To(Equal(apiv1.ReportKind))
 	g.Expect(env.Schema).To(BeEmpty())
 	g.Expect(env.Report.Summary.Valid).To(Equal(1))
 }
@@ -1112,7 +1223,7 @@ func TestValidateCmd_Output_JSON_IgnoresVerbose(t *testing.T) {
 	g.Expect(err).To(HaveOccurred())
 
 	env := decodeReport(t, out)
-	g.Expect(env.Report.Summary).To(Equal(validator.ReportSummary{Total: 2, Valid: 1, Invalid: 1, Skipped: 0}))
+	g.Expect(env.Report.Summary).To(Equal(apiv1.ReportSummary{Total: 2, Valid: 1, Invalid: 1, Skipped: 0}))
 	g.Expect(env.Report.Results).To(HaveLen(2))
 
 	statuses := []string{env.Report.Results[0].Status, env.Report.Results[1].Status}
@@ -1125,7 +1236,8 @@ func TestValidateCmd_Output_JSON_Config(t *testing.T) {
 	manifestDir := t.TempDir()
 	writeManifest(t, manifestDir, "ok.yaml", validWidget)
 
-	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
 validate:
   output: json
 `)
@@ -1138,7 +1250,8 @@ validate:
 	g.Expect(err).ToNot(HaveOccurred())
 
 	env := decodeReport(t, out)
-	g.Expect(env.Version).To(Equal(validator.ReportVersion))
+	g.Expect(env.APIVersion).To(Equal(apiv1.GroupVersion.String()))
+	g.Expect(env.Kind).To(Equal(apiv1.ReportKind))
 	g.Expect(env.Report.Summary.Valid).To(Equal(1))
 }
 
@@ -1150,7 +1263,8 @@ func TestValidateCmd_Output_Unsupported(t *testing.T) {
 
 func TestValidateCmd_Config_InvalidOutput(t *testing.T) {
 	g := NewWithT(t)
-	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
 validate:
   output: toml
 `)
@@ -1217,12 +1331,12 @@ func TestValidateCmd_CELRule_Invalid(t *testing.T) {
 	g.Expect(err).To(HaveOccurred())
 
 	env := decodeReport(t, out)
-	g.Expect(env.Report.Summary).To(Equal(validator.ReportSummary{Total: 1, Valid: 0, Invalid: 1, Skipped: 0}))
+	g.Expect(env.Report.Summary).To(Equal(apiv1.ReportSummary{Total: 1, Valid: 0, Invalid: 1, Skipped: 0}))
 	g.Expect(env.Report.Results).To(HaveLen(1))
 	res := env.Report.Results[0]
 	g.Expect(res.Source).To(Equal(path))
 	g.Expect(res.Status).To(Equal("invalid"))
-	g.Expect(res.Reason).To(Equal(validator.ReasonCELViolation))
+	g.Expect(res.Reason).To(Equal(apiv1.ReportReason(validator.ReasonCELViolation)))
 	g.Expect(res.Violations).ToNot(BeEmpty())
 	g.Expect(res.Violations[0].Path).To(Equal("/spec"))
 	g.Expect(res.Violations[0].Message).To(ContainSubstring("spec.mode must be ok"))
@@ -1262,9 +1376,10 @@ func TestValidateCmd_CELRule_ConfigFile(t *testing.T) {
 	schemaDir := extractCRDSchema(t, celGadgetCRDYAML)
 	manifestDir := t.TempDir()
 	writeManifest(t, manifestDir, "bad.yaml", celViolatingGadget)
-	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `version: "1"
+	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
 validate:
-  skip-cel-rules: true
+  skipCELRules: true
 `)
 
 	out, err := executeCommand([]string{
@@ -1326,6 +1441,6 @@ func TestValidateCmd_CELRule_SkipJSONPath(t *testing.T) {
 
 	env := decodeReport(t, out)
 	res := env.Report.Results[0]
-	g.Expect(res.Reason).To(Equal(validator.ReasonCELViolation))
+	g.Expect(res.Reason).To(Equal(apiv1.ReportReason(validator.ReasonCELViolation)))
 	g.Expect(res.Violations[0].Message).ToNot(BeEmpty())
 }

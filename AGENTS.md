@@ -52,7 +52,7 @@ CI (`.github/workflows/test.yaml`) runs `make test` + `make lint` and fails if t
 - Struct tags: only `json` and `inline` are permitted on struct fields (revive `struct-tag` rule).
 - Flag wiring: for any flag with a fixed set of accepted values, add a type under `internal/flags/` and register it with `cmd.Flags().VarP(&args.x, "name", "n", args.x.Description())` rather than `StringVarP` — this gets validation, the `a|b|c` type hint in `--help`, and consistent error messages for free.
 - Command output: inside cobra `RunE` handlers (and helpers they call), emit via `cmd.Printf` / `cmd.PrintErrf` and pass `*cobra.Command` to helpers — not `fmt.Fprintf(cmd.OutOrStdout(), ...)`. `rootCmd.SetOut(os.Stdout)` in `main.go` already routes `cmd.Print*` to stdout, and the pattern avoids the `_, _ = fmt.Fprintf(...)` noise that errcheck forces.
-- Config file sync: any new flag added to a subcommand that supports `--config` (currently `validate`) must also be added to the matching section struct in `cmd/flux-schema/config.go` (`validateConfig` for validate) with a hyphenated `json:` tag that matches the flag name, and wired into `applyValidateConfig` with the same `!flags.Changed("<name>")` gate as the existing fields.
+- Config file sync: any new flag added to a subcommand that supports `--config` (currently `validate`) must also be added to the matching API struct in `api/v1beta1/config_types.go` (`ValidateConfig` for validate) with a lower camelCase `json:` tag, and wired into `applyValidateConfig` with the same `!flags.Changed("<name>")` gate as the existing fields.
 - Tests use Gomega (`. "github.com/onsi/gomega"` dot-import is accepted — staticcheck ST1001 is disabled project-wide). Table-driven tests are the norm.
 
 ## Writing Documentation
@@ -62,7 +62,8 @@ User-facing changes (flags, commands, report shape, GitHub Action inputs) must b
 - `README.md` — features list, install, quickstart, commands table, doc links.
 - `docs/guides/manifests-validation.md` — `validate` reference: flag table, schema resolution, skip rules, CEL rules, config file with example `.fluxschema.yml`.
 - `docs/guides/custom-schema-catalog.md` — `extract crd`/`extract k8s`/`extract openshift` reference and catalog hosting/refresh.
-- `docs/report/README.md` + `docs/report/schema-1.0.0.json` — JSON/YAML report envelope and its JSON Schema.
+- `docs/config/README.md` + `docs/config/config-v1beta1.json` — config file envelope and its JSON Schema.
+- `docs/report/README.md` + `docs/report/report-v1beta1.json` — report file envelope and its JSON Schema.
 - `actions/setup/README.md` + `actions/validate/README.md` — GitHub Action inputs and example workflows.
 
 Apply these rules:

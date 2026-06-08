@@ -128,8 +128,9 @@ Example JSON output:
 
 ```json
 {
-  "version": "1.0.0",
-  "$schema": "https://raw.githubusercontent.com/fluxcd/flux-schema/main/docs/report/schema-1.0.0.json",
+  "apiVersion": "schema.plugin.fluxcd.io/v1beta1",
+  "kind": "Report",
+  "$schema": "https://raw.githubusercontent.com/fluxcd/flux-schema/main/docs/report/report-v1beta1.json",
   "report": {
     "reporter": "flux-schema/v0.1.0",
     "timestamp": "2026-05-20T12:00:00Z",
@@ -197,7 +198,7 @@ Example JSON output:
 
 See the [validation report reference](../report/README.md) for the full envelope
 shape, the `reason` enum, and an example covering every result type. The
-report is versioned by a published [JSON Schema](../report/schema-1.0.0.json).
+report is versioned by a published [JSON Schema](../report/report-v1beta1.json).
 
 ## Validation rules
 
@@ -236,28 +237,30 @@ out of CI scripts and makes validation reproducible across environments.
 flux-schema validate ./manifests --config .fluxschema.yml
 ```
 
-The file has a `version` (required, must be `"1"`) and a `validate` section
-whose keys mirror the CLI flag names:
+The file is wrapped in a `Config` API envelope and has a `validate` section
+for validation defaults. The shape is documented by the
+[Config JSON Schema](../config/config-v1beta1.json).
 
 ```yaml
-version: "1"
+apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
 validate:
-  schema-location:
+  schemaLocation:
     - default
     - https://raw.githubusercontent.com/datreeio/CRDs-catalog/main
-  skip-kind:
+  skipKind:
     - source.toolkit.fluxcd.io/v1/ExternalArtifact
-  skip-json-path:
+  skipJSONPath:
     - Secret:/sops
-  skip-file:
+  skipFile:
     - '.*'
     - kustomization.yaml
-  skip-cel-rules: false
-  skip-missing-schemas: false
+  skipCELRules: false
+  skipMissingSchemas: false
   verbose: true
-  fail-fast: false
+  failFast: false
   concurrent: 8
-  insecure-skip-tls-verify: false
+  insecureSkipTLSVerify: false
   output: text
 ```
 

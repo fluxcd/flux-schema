@@ -1,0 +1,186 @@
+{
+  "$id": "https://raw.githubusercontent.com/fluxcd/flux-schema/main/docs/report/report-v1beta1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "format": "uri",
+      "type": "string"
+    },
+    "apiVersion": {
+      "const": "schema.plugin.fluxcd.io/v1beta1",
+      "type": "string"
+    },
+    "kind": {
+      "const": "Report",
+      "type": "string"
+    },
+    "report": {
+      "additionalProperties": false,
+      "description": "ReportSpec contains validation report details.",
+      "properties": {
+        "reporter": {
+          "description": "Reporter identifies the software that produced the report.",
+          "pattern": "^flux-schema/",
+          "type": "string"
+        },
+        "results": {
+          "description": "Results contains one validation result per processed document.",
+          "items": {
+            "additionalProperties": false,
+            "description": "ReportResult is the wire form of a single validated document.",
+            "properties": {
+              "idx": {
+                "description": "Idx is the zero-based document index within the source.",
+                "minimum": 0,
+                "type": "integer"
+              },
+              "reason": {
+                "description": "Reason is a stable machine-readable code for non-valid results.",
+                "enum": [
+                  "cel-violation",
+                  "kind-skipped",
+                  "schema-load-error",
+                  "schema-not-found",
+                  "schema-violation",
+                  "source-load-error",
+                  "yaml-parse-error"
+                ],
+                "type": "string"
+              },
+              "resource": {
+                "description": "Resource identifies the validated document. It is null when no identity\ncould be recovered.",
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "apiVersion": {
+                        "description": "APIVersion is the Kubernetes API version of the document.",
+                        "type": "string"
+                      },
+                      "kind": {
+                        "description": "Kind is the Kubernetes kind of the document.",
+                        "type": "string"
+                      },
+                      "name": {
+                        "description": "Name is the Kubernetes name of the document.",
+                        "type": "string"
+                      },
+                      "namespace": {
+                        "description": "Namespace is the Kubernetes namespace of the document.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "apiVersion",
+                      "kind"
+                    ],
+                    "type": "object"
+                  }
+                ]
+              },
+              "source": {
+                "description": "Source identifies the input source for the document.",
+                "type": "string"
+              },
+              "status": {
+                "description": "Status is the validation outcome for the document.",
+                "enum": [
+                  "valid",
+                  "invalid",
+                  "skipped"
+                ],
+                "type": "string"
+              },
+              "violations": {
+                "description": "Violations contains validation errors found in the document.",
+                "items": {
+                  "additionalProperties": false,
+                  "description": "ReportViolation carries a JSON Pointer path only for schema violations;\nfor every other reason Path is empty and Message holds the raw error text.",
+                  "properties": {
+                    "message": {
+                      "description": "Message describes the validation error.",
+                      "type": "string"
+                    },
+                    "path": {
+                      "description": "Path is the JSON Pointer to the invalid field for schema violations.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "idx",
+              "resource",
+              "source",
+              "status"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "summary": {
+          "additionalProperties": false,
+          "description": "Summary contains aggregate validation counts.",
+          "properties": {
+            "invalid": {
+              "description": "Invalid is the number of documents that failed validation.",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "skipped": {
+              "description": "Skipped is the number of documents that were not validated.",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "total": {
+              "description": "Total is the number of processed documents.",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "valid": {
+              "description": "Valid is the number of documents that passed validation.",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "invalid",
+            "skipped",
+            "total",
+            "valid"
+          ],
+          "type": "object"
+        },
+        "timestamp": {
+          "description": "Timestamp is the report creation time in RFC 3339 format.",
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reporter",
+        "results",
+        "summary",
+        "timestamp"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "apiVersion",
+    "kind",
+    "report"
+  ],
+  "title": "ReportSpec contains validation report details.",
+  "type": "object"
+}

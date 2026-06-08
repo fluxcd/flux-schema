@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"slices"
 	"sort"
 	"strings"
@@ -16,6 +15,7 @@ import (
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
 
+	apiv1 "github.com/fluxcd/flux-schema/api/v1beta1"
 	"github.com/fluxcd/flux-schema/internal/flags"
 	"github.com/fluxcd/flux-schema/internal/validator"
 )
@@ -108,7 +108,7 @@ func init() {
 		"disable TLS certificate verification when fetching schemas over HTTPS")
 	validateCmd.Flags().StringVar(&validateArgs.configFile, "config", "",
 		"path to a YAML file supplying default values for validate flags "+
-			"(env: "+envConfigFile+")")
+			"(env: "+envConfigFile+", default: <executable>.config)")
 	_ = validateCmd.MarkFlagFilename("config", "yaml", "yml")
 	validateCmd.Flags().VarP(&validateArgs.output, "output", "o", validateArgs.output.Description())
 	rootCmd.AddCommand(validateCmd)
@@ -261,7 +261,7 @@ func validateCmdRun(cmd *cobra.Command, args []string) error {
 	}
 
 	if mode != "text" {
-		summary := validator.ReportSummary{
+		summary := apiv1.ReportSummary{
 			Total:   nValid + nInvalid + nSkipped,
 			Valid:   nValid,
 			Invalid: nInvalid,
@@ -286,7 +286,7 @@ func validateCmdRun(cmd *cobra.Command, args []string) error {
 // writeReport streams report to cmd's output as JSON or YAML. The `$schema`
 // key is JSON-only: it points at a JSON Schema document and carries no
 // meaning for YAML consumers, so we drop it in YAML mode.
-func writeReport(cmd *cobra.Command, mode string, report validator.Report) error {
+func writeReport(cmd *cobra.Command, mode string, report apiv1.Report) error {
 	switch mode {
 	case "json":
 		enc := json.NewEncoder(cmd.OutOrStdout())
@@ -405,21 +405,22 @@ func pluralize(word string, n int) string {
 	return word + "s"
 }
 
-// loadValidateConfig applies a config file resolved from --config or the
-// FLUX_SCHEMA_CONFIG env var; missing path is a no-op.
+// loadValidateConfig applies a config file resolved from --config,
+// FLUX_SCHEMA_CONFIG, or the executable-adjacent default path. A missing
+// default config is a no-op.
 func loadValidateConfig(cmd *cobra.Command) error {
-	configPath := validateArgs.configFile
-	if configPath == "" {
-		configPath = os.Getenv(envConfigFile)
+	configPath, ok, err := resolveConfigFile(validateArgs.configFile)
+	if err != nil {
+		return err
 	}
-	if configPath == "" {
+	if !ok {
 		return nil
 	}
 	cfg, err := loadConfigFile(configPath)
 	if err != nil {
 		return err
 	}
-	return applyValidateConfig(cmd, cfg.Validate, &validateArgs)
+	return applyValidateConfig(cmd, &cfg.Validate, &validateArgs)
 }
 
 // buildValidatorOptions expands --schema-location values, validates flag
