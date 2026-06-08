@@ -559,7 +559,7 @@ func TestValidateCmd_Config_AppliesFlagValues(t *testing.T) {
 kind: Config
 validate:
   verbose: true
-  skip-kind:
+  skipKind:
     - Widget
 `)
 
@@ -603,7 +603,7 @@ func TestValidateCmd_Config_SkipJSONPath(t *testing.T) {
 	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
 kind: Config
 validate:
-  skip-json-path:
+  skipJSONPath:
     - Secret:/sops
 `)
 	out, err := executeCommand([]string{
@@ -625,7 +625,7 @@ func TestValidateCmd_Config_CLIOverridesSkipJSONPath(t *testing.T) {
 	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
 kind: Config
 validate:
-  skip-json-path:
+  skipJSONPath:
     - Secret:/sops
 `)
 	_, err := executeCommand([]string{
@@ -649,7 +649,7 @@ func TestValidateCmd_Config_SkipFile(t *testing.T) {
 	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
 kind: Config
 validate:
-  skip-file:
+  skipFile:
     - kustomization.yaml
 `)
 	out, err := executeCommand([]string{
@@ -671,7 +671,7 @@ func TestValidateCmd_Config_CLIOverridesSlice(t *testing.T) {
 	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
 kind: Config
 validate:
-  skip-kind:
+  skipKind:
     - Widget
 `)
 
@@ -762,12 +762,12 @@ func TestValidateCmd_Config_StrictUnknownKey(t *testing.T) {
 	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
 kind: Config
 validate:
-  skip_kind:
+  skip-kind:
     - Secret
 `)
 	_, err := executeCommand([]string{"validate", "--config", cfg})
 	g.Expect(err).To(HaveOccurred())
-	g.Expect(err.Error()).To(ContainSubstring("skip_kind"))
+	g.Expect(err.Error()).To(ContainSubstring("skip-kind"))
 }
 
 func TestValidateCmd_Config_StrictUnknownSection(t *testing.T) {
@@ -799,7 +799,7 @@ func TestValidateCmd_Config_EnvVar(t *testing.T) {
 	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
 kind: Config
 validate:
-  skip-kind:
+  skipKind:
     - Widget
 `)
 	t.Setenv("FLUX_SCHEMA_CONFIG", cfg)
@@ -827,7 +827,7 @@ kind: Config`)
 	flagCfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
 kind: Config
 validate:
-  skip-kind:
+  skipKind:
     - Widget
 `)
 	out, err := executeCommand([]string{
@@ -957,20 +957,20 @@ func TestValidateCmd_Config_Schema(t *testing.T) {
 	validateConfigSchema(t, `apiVersion: schema.plugin.fluxcd.io/v1beta1
 kind: Config
 validate:
-  schema-location:
+  schemaLocation:
     - default
-  skip-kind:
+  skipKind:
     - Widget
-  skip-json-path:
+  skipJSONPath:
     - Secret:/sops
-  skip-file:
+  skipFile:
     - '.*'
-  skip-cel-rules: true
-  skip-missing-schemas: true
+  skipCELRules: true
+  skipMissingSchemas: true
   verbose: true
-  fail-fast: true
+  failFast: true
   concurrent: 8
-  insecure-skip-tls-verify: true
+  insecureSkipTLSVerify: true
   output: json
 `)
 }
@@ -1349,7 +1349,7 @@ func TestValidateCmd_CELRule_ConfigFile(t *testing.T) {
 	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
 kind: Config
 validate:
-  skip-cel-rules: true
+  skipCELRules: true
 `)
 
 	out, err := executeCommand([]string{

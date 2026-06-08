@@ -238,29 +238,29 @@ flux-schema validate ./manifests --config .fluxschema.yml
 ```
 
 The file is wrapped in a `Config` API envelope and has a `validate` section
-whose keys mirror the CLI flag names. The shape is documented by the
+for validation defaults. The shape is documented by the
 [Config JSON Schema](../config/config-v1beta1.json).
 
 ```yaml
 apiVersion: schema.plugin.fluxcd.io/v1beta1
 kind: Config
 validate:
-  schema-location:
+  schemaLocation:
     - default
     - https://raw.githubusercontent.com/datreeio/CRDs-catalog/main
-  skip-kind:
+  skipKind:
     - source.toolkit.fluxcd.io/v1/ExternalArtifact
-  skip-json-path:
+  skipJSONPath:
     - Secret:/sops
-  skip-file:
+  skipFile:
     - '.*'
     - kustomization.yaml
-  skip-cel-rules: false
-  skip-missing-schemas: false
+  skipCELRules: false
+  skipMissingSchemas: false
   verbose: true
-  fail-fast: false
+  failFast: false
   concurrent: 8
-  insecure-skip-tls-verify: false
+  insecureSkipTLSVerify: false
   output: text
 ```
 

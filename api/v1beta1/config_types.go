@@ -25,27 +25,27 @@ type Config struct {
 type ValidateConfig struct {
 	// SchemaLocations contains schema URLs, file paths, or templates to try in order.
 	// +optional
-	SchemaLocations []string `json:"schema-location,omitempty"`
+	SchemaLocations []string `json:"schemaLocation,omitempty"`
 
 	// SkipMissingSchemas skips documents for which no schema can be found.
 	// +optional
-	SkipMissingSchemas bool `json:"skip-missing-schemas,omitempty"`
+	SkipMissingSchemas bool `json:"skipMissingSchemas,omitempty"`
 
 	// SkipKinds contains kind or apiVersion/kind patterns excluded from validation.
 	// +optional
-	SkipKinds []string `json:"skip-kind,omitempty"`
+	SkipKinds []string `json:"skipKind,omitempty"`
 
 	// SkipJSONPaths contains JSON Pointers stripped before validation.
 	// +optional
-	SkipJSONPaths []string `json:"skip-json-path,omitempty"`
+	SkipJSONPaths []string `json:"skipJSONPath,omitempty"`
 
 	// SkipFiles contains basename glob patterns excluded from validation.
 	// +optional
-	SkipFiles []string `json:"skip-file,omitempty"`
+	SkipFiles []string `json:"skipFile,omitempty"`
 
 	// SkipCELRules disables evaluation of x-kubernetes-validations CEL rules.
 	// +optional
-	SkipCELRules bool `json:"skip-cel-rules,omitempty"`
+	SkipCELRules bool `json:"skipCELRules,omitempty"`
 
 	// Verbose prints a line for every document, including valid and skipped documents.
 	// +optional
@@ -53,7 +53,7 @@ type ValidateConfig struct {
 
 	// FailFast exits after the first invalid document.
 	// +optional
-	FailFast bool `json:"fail-fast,omitempty"`
+	FailFast bool `json:"failFast,omitempty"`
 
 	// Concurrent is the number of concurrent validation workers.
 	// +optional
@@ -62,7 +62,7 @@ type ValidateConfig struct {
 
 	// InsecureSkipTLSVerify disables TLS certificate verification for HTTPS schemas.
 	// +optional
-	InsecureSkipTLSVerify bool `json:"insecure-skip-tls-verify,omitempty"`
+	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
 
 	// Output selects the command output format.
 	// +optional

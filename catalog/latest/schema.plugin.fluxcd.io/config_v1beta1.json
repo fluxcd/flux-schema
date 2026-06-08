@@ -20,11 +20,11 @@
           "minimum": 1,
           "type": "integer"
         },
-        "fail-fast": {
+        "failFast": {
           "description": "FailFast exits after the first invalid document.",
           "type": "boolean"
         },
-        "insecure-skip-tls-verify": {
+        "insecureSkipTLSVerify": {
           "description": "InsecureSkipTLSVerify disables TLS certificate verification for HTTPS schemas.",
           "type": "boolean"
         },
@@ -37,39 +37,39 @@
           ],
           "type": "string"
         },
-        "schema-location": {
+        "schemaLocation": {
           "description": "SchemaLocations contains schema URLs, file paths, or templates to try in order.",
           "items": {
             "type": "string"
           },
           "type": "array"
         },
-        "skip-cel-rules": {
+        "skipCELRules": {
           "description": "SkipCELRules disables evaluation of x-kubernetes-validations CEL rules.",
           "type": "boolean"
         },
-        "skip-file": {
+        "skipFile": {
           "description": "SkipFiles contains basename glob patterns excluded from validation.",
           "items": {
             "type": "string"
           },
           "type": "array"
         },
-        "skip-json-path": {
+        "skipJSONPath": {
           "description": "SkipJSONPaths contains JSON Pointers stripped before validation.",
           "items": {
             "type": "string"
           },
           "type": "array"
         },
-        "skip-kind": {
+        "skipKind": {
           "description": "SkipKinds contains kind or apiVersion/kind patterns excluded from validation.",
           "items": {
             "type": "string"
           },
           "type": "array"
         },
-        "skip-missing-schemas": {
+        "skipMissingSchemas": {
           "description": "SkipMissingSchemas skips documents for which no schema can be found.",
           "type": "boolean"
         },

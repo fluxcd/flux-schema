@@ -55,12 +55,12 @@ Commit a `.fluxschema.yml` to your repository root to control the validation:
 apiVersion: schema.plugin.fluxcd.io/v1beta1
 kind: Config
 validate:
-  schema-location:
+  schemaLocation:
     - default
     - https://raw.githubusercontent.com/datreeio/CRDs-catalog/main
-  skip-json-path:
+  skipJSONPath:
     - Secret:/sops
-  skip-missing-schemas: true
+  skipMissingSchemas: true
   verbose: true
   output: text
 ```

@@ -67,7 +67,7 @@ func writePluginConfigSchema(t *testing.T, dir string) {
 				"type":                 "object",
 				"additionalProperties": false,
 				"properties": map[string]any{
-					"skip-missing-schemas": map[string]any{"type": "boolean"},
+					"skipMissingSchemas": map[string]any{"type": "boolean"},
 				},
 			},
 		},
@@ -514,7 +514,7 @@ func TestValidateBytes_PluginAPIWithoutMetadata(t *testing.T) {
 	doc := []byte(`apiVersion: schema.plugin.fluxcd.io/v1beta1
 kind: Config
 validate:
-  skip-missing-schemas: true
+  skipMissingSchemas: true
 `)
 	results := v.ValidateBytes(context.Background(), "test.yaml", doc)
 	g.Expect(results).To(HaveLen(1))
