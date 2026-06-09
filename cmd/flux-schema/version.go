@@ -66,6 +66,6 @@ func versionCmdRun(cmd *cobra.Command, args []string) error {
 		output = string(data) + "\n"
 	}
 
-	rootCmd.Print(output)
+	cmd.Print(output)
 	return nil
 }

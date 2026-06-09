@@ -6,7 +6,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/hashicorp/go-retryablehttp"
@@ -88,46 +87,7 @@ func extractOpenShiftCmdRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	destDir := extractOpenShiftArgs.Dir
-	if err := os.MkdirAll(destDir, 0o755); err != nil {
-		return fmt.Errorf("create output dir: %w", err)
-	}
-
-	cmd.Printf("reading %s\n", source)
-
-	schemas, errs := extractor.ExtractOpenShift(data)
-
-	if extractOpenShiftArgs.StripDescription {
-		for _, s := range schemas {
-			extractor.StripDescriptions(s.JSON)
-		}
-	}
-
-	var failures []error
-	for _, e := range errs {
-		failures = append(failures, fmt.Errorf("%s: %w", source, e))
-	}
-
-	written := 0
-	for _, schema := range schemas {
-		relPath, err := writeSwaggerSchema(schema, destDir, extractOpenShiftArgs.Format)
-		if err != nil {
-			failures = append(failures, err)
-			continue
-		}
-		cmd.Printf("OK   %s\n", relPath)
-		written++
-	}
-
-	cmd.Printf("Summary: %d schemas extracted\n", written)
-
-	if len(failures) > 0 {
-		for _, e := range failures {
-			cmd.PrintErrf("FAIL %v\n", e)
-		}
-		return fmt.Errorf("%d error(s) during extraction", len(failures))
-	}
-	return nil
+	return runSwaggerExtract(cmd, source, data, extractOpenShiftArgs.ExtractOutput, extractor.ExtractOpenShift)
 }
 
 // resolveOpenShiftInput returns (source, data). source is the file path or

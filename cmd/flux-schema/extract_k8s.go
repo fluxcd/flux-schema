@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -19,7 +17,6 @@ import (
 
 	"github.com/fluxcd/flux-schema/internal/extractor"
 	"github.com/fluxcd/flux-schema/internal/flags"
-	"github.com/fluxcd/flux-schema/internal/tmpl"
 )
 
 const defaultK8sSwaggerURL = "https://raw.githubusercontent.com/kubernetes/kubernetes/%s/api/openapi-spec/swagger.json"
@@ -97,76 +94,7 @@ func extractK8sCmdRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	destDir := extractK8sArgs.Dir
-	if err := os.MkdirAll(destDir, 0o755); err != nil {
-		return fmt.Errorf("create output dir: %w", err)
-	}
-
-	cmd.Printf("reading %s\n", source)
-
-	schemas, errs := extractor.ExtractKubernetes(data)
-
-	if extractK8sArgs.StripDescription {
-		for _, s := range schemas {
-			extractor.StripDescriptions(s.JSON)
-		}
-	}
-
-	var failures []error
-	for _, e := range errs {
-		failures = append(failures, fmt.Errorf("%s: %w", source, e))
-	}
-
-	written := 0
-	for _, schema := range schemas {
-		relPath, err := writeSwaggerSchema(schema, destDir, extractK8sArgs.Format)
-		if err != nil {
-			failures = append(failures, err)
-			continue
-		}
-		cmd.Printf("OK   %s\n", relPath)
-		written++
-	}
-
-	cmd.Printf("Summary: %d schemas extracted\n", written)
-
-	if len(failures) > 0 {
-		for _, e := range failures {
-			cmd.PrintErrf("FAIL %v\n", e)
-		}
-		return fmt.Errorf("%d error(s) during extraction", len(failures))
-	}
-	return nil
-}
-
-// writeSwaggerSchema renders the output template, writes the schema as
-// pretty-printed JSON under destDir, and returns the path relative to
-// destDir. Shared by `extract k8s` and `extract openshift` since their
-// per-schema write loops are otherwise identical.
-func writeSwaggerSchema(schema extractor.Schema, destDir, format string) (string, error) {
-	rendered, err := tmpl.Render(format, tmpl.SchemaVars{
-		Group:   schema.Group,
-		Kind:    schema.Kind,
-		Version: schema.Version,
-	})
-	if err != nil {
-		return "", fmt.Errorf("%s/%s %s: %w", schema.Group, schema.Kind, schema.Version, err)
-	}
-
-	relPath := filepath.FromSlash(rendered)
-	outPath := filepath.Join(destDir, relPath)
-	if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
-		return "", fmt.Errorf("create %s: %w", filepath.Dir(outPath), err)
-	}
-
-	payload, err := marshalSchema(schema.JSON)
-	if err != nil {
-		return "", fmt.Errorf("%s %s: %w", schema.Kind, schema.Version, err)
-	}
-	if err := os.WriteFile(outPath, payload, 0o644); err != nil {
-		return "", fmt.Errorf("write %s: %w", outPath, err)
-	}
-	return relPath, nil
+	return runSwaggerExtract(cmd, source, data, extractK8sArgs.ExtractOutput, extractor.ExtractKubernetes)
 }
 
 func newDefaultK8sHTTPClient() *retryablehttp.Client {

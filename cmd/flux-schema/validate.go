@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
-	"sort"
 	"strings"
 	"time"
 
@@ -199,7 +198,7 @@ func validateCmdRun(cmd *cobra.Command, args []string) error {
 		for i := range buf.pending {
 			indices = append(indices, i)
 		}
-		sort.Ints(indices)
+		slices.Sort(indices)
 		for _, i := range indices {
 			emit(buf.pending[i])
 		}

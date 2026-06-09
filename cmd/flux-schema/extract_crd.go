@@ -4,8 +4,6 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -17,7 +15,6 @@ import (
 
 	"github.com/fluxcd/flux-schema/internal/extractor"
 	"github.com/fluxcd/flux-schema/internal/flags"
-	"github.com/fluxcd/flux-schema/internal/tmpl"
 )
 
 var extractCRDCmd = &cobra.Command{
@@ -135,27 +132,9 @@ func extractCRDCmdRun(cmd *cobra.Command, args []string) error {
 }
 
 func writeCRDSchema(srcPath string, crd extractor.Schema, destDir string) (string, error) {
-	rendered, err := tmpl.Render(extractCRDArgs.Format, tmpl.SchemaVars{
-		Group:   crd.Group,
-		Kind:    crd.Kind,
-		Version: crd.Version,
-	})
+	relPath, err := writeSwaggerSchema(crd, destDir, extractCRDArgs.Format)
 	if err != nil {
-		return "", fmt.Errorf("%s (%s/%s %s): %w", srcPath, crd.Group, crd.Kind, crd.Version, err)
-	}
-
-	relPath := filepath.FromSlash(rendered)
-	outPath := filepath.Join(destDir, relPath)
-	if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
-		return "", fmt.Errorf("create %s: %w", filepath.Dir(outPath), err)
-	}
-
-	payload, err := marshalSchema(crd.JSON)
-	if err != nil {
-		return "", fmt.Errorf("%s %s %s: %w", srcPath, crd.Kind, crd.Version, err)
-	}
-	if err := os.WriteFile(outPath, payload, 0o644); err != nil {
-		return "", fmt.Errorf("write %s: %w", outPath, err)
+		return "", fmt.Errorf("%s: %w", srcPath, err)
 	}
 	return relPath, nil
 }
@@ -175,17 +154,4 @@ func writeArchive(archivePath, srcDir string) error {
 		return fmt.Errorf("write archive %s: %w", archivePath, err)
 	}
 	return nil
-}
-
-// marshalSchema encodes a parsed schema as deterministic, pretty-printed JSON.
-// encoding/json sorts map[string]any keys alphabetically, so output is stable across runs.
-func marshalSchema(schema map[string]any) ([]byte, error) {
-	var buf bytes.Buffer
-	enc := json.NewEncoder(&buf)
-	enc.SetEscapeHTML(false)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(schema); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
 }
