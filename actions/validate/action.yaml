@@ -27,6 +27,12 @@ inputs:
       is ignored by validation and discovery. When empty, no bundle is written.
     required: false
     default: ""
+  helm-charts:
+    description: |
+      Render Helm charts with 'helm template' using their default values and
+      validate the output. Requires helm on PATH.
+    required: false
+    default: "false"
 runs:
   using: composite
   steps:
@@ -37,6 +43,7 @@ runs:
         EXCLUDE_DIRS: ${{ inputs.exclude }}
         CONFIG_FILE: ${{ inputs.config }}
         BUNDLE_FILE: ${{ inputs.output-bundle }}
+        HELM_CHARTS: ${{ inputs.helm-charts }}
       run: |
         set -euo pipefail
         args=("-d" "$ROOT_DIR" "-c" "$CONFIG_FILE")
@@ -48,5 +55,8 @@ runs:
         fi
         if [[ -n "$BUNDLE_FILE" ]]; then
           args+=("-b" "$BUNDLE_FILE")
+        fi
+        if [[ "$HELM_CHARTS" == "true" ]]; then
+          args+=("-H")
         fi
         "${GITHUB_ACTION_PATH}/validate.sh" "${args[@]}"

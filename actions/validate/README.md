@@ -6,13 +6,15 @@ to run in CI before changes are merged to a branch synced by Flux.
 
 The action wraps [`validate.sh`](validate.sh), which auto-detects kustomize
 overlays and skips YAML files included in Helm chart and Terraform modules.
+Helm charts can be opted into validation with the `helm-charts` input, which
+renders them with `helm template` using their default values.
 
 ## Prerequisites
 
 The action expects `kubectl` (for building overlays with `kubectl kustomize`)
-and `flux-schema` to be on `PATH`. `kubectl` is pre-installed on GitHub-hosted
-runners; compose with [`fluxcd/flux-schema/actions/setup`](../setup)
-to install the CLI.
+and `flux-schema` to be on `PATH`, plus `helm` when `helm-charts` is enabled.
+`kubectl` and `helm` are pre-installed on GitHub-hosted runners; compose with
+[`fluxcd/flux-schema/actions/setup`](../setup) to install the CLI.
 
 ## Usage
 
@@ -76,6 +78,24 @@ If the file lives at a non-default path, point the action at it with `config`:
     config: .github/.fluxschema.yml
 ```
 
+### Validating Helm charts
+
+Helm chart directories (containing a `Chart.yaml`) are excluded from
+validation by default, since chart templates are not valid Kubernetes YAML
+until rendered. Set `helm-charts: "true"` to render each chart with
+`helm template` using its default values and validate the output:
+
+```yaml
+- uses: fluxcd/flux-schema/actions/validate@main
+  with:
+    helm-charts: "true"
+```
+
+Charts vendored inside another chart's `charts/` directory are rendered as
+part of their parent and are not templated standalone. Charts with remote
+dependencies must have them vendored (`helm dependency build`) before
+validation, otherwise the render fails and is reported as an error.
+
 ### Writing a manifest bundle
 
 With `output-bundle`, the action merges every standalone manifest and the
@@ -99,11 +119,12 @@ kind: HelmRelease
 ...
 ```
 
-Overlays whose build fails are recorded with a
-`# === kustomize-overlay: <dir> (build failed) ===` marker. A build or
-validation failure does not stop the run: all remaining files and overlays
-are still validated and bundled, and the action fails at the end with the
-total error count.
+With `helm-charts` enabled, rendered charts are bundled as well under
+`# === helm-chart: <dir> ===` headers. Overlays and charts whose build fails
+are recorded with a `(build failed)` marker. A build or validation failure
+does not stop the run: all remaining files, overlays and charts are still
+validated and bundled, and the action fails at the end with the total error
+count.
 
 The bundle contains the post-build state of the repository (after kustomize
 patches and generators are applied), making it a single greppable audit
@@ -130,4 +151,5 @@ surface for tools and AI agents. It can be uploaded as a workflow artifact:
 | `path`          | Root directory to validate (relative to the repository root).                                                                 | `.`               |
 | `exclude`       | Newline-separated list of directories to exclude from validation.                                                             | `""`              |
 | `config`        | Path to Flux Schema CLI config file. When the file does not exist, sensible defaults targeting the built-in catalog are used. | `.fluxschema.yml` |
+| `helm-charts`   | Render Helm charts with `helm template` using their default values and validate the output. Requires `helm` on `PATH`.        | `"false"`         |
 | `output-bundle` | Path to a file where all manifests and rendered overlays are merged as a single YAML stream with provenance comments.         | `""`              |

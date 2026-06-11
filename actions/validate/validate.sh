@@ -8,6 +8,8 @@
 # default schema catalog or a user-provided config file.
 # The script auto-detects and excludes non-Kubernetes directories such as
 # dotfiles, Terraform modules and Helm charts.
+# With --helm-charts, Helm charts are rendered with 'helm template' using
+# their default values and the output is validated as well.
 # A build or validation failure does not stop the run; the script keeps
 # going and exits non-zero at the end with the total error count.
 # With --output-bundle, all standalone manifests and rendered kustomize
@@ -19,8 +21,9 @@
 # are merged on the main branch that's synced by Flux.
 
 # Prerequisites
-# - kubectl >= 1.36
 # - flux-schema >= 0.2
+# - kubectl >= 1.36
+# - helm >= 4.0 (only with --helm-charts)
 
 # Usage example:
 #   validate.sh \
@@ -41,6 +44,10 @@ errors=0
 # mirror kustomize-controller build options
 kustomize_flags=("--load-restrictor=LoadRestrictionsNone")
 kustomize_config="kustomization.yaml"
+
+# mirror helm-controller install options (CRDs are installed by default)
+helm_flags=("--include-crds")
+helm_config="Chart.yaml"
 
 # Default flags used when no config file is found. Strip SOPS-encrypted
 # fields before validation (Flux removes these at apply time) and skip
@@ -64,17 +71,23 @@ config_file=".fluxschema.yml"
 # path to the merged YAML bundle (empty disables bundling)
 bundle_file=""
 
+# when true, render Helm charts with 'helm template' and validate the output
+build_helm_charts=false
+
 # directories to exclude from validation
 exclude_dirs=()
 
 # directories auto-detected as non-Kubernetes (terraform, helm charts)
 declare -a auto_skip_dirs=()
 
+# directories that are Helm charts
+declare -a helm_chart_dirs=()
+
 # directories that are kustomize overlays
 declare -a kustomize_dirs=()
 
 usage() {
-  echo "Usage: $0 [-d <dir>] [-c <file>] [-e <dir>]... [-b <file>] [-h]"
+  echo "Usage: $0 [-d <dir>] [-c <file>] [-e <dir>]... [-b <file>] [-H] [-h]"
   echo ""
   echo "Validate Flux custom resources and kustomize overlays using flux-schema."
   echo ""
@@ -85,6 +98,8 @@ usage() {
   echo "  -e, --exclude <dir>         Directory to exclude from validation (can be repeated)"
   echo "  -b, --output-bundle <file>  Write all standalone manifests and rendered kustomize"
   echo "                              overlays to a single YAML file with provenance comments"
+  echo "  -H, --helm-charts           Render Helm charts with 'helm template' using their"
+  echo "                              default values and validate the output (requires helm)"
   echo "  -h, --help                  Show this help message"
 }
 
@@ -123,6 +138,10 @@ parse_args() {
         bundle_file="$2"
         shift 2
         ;;
+      -H|--helm-charts)
+        build_helm_charts=true
+        shift
+        ;;
       -h|--help)
         usage
         exit 0
@@ -139,6 +158,10 @@ parse_args() {
 check_prerequisites() {
   if ! command -v kubectl &> /dev/null; then
     echo "ERROR - kubectl is not installed" >&2
+    exit 1
+  fi
+  if [[ "$build_helm_charts" == true ]] && ! command -v helm &> /dev/null; then
+    echo "ERROR - helm is not installed (required by --helm-charts)" >&2
     exit 1
   fi
 }
@@ -242,6 +265,36 @@ is_excluded_dir() {
   return 1
 }
 
+# Check if a path is under a user-excluded directory only
+is_user_excluded_dir() {
+  local path
+  path="$(normalize_path "$1")"
+  for dir in "${exclude_dirs[@]}"; do
+    local d
+    d="$(normalize_path "$dir")"
+    if [[ "$path" == "$d"/* || "$path" == "$d" ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+# Check if a chart directory is vendored inside another chart
+# (e.g. a dependency under the parent's charts/ directory); such charts
+# are rendered as part of their parent and must not be templated standalone
+is_nested_chart_dir() {
+  local path
+  path="$(normalize_path "$1")"
+  for dir in "${helm_chart_dirs[@]}"; do
+    local d
+    d="$(normalize_path "$dir")"
+    if [[ "$path" != "$d" && "$path" == "$d"/* ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
 # Check if a path is under a user-excluded or auto-skipped directory (but not kustomize dirs)
 is_non_kustomize_excluded_dir() {
   local path
@@ -260,7 +313,12 @@ is_non_kustomize_excluded_dir() {
 detect_excluded_dirs() {
   while IFS= read -r -d $'\0' file; do
     auto_skip_dirs+=("$(dirname "$file")")
-  done < <(find "$root_dir" -path '*/.*' -prune -o -type f \( -name '*.tf' -o -name 'Chart.yaml' \) -print0)
+  done < <(find "$root_dir" -path '*/.*' -prune -o -type f -name '*.tf' -print0)
+
+  while IFS= read -r -d $'\0' file; do
+    auto_skip_dirs+=("$(dirname "$file")")
+    helm_chart_dirs+=("$(dirname "$file")")
+  done < <(find "$root_dir" -path '*/.*' -prune -o -type f -name "$helm_config" -print0)
 
   while IFS= read -r -d $'\0' file; do
     kustomize_dirs+=("$(dirname "$file")")
@@ -315,6 +373,30 @@ validate_kustomize_overlays() {
   done < <(find "$root_dir" -path '*/.*' -prune -o -type f -name "$kustomize_config" -print0)
 }
 
+validate_helm_charts() {
+  if [[ "$build_helm_charts" != true ]]; then
+    return 0
+  fi
+  local chart build_output
+  for chart in "${helm_chart_dirs[@]}"; do
+    if is_user_excluded_dir "$chart" || is_nested_chart_dir "$chart"; then
+      continue
+    fi
+    echo "INFO - Validating helm chart $chart"
+    if ! build_output=$(helm template "$chart" "${helm_flags[@]}"); then
+      echo "ERROR - helm template failed for $chart" >&2
+      bundle_append "helm-chart: $(rel_path "$chart") (build failed)" < /dev/null
+      errors=$((errors + 1))
+      continue
+    fi
+    bundle_append "helm-chart: $(rel_path "$chart")" <<< "$build_output"
+    if ! printf '%s\n' "$build_output" | \
+      "${flux_schema_cmd[@]}" validate "${flux_schema_flags[@]}"; then
+      errors=$((errors + 1))
+    fi
+  done
+}
+
 # Print the final outcome and exit non-zero when any build or validation failed
 report_results() {
   if [[ -n "$bundle_file" ]]; then
@@ -336,4 +418,5 @@ init_bundle
 detect_excluded_dirs
 validate_kubernetes_manifests
 validate_kustomize_overlays
+validate_helm_charts
 report_results
