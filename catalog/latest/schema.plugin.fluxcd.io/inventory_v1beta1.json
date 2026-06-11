@@ -19,9 +19,9 @@
           "additionalProperties": {
             "description": "InventoryDirectoryType classifies a directory in the repository.",
             "enum": [
+              "helm-chart",
               "kubernetes-manifests",
               "kustomize-overlay",
-              "helm-chart",
               "terraform-module"
             ],
             "type": "string"

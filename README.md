@@ -9,7 +9,7 @@
 **Flux Schema** is a CLI for validating Kubernetes YAML manifests against JSON
 Schema and CEL rules using the same evaluation semantics as the Kubernetes
 API server. It ships as a single Go binary with a built-in catalog covering
-Kubernetes, OpenShift, Gateway API and the Flux ecosystem CRDs.
+Kubernetes, OpenShift, Gateway API, and the Flux ecosystem CRDs.
 
 This project is inspired by `kubeconform`, adding CEL rule evaluation,
 built-in schema extraction for CRDs & OpenAPI swagger, and a curated catalog
@@ -33,10 +33,13 @@ refreshed automatically from upstream stable releases.
   behavior. Metadata name, namespace, labels, and annotations are
   checked against API server rules (DNS-1123, qualified names).
 - **Built-in catalog** — JSON Schemas with CEL rules for Kubernetes, OpenShift,
-  Gateway API, Flux, Flagger and Flux Operator CRDs, refreshed automatically against upstream.
+  Gateway API, Flux, Flagger, and Flux Operator CRDs, refreshed automatically against upstream.
 - **Custom catalogs** — extract JSON Schemas from Kubernetes CRDs and OpenAPI swagger files,
   then layer your catalog on top of the default schemas.
 - **SOPS-aware** — strip SOPS metadata fields so the rest of the document can be validated without decryption.
+- **Repository discovery** — catalog a GitOps repository into a structured inventory
+  designed for AI agents: directory classification, Flux resources with their defining
+  files, and Kubernetes resource counts.
 - **Structured reports** — versioned JSON or YAML validation reports for CI tooling and downstream automation.
 - **Declarative validation** — define the validation config in a `.fluxschema.yml` file for reproducible runs across local and CI environments.
 - **GitHub Actions** — composite actions for installation and manifests validation on GitHub runners.
@@ -155,6 +158,7 @@ validation guide for details on running the CLI in CI using the container image.
 | Command                                   | Description                                                   |
 |-------------------------------------------|---------------------------------------------------------------|
 | `flux-schema validate [paths...]`         | Validate Kubernetes YAML against JSON Schema and CEL rules.   |
+| `flux-schema discover [path]`             | Catalog Flux and Kubernetes resources in a GitOps repository. |
 | `flux-schema extract crd [files...]`      | Extract JSON Schemas from CRD YAMLs.                          |
 | `flux-schema extract k8s [swagger]`       | Extract JSON Schemas from Kubernetes OpenAPI v2 swagger.      |
 | `flux-schema extract openshift [swagger]` | Extract JSON Schemas from OpenShift OpenAPI v2 swagger.       |
@@ -169,8 +173,12 @@ Run `flux-schema <command> --help` for the full flag list.
   and config files.
 - [Custom catalog guide](docs/guides/custom-schema-catalog.md) — populate,
   layout, host, and refresh your own catalog with the `extract` commands.
+- [Repository discovery guide](docs/guides/repo-discovery.md) — catalog a
+  GitOps repository with the `discover` command.
 - [Validation report reference](docs/report/README.md) — envelope shape and
   JSON Schema for `-o json` / `-o yaml` output.
+- [Inventory reference](docs/inventory/README.md) — envelope shape and JSON
+  Schema for the `discover` command output.
 - [Configuration reference](docs/config/README.md) — config file envelope and
   JSON Schema for `--config`.
 - [Built-in catalog](catalog/README.md) — Kubernetes, OpenShift, Gateway
