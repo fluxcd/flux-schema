@@ -76,10 +76,58 @@ If the file lives at a non-default path, point the action at it with `config`:
     config: .github/.fluxschema.yml
 ```
 
+### Writing a manifest bundle
+
+With `output-bundle`, the action merges every standalone manifest and the
+rendered output of every kustomize overlay into a single YAML file. Missing
+parent directories are created. Use a dot-prefixed name such as `.bundle.yaml`:
+dotfiles are excluded from validation and from `flux-schema discover` by
+default, so the bundle never shows up as a manifest in later runs. Each unit
+is preceded by a provenance comment naming its origin, with paths relative to
+the validated root:
+
+```yaml
+---
+# === file: infrastructure/sources.yaml ===
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+...
+---
+# === kustomize-overlay: clusters/production ===
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+...
+```
+
+Overlays whose build fails are recorded with a
+`# === kustomize-overlay: <dir> (build failed) ===` marker. A build or
+validation failure does not stop the run: all remaining files and overlays
+are still validated and bundled, and the action fails at the end with the
+total error count.
+
+The bundle contains the post-build state of the repository (after kustomize
+patches and generators are applied), making it a single greppable audit
+surface for tools and AI agents. It can be uploaded as a workflow artifact:
+
+```yaml
+- name: Validate manifests
+  uses: fluxcd/flux-schema/actions/validate@main
+  with:
+    output-bundle: .bundle.yaml
+- name: Upload bundle
+  if: always()
+  uses: actions/upload-artifact@v4
+  with:
+    name: manifest-bundle
+    path: .bundle.yaml
+    include-hidden-files: true
+```
+
 ## Action Inputs
 
-| Name      | Description                                                                                                                   | Default           |
-|-----------|-------------------------------------------------------------------------------------------------------------------------------|-------------------|
-| `path`    | Root directory to validate (relative to the repository root).                                                                 | `.`               |
-| `exclude` | Newline-separated list of directories to exclude from validation.                                                             | `""`              |
-| `config`  | Path to Flux Schema CLI config file. When the file does not exist, sensible defaults targeting the built-in catalog are used. | `.fluxschema.yml` |
+| Name            | Description                                                                                                                   | Default           |
+|-----------------|-------------------------------------------------------------------------------------------------------------------------------|-------------------|
+| `path`          | Root directory to validate (relative to the repository root).                                                                 | `.`               |
+| `exclude`       | Newline-separated list of directories to exclude from validation.                                                             | `""`              |
+| `config`        | Path to Flux Schema CLI config file. When the file does not exist, sensible defaults targeting the built-in catalog are used. | `.fluxschema.yml` |
+| `output-bundle` | Path to a file where all manifests and rendered overlays are merged as a single YAML stream with provenance comments.         | `""`              |

@@ -8,6 +8,13 @@
 # default schema catalog or a user-provided config file.
 # The script auto-detects and excludes non-Kubernetes directories such as
 # dotfiles, Terraform modules and Helm charts.
+# A build or validation failure does not stop the run; the script keeps
+# going and exits non-zero at the end with the total error count.
+# With --output-bundle, all standalone manifests and rendered kustomize
+# overlays are merged into a single YAML file where each unit is preceded
+# by a provenance comment ('# === file: <path> ===' or
+# '# === kustomize-overlay: <dir> ==='), so tools and AI agents can grep
+# one file instead of crawling the repository.
 # This script is meant to be run locally and in CI before the changes
 # are merged on the main branch that's synced by Flux.
 
@@ -18,10 +25,18 @@
 # Usage example:
 #   validate.sh \
 #     -d ./manifests \
-#     -c ./.fluxschema.yml
+#     -c ./.fluxschema.yml \
+#     -b ./.bundle.yaml
+#
+# Name the bundle with a leading dot (e.g. '.bundle.yaml') so that
+# validation and 'flux-schema discover' ignore it on subsequent runs,
+# as dotfiles are excluded by default.
 
 set -o errexit
 set -o pipefail
+
+# track validation and build failures
+errors=0
 
 # mirror kustomize-controller build options
 kustomize_flags=("--load-restrictor=LoadRestrictionsNone")
@@ -46,6 +61,9 @@ root_dir="."
 # path to the flux-schema config file
 config_file=".fluxschema.yml"
 
+# path to the merged YAML bundle (empty disables bundling)
+bundle_file=""
+
 # directories to exclude from validation
 exclude_dirs=()
 
@@ -56,16 +74,18 @@ declare -a auto_skip_dirs=()
 declare -a kustomize_dirs=()
 
 usage() {
-  echo "Usage: $0 [-d <dir>] [-c <file>] [-e <dir>]... [-h]"
+  echo "Usage: $0 [-d <dir>] [-c <file>] [-e <dir>]... [-b <file>] [-h]"
   echo ""
   echo "Validate Flux custom resources and kustomize overlays using flux-schema."
   echo ""
   echo "Options:"
-  echo "  -d, --dir <dir>      Root directory to validate (default: current directory)"
-  echo "  -c, --config <file>  Path to a flux-schema config file (default: .fluxschema.yml)."
-  echo "                       When the file does not exist, sensible defaults are used."
-  echo "  -e, --exclude <dir>  Directory to exclude from validation (can be repeated)"
-  echo "  -h, --help           Show this help message"
+  echo "  -d, --dir <dir>             Root directory to validate (default: current directory)"
+  echo "  -c, --config <file>         Path to a flux-schema config file (default: .fluxschema.yml)."
+  echo "                              When the file does not exist, sensible defaults are used."
+  echo "  -e, --exclude <dir>         Directory to exclude from validation (can be repeated)"
+  echo "  -b, --output-bundle <file>  Write all standalone manifests and rendered kustomize"
+  echo "                              overlays to a single YAML file with provenance comments"
+  echo "  -h, --help                  Show this help message"
 }
 
 parse_args() {
@@ -93,6 +113,14 @@ parse_args() {
           exit 1
         fi
         exclude_dirs+=("./${2#./}")
+        shift 2
+        ;;
+      -b|--output-bundle)
+        if [[ -z "${2:-}" ]]; then
+          echo "ERROR - --output-bundle requires a file path argument" >&2
+          exit 1
+        fi
+        bundle_file="$2"
         shift 2
         ;;
       -h|--help)
@@ -144,6 +172,46 @@ resolve_config() {
 normalize_path() {
   local p="${1#./}"
   echo "${p%/}"
+}
+
+# Create the parent directory and truncate the bundle file when
+# --output-bundle is set
+init_bundle() {
+  if [[ -z "$bundle_file" ]]; then
+    return 0
+  fi
+  if ! mkdir -p "$(dirname "$bundle_file")" 2>/dev/null || \
+    ! : 2>/dev/null > "$bundle_file"; then
+    echo "ERROR - Cannot write bundle file: $bundle_file" >&2
+    exit 1
+  fi
+}
+
+# Path relative to root_dir, used in bundle provenance comments to match
+# the root-relative paths emitted by 'flux-schema discover'
+rel_path() {
+  local p r
+  p="$(normalize_path "$1")"
+  r="$(normalize_path "$root_dir")"
+  if [[ "$r" != "." && "$p" == "$r"/* ]]; then
+    p="${p#"$r"/}"
+  fi
+  echo "$p"
+}
+
+# Append a unit to the bundle file: a document separator, a provenance
+# comment, and the YAML content read from stdin. No-op when --output-bundle
+# is not set (stdin is drained so writers never see a broken pipe).
+bundle_append() {
+  if [[ -z "$bundle_file" ]]; then
+    cat > /dev/null
+    return 0
+  fi
+  {
+    echo "---"
+    echo "# === $1 ==="
+    cat
+  } >> "$bundle_file"
 }
 
 # Check if a path is under a user-excluded, auto-skipped, or kustomize directory
@@ -207,26 +275,56 @@ validate_kubernetes_manifests() {
     if is_excluded_dir "$dir"; then
       continue
     fi
+    if [[ -n "$bundle_file" && "$file" -ef "$bundle_file" ]]; then
+      continue
+    fi
     files+=("$file")
   done < <(find "$root_dir" -path '*/.*' -prune -o -type f -name '*.yaml' -print0)
   if [[ ${#files[@]} -gt 0 ]]; then
-    "${flux_schema_cmd[@]}" validate "${flux_schema_flags[@]}" "${files[@]}"
+    if [[ -n "$bundle_file" ]]; then
+      for file in "${files[@]}"; do
+        bundle_append "file: $(rel_path "$file")" < "$file"
+      done
+    fi
+    if ! "${flux_schema_cmd[@]}" validate "${flux_schema_flags[@]}" "${files[@]}"; then
+      errors=$((errors + 1))
+    fi
   fi
 }
 
 validate_kustomize_overlays() {
+  local overlay build_output
   while IFS= read -r -d $'\0' file; do
     dir="$(dirname "$file")"
     if is_non_kustomize_excluded_dir "$dir"; then
       continue
     fi
-    echo "INFO - Validating kustomize overlay ${file/%$kustomize_config}"
-    kubectl kustomize "${file/%$kustomize_config}" "${kustomize_flags[@]}" | \
-      "${flux_schema_cmd[@]}" validate "${flux_schema_flags[@]}"
-    if [[ ${PIPESTATUS[0]} != 0 || ${PIPESTATUS[1]} != 0 ]]; then
-      exit 1
+    overlay="${file/%$kustomize_config}"
+    echo "INFO - Validating kustomize overlay $overlay"
+    if ! build_output=$(kubectl kustomize "$overlay" "${kustomize_flags[@]}"); then
+      echo "ERROR - kustomize build failed for $overlay" >&2
+      bundle_append "kustomize-overlay: $(rel_path "$overlay") (build failed)" < /dev/null
+      errors=$((errors + 1))
+      continue
+    fi
+    bundle_append "kustomize-overlay: $(rel_path "$overlay")" <<< "$build_output"
+    if ! printf '%s\n' "$build_output" | \
+      "${flux_schema_cmd[@]}" validate "${flux_schema_flags[@]}"; then
+      errors=$((errors + 1))
     fi
   done < <(find "$root_dir" -path '*/.*' -prune -o -type f -name "$kustomize_config" -print0)
+}
+
+# Print the final outcome and exit non-zero when any build or validation failed
+report_results() {
+  if [[ -n "$bundle_file" ]]; then
+    echo "INFO - Bundle written to $bundle_file"
+  fi
+  if [[ $errors -gt 0 ]]; then
+    echo "ERROR - Validation failed with $errors error(s)" >&2
+    exit 1
+  fi
+  echo "INFO - All validations passed"
 }
 
 # Main
@@ -234,7 +332,8 @@ parse_args "$@"
 check_prerequisites
 resolve_cli
 resolve_config
+init_bundle
 detect_excluded_dirs
 validate_kubernetes_manifests
 validate_kustomize_overlays
-echo "INFO - All validations passed"
+report_results

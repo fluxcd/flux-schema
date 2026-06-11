@@ -19,6 +19,14 @@ inputs:
       When the file does not exist, the default Flux Schema catalog will be used.
     required: false
     default: ".fluxschema.yml"
+  output-bundle:
+    description: |
+      Path to a file where all standalone manifests and rendered kustomize
+      overlays are merged as a single YAML document stream with provenance
+      comments. Use a dot-prefixed name (e.g. '.bundle.yaml') so the bundle
+      is ignored by validation and discovery. When empty, no bundle is written.
+    required: false
+    default: ""
 runs:
   using: composite
   steps:
@@ -28,6 +36,7 @@ runs:
         ROOT_DIR: ${{ inputs.path }}
         EXCLUDE_DIRS: ${{ inputs.exclude }}
         CONFIG_FILE: ${{ inputs.config }}
+        BUNDLE_FILE: ${{ inputs.output-bundle }}
       run: |
         set -euo pipefail
         args=("-d" "$ROOT_DIR" "-c" "$CONFIG_FILE")
@@ -36,5 +45,8 @@ runs:
             [[ -z "$line" ]] && continue
             args+=("-e" "$line")
           done <<< "$EXCLUDE_DIRS"
+        fi
+        if [[ -n "$BUNDLE_FILE" ]]; then
+          args+=("-b" "$BUNDLE_FILE")
         fi
         "${GITHUB_ACTION_PATH}/validate.sh" "${args[@]}"
