@@ -6,6 +6,9 @@
 # This script validates Kubernetes manifests using the Flux Schema CLI.
 # It builds kustomize overlays and validating the output against the
 # default schema catalog or a user-provided config file.
+# Arguments after '--' are passed verbatim to 'flux-schema validate' and
+# take precedence over the config file, so callers (e.g. AI agents) can
+# set validation options inline without writing a config file to disk.
 # The script auto-detects and excludes non-Kubernetes directories such as
 # dotfiles, Terraform modules and Helm charts.
 # With --helm-charts, Helm charts are rendered with 'helm template' using
@@ -25,11 +28,16 @@
 # - kubectl >= 1.36
 # - helm >= 4.0 (only with --helm-charts)
 
-# Usage example:
+# Usage examples:
 #   validate.sh \
 #     -d ./manifests \
 #     -c ./.fluxschema.yml \
 #     -b ./.bundle.yaml
+#
+#   validate.sh -d ./manifests -- \
+#     --skip-json-path=Secret:/sops \
+#     --skip-missing-schemas \
+#     --output=json
 #
 # Name the bundle with a leading dot (e.g. '.bundle.yaml') so that
 # validation and 'flux-schema discover' ignore it on subsequent runs,
@@ -56,6 +64,10 @@ default_flux_schema_flags=("--skip-json-path=/sops" "--skip-missing-schemas" "--
 
 # Effective flags passed to flux-schema, populated by resolve_config.
 flux_schema_flags=()
+
+# Flags given after '--', passed verbatim to 'flux-schema validate'.
+# When set, they take precedence over the config file and default flags.
+flux_schema_args=()
 
 # Effective flux-schema invocation, populated by resolve_cli.
 # Either ("flux-schema") for the standalone CLI or ("flux" "schema") for the
@@ -87,7 +99,7 @@ declare -a helm_chart_dirs=()
 declare -a kustomize_dirs=()
 
 usage() {
-  echo "Usage: $0 [-d <dir>] [-c <file>] [-e <dir>]... [-b <file>] [-H] [-h]"
+  echo "Usage: $0 [-d <dir>] [-c <file>] [-e <dir>]... [-b <file>] [-H] [-h] [-- <flux-schema flags>]"
   echo ""
   echo "Validate Flux custom resources and kustomize overlays using flux-schema."
   echo ""
@@ -101,6 +113,8 @@ usage() {
   echo "  -H, --helm-charts           Render Helm charts with 'helm template' using their"
   echo "                              default values and validate the output (requires helm)"
   echo "  -h, --help                  Show this help message"
+  echo "  -- <flux-schema flags>      Pass the remaining arguments verbatim to 'flux-schema validate',"
+  echo "                              taking precedence over the config file and default flags"
 }
 
 parse_args() {
@@ -146,6 +160,11 @@ parse_args() {
         usage
         exit 0
         ;;
+      --)
+        shift
+        flux_schema_args=("$@")
+        break
+        ;;
       *)
         echo "ERROR - Unknown argument: $1" >&2
         usage >&2
@@ -179,10 +198,14 @@ resolve_cli() {
   fi
 }
 
-# Pick the flags to pass to flux-schema. When the config file exists, defer
-# all validation options to it; otherwise fall back to the built-in defaults.
+# Pick the flags to pass to flux-schema. Flags given after '--' win; when
+# the config file exists, defer all validation options to it; otherwise
+# fall back to the built-in defaults.
 resolve_config() {
-  if [[ -f "$config_file" ]]; then
+  if [[ ${#flux_schema_args[@]} -gt 0 ]]; then
+    echo "INFO - Using flux-schema flags from the command line"
+    flux_schema_flags=("${flux_schema_args[@]}")
+  elif [[ -f "$config_file" ]]; then
     echo "INFO - Using flux-schema config: $config_file"
     flux_schema_flags=("--config=$config_file")
   else
