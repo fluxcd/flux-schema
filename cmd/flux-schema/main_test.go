@@ -53,6 +53,7 @@ func resetCmdArgs() {
 	extractK8sArgs = extractK8sFlags{ExtractOutput: flags.NewExtractOutput()}
 	extractOpenShiftArgs = extractOpenShiftFlags{ExtractOutput: flags.NewExtractOutput()}
 	validateArgs = validateFlags{concurrent: validator.DefaultWorkers, output: "text"}
+	discoverArgs = discoverFlags{output: "text"}
 
 	// pflag.Flag.Changed persists across Execute calls on the shared rootCmd,
 	// which breaks MarkFlagRequired validation in subsequent tests. Clear it

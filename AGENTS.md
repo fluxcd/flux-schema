@@ -20,7 +20,7 @@ These rules come from [`fluxcd/flux2/CONTRIBUTING.md`](https://github.com/fluxcd
 
 ## Project
 
-`flux-schema` is a Flux CLI plugin for Kubernetes schema extraction and manifest validation. Single Go binary, cobra-based.
+`flux-schema` is a Flux CLI plugin for Kubernetes schema extraction, manifest validation, and GitOps repository discovery. Single Go binary, cobra-based.
 
 Read the [README](README.md) for an overview of the project and its features.
 
@@ -29,6 +29,7 @@ Read the [README](README.md) for an overview of the project and its features.
 - `cmd/flux-schema/` — the `main` package. One file per cobra subcommand (`version.go`, etc.), each registering itself in `init()` via `rootCmd.AddCommand(...)`. `main.VERSION` is overridden at build time by the Makefile.
 - `internal/extractor/` — OpenAPI v2 swagger and CRD → standalone-strict JSON Schema extraction. `ExtractKubernetes`/`ExtractOpenShift`/`ExtractCRDs` are the entry points; `transformers.go` holds the pipeline steps (`inlineRefs`, `injectGVK`, `replaceIntOrString`, `nullableOptional`, `closeAdditionalProperties`, `stripVendorExtensions`) plus the exported `StripDescriptions` post-process.
 - `internal/validator/` — JSON Schema validation of Kubernetes YAML manifests. `loader.go` compiles schemas via `santhosh-tekuri/jsonschema/v6` with `Draft2020` as the default draft; `formats.go` registers the Kubernetes string formats (`duration`, `date`, etc.) that the library doesn't assert by default.
+- `internal/inventory/` — GitOps repository discovery for the `discover` command. `Scan` walks a directory via `os.Root` (reads are OS-confined to the scanned root, symlinks are not followed), classifies directories (`kustomize-overlay`, `helm-chart`, `terraform-module`; chart and Terraform subtrees are pruned), and lists every resource with its defining file; files referenced as kustomize patches are excluded to avoid double counting. `NewInventory` converts the `Result` into the versioned `Inventory` envelope from `api/v1beta1/inventory_types.go`.
 - `internal/tmpl/` — Go `text/template` renderer for the output-path and `--schema-location` templates. `SchemaVars` (`Group`, `GroupPrefix`, `Kind`, `Version`) is the shared variable set; values are lowercased at render time and `Group: ""` is normalized to `core`.
 - `internal/yamldoc/` — line-oriented `bufio.SplitFunc` that splits a byte stream on `\n---` boundaries. Matches kubectl's `splitYAMLDocument` behavior.
 - `internal/flags/` — reusable `pflag.Value` implementations for CLI flags shared across commands.
@@ -62,8 +63,10 @@ User-facing changes (flags, commands, report shape, GitHub Action inputs) must b
 - `README.md` — features list, install, quickstart, commands table, doc links.
 - `docs/guides/manifests-validation.md` — `validate` reference: flag table, schema resolution, skip rules, CEL rules, config file with example `.fluxschema.yml`.
 - `docs/guides/custom-schema-catalog.md` — `extract crd`/`extract k8s`/`extract openshift` reference and catalog hosting/refresh.
+- `docs/guides/repo-discovery.md` — `discover` reference: flags, classification rules, output formats, and how AI agents should read the inventory.
 - `docs/config/README.md` + `docs/config/config-v1beta1.json` — config file envelope and its JSON Schema.
 - `docs/report/README.md` + `docs/report/report-v1beta1.json` — report file envelope and its JSON Schema.
+- `docs/inventory/README.md` + `docs/inventory/inventory-v1beta1.json` — inventory envelope (`discover` output) and its JSON Schema.
 - `actions/setup/README.md` + `actions/validate/README.md` — GitHub Action inputs and example workflows.
 
 Apply these rules:
@@ -71,6 +74,7 @@ Apply these rules:
 - New or changed flag: update the flag table in the matching guide. For `validate` flags that are config-file-eligible, also extend the example `.fluxschema.yml` block in the "Config file" section.
 - New subcommand: add a row to `README.md`'s "Commands" table and either a new section in an existing guide or a dedicated guide under `docs/guides/`.
 - Report shape change: update `docs/report/README.md` (and `schema-1.0.0.json` per its versioning rules) and the JSON example under "Output" in `docs/guides/manifests-validation.md`.
+- Inventory shape change: edit `api/v1beta1/inventory_types.go`, run `make generate-json-schemas` to regenerate `docs/inventory/inventory-v1beta1.json` (also copied into the catalog), then update `docs/inventory/README.md` and the examples in `docs/guides/repo-discovery.md`.
 - GitHub Action change: when a `validate.sh` argument or an `action.yaml` input changes, refresh the inputs table and example workflow in `actions/validate/README.md`.
 
 ## Builtin Schema Catalog

@@ -1,0 +1,112 @@
+{
+  "$id": "https://raw.githubusercontent.com/fluxcd/flux-schema/main/docs/inventory/inventory-v1beta1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "format": "uri",
+      "type": "string"
+    },
+    "apiVersion": {
+      "const": "schema.plugin.fluxcd.io/v1beta1",
+      "type": "string"
+    },
+    "inventory": {
+      "additionalProperties": false,
+      "description": "InventorySpec contains repository inventory details.",
+      "properties": {
+        "directories": {
+          "additionalProperties": {
+            "description": "InventoryDirectoryType classifies a directory in the repository.",
+            "enum": [
+              "helm-chart",
+              "kubernetes-manifests",
+              "kustomize-overlay",
+              "terraform-module"
+            ],
+            "type": "string"
+          },
+          "description": "Directories maps every directory containing scanned manifests, plus\nHelm chart and Terraform directories, to its classification. Paths\nare relative to the scanned root and \"/\"-separated; the root itself\nis \".\".",
+          "type": "object"
+        },
+        "flux": {
+          "additionalProperties": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object"
+          },
+          "description": "Flux maps Flux custom resource kinds to the files defining them:\neach kind holds a map of file path (relative to the scanned root)\nto the \"namespace/name\" identities declared in that file. The\nnamespace segment is omitted for resources without a namespace and\nthe name is \"-\" when the document has no metadata.name. The\napiVersion of each kind is available in Resources.",
+          "type": "object"
+        },
+        "reporter": {
+          "description": "Reporter identifies the software that produced the inventory.",
+          "pattern": "^flux-schema/",
+          "type": "string"
+        },
+        "resources": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "description": "Resources maps \"apiVersion/Kind\" keys to the number of resources\nof that type, covering Flux and plain Kubernetes resources alike.",
+          "type": "object"
+        },
+        "summary": {
+          "additionalProperties": false,
+          "description": "Summary contains aggregate resource counts.",
+          "properties": {
+            "files": {
+              "description": "Files is the number of YAML files scanned.",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "lines-of-yaml": {
+              "description": "LinesOfYAML is the total number of lines in the scanned YAML files.",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "resources": {
+              "description": "Resources is the total number of resources found.",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "files",
+            "lines-of-yaml",
+            "resources"
+          ],
+          "type": "object"
+        },
+        "timestamp": {
+          "description": "Timestamp is the inventory creation time in RFC 3339 format.",
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "directories",
+        "flux",
+        "reporter",
+        "resources",
+        "summary",
+        "timestamp"
+      ],
+      "type": "object"
+    },
+    "kind": {
+      "const": "Inventory",
+      "type": "string"
+    }
+  },
+  "required": [
+    "apiVersion",
+    "kind",
+    "inventory"
+  ],
+  "title": "InventorySpec contains repository inventory details.",
+  "type": "object"
+}

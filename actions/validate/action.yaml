@@ -19,6 +19,20 @@ inputs:
       When the file does not exist, the default Flux Schema catalog will be used.
     required: false
     default: ".fluxschema.yml"
+  output-bundle:
+    description: |
+      Path to a file where all standalone manifests and rendered kustomize
+      overlays are merged as a single YAML document stream with provenance
+      comments. Use a dot-prefixed name (e.g. '.bundle.yaml') so the bundle
+      is ignored by validation and discovery. When empty, no bundle is written.
+    required: false
+    default: ""
+  helm-charts:
+    description: |
+      Render Helm charts with 'helm template' using their default values and
+      validate the output. Requires helm on PATH.
+    required: false
+    default: "false"
 runs:
   using: composite
   steps:
@@ -28,6 +42,8 @@ runs:
         ROOT_DIR: ${{ inputs.path }}
         EXCLUDE_DIRS: ${{ inputs.exclude }}
         CONFIG_FILE: ${{ inputs.config }}
+        BUNDLE_FILE: ${{ inputs.output-bundle }}
+        HELM_CHARTS: ${{ inputs.helm-charts }}
       run: |
         set -euo pipefail
         args=("-d" "$ROOT_DIR" "-c" "$CONFIG_FILE")
@@ -36,5 +52,11 @@ runs:
             [[ -z "$line" ]] && continue
             args+=("-e" "$line")
           done <<< "$EXCLUDE_DIRS"
+        fi
+        if [[ -n "$BUNDLE_FILE" ]]; then
+          args+=("-b" "$BUNDLE_FILE")
+        fi
+        if [[ "$HELM_CHARTS" == "true" ]]; then
+          args+=("-H")
         fi
         "${GITHUB_ACTION_PATH}/validate.sh" "${args[@]}"
