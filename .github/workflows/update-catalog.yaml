@@ -24,7 +24,7 @@ jobs:
       - name: Setup flux-operator
         uses: controlplaneio-fluxcd/flux-operator/actions/setup@5836c14559f39a466a7c413e55e0ee35480a0250 # v0.50.0
       - name: Reset catalog directory
-        run: rm -rf ./catalog/latest && mkdir -p ./catalog/latest
+        run: find ./catalog/latest -mindepth 1 -maxdepth 1 ! -name 'schema.plugin.fluxcd.io' -exec rm -rf {} +
       - name: Update Kubernetes schemas
         run: ./scripts/gen-k8s-schemas.sh -d ./catalog/latest
       - name: Update Gateway API schemas
