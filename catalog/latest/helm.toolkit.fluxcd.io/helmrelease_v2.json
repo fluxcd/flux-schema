@@ -290,8 +290,7 @@
             },
             "required": [
               "apiVersion",
-              "current",
-              "kind"
+              "current"
             ],
             "type": "object"
           },
@@ -438,6 +437,14 @@
         },
         "persistentClient": {
           "type": "boolean"
+        },
+        "postRenderStrategy": {
+          "enum": [
+            "nohooks",
+            "combined",
+            "separate"
+          ],
+          "type": "string"
         },
         "postRenderers": {
           "items": {
@@ -650,6 +657,13 @@
         "upgrade": {
           "additionalProperties": false,
           "properties": {
+            "chartNameChangeStrategy": {
+              "enum": [
+                "InPlaceUpdate",
+                "Reinstall"
+              ],
+              "type": "string"
+            },
             "cleanupOnFail": {
               "type": "boolean"
             },
@@ -761,6 +775,9 @@
                   "ConfigMap"
                 ],
                 "type": "string"
+              },
+              "literal": {
+                "type": "boolean"
               },
               "name": {
                 "maxLength": 253,

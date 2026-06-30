@@ -86,6 +86,13 @@
                         "name"
                       ],
                       "type": "object"
+                    },
+                    "type": {
+                      "enum": [
+                        "gpg",
+                        "ssh"
+                      ],
+                      "type": "string"
                     }
                   },
                   "required": [

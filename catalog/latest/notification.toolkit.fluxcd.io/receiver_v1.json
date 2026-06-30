@@ -23,6 +23,69 @@
           "pattern": "^([0-9]+(\\.[0-9]+)?(ms|s|m|h))+$",
           "type": "string"
         },
+        "oidcProviders": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "audience": {
+                "type": "string"
+              },
+              "issuerURL": {
+                "pattern": "^https?://",
+                "type": "string"
+              },
+              "validations": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "expression": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "expression",
+                    "message"
+                  ],
+                  "type": "object"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              "variables": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "expression": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "expression",
+                    "name"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "issuerURL",
+              "validations"
+            ],
+            "type": "object"
+          },
+          "type": "array",
+          "x-kubernetes-list-map-keys": [
+            "issuerURL"
+          ],
+          "x-kubernetes-list-type": "map"
+        },
         "resourceFilter": {
           "type": "string"
         },
@@ -31,6 +94,9 @@
             "additionalProperties": false,
             "properties": {
               "apiVersion": {
+                "type": "string"
+              },
+              "filter": {
                 "type": "string"
               },
               "kind": {
@@ -97,6 +163,7 @@
           "enum": [
             "generic",
             "generic-hmac",
+            "generic-oidc",
             "github",
             "gitlab",
             "bitbucket",
@@ -113,10 +180,27 @@
       },
       "required": [
         "resources",
-        "secretRef",
         "type"
       ],
-      "type": "object"
+      "type": "object",
+      "x-kubernetes-validations": [
+        {
+          "message": "generic-oidc receivers must define at least one oidcProvider",
+          "rule": "self.type != 'generic-oidc' || (has(self.oidcProviders) && size(self.oidcProviders) > 0)"
+        },
+        {
+          "message": "oidcProviders can only be set when type is generic-oidc",
+          "rule": "self.type == 'generic-oidc' || !has(self.oidcProviders) || size(self.oidcProviders) == 0"
+        },
+        {
+          "message": "secretRef cannot be set when type is generic-oidc",
+          "rule": "self.type != 'generic-oidc' || !has(self.secretRef)"
+        },
+        {
+          "message": "secretRef is required when type is not generic-oidc",
+          "rule": "self.type == 'generic-oidc' || has(self.secretRef)"
+        }
+      ]
     },
     "status": {
       "additionalProperties": false,

@@ -172,6 +172,7 @@
         },
         "resources": {
           "items": {
+            "type": "object",
             "x-kubernetes-preserve-unknown-fields": true
           },
           "type": "array"
@@ -182,11 +183,66 @@
         "serviceAccountName": {
           "type": "string"
         },
+        "steps": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "maxLength": 63,
+                "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+                "type": "string"
+              },
+              "resources": {
+                "items": {
+                  "type": "object",
+                  "x-kubernetes-preserve-unknown-fields": true
+                },
+                "type": "array"
+              },
+              "resourcesTemplate": {
+                "type": "string"
+              },
+              "timeout": {
+                "pattern": "^([0-9]+(\\.[0-9]+)?(ms|s|m|h))+$",
+                "type": "string"
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "type": "object",
+            "x-kubernetes-validations": [
+              {
+                "message": "at least one of resources or resourcesTemplate must be set",
+                "rule": "has(self.resources) || has(self.resourcesTemplate)"
+              }
+            ]
+          },
+          "maxItems": 20,
+          "minItems": 1,
+          "type": "array",
+          "x-kubernetes-validations": [
+            {
+              "message": "step names must be unique",
+              "rule": "self.all(s, self.exists_one(t, t.name == s.name))"
+            }
+          ]
+        },
         "wait": {
           "type": "boolean"
         }
       },
-      "type": "object"
+      "type": "object",
+      "x-kubernetes-validations": [
+        {
+          "message": "steps is mutually exclusive with resources and resourcesTemplate",
+          "rule": "!has(self.steps) || (!has(self.resources) && !has(self.resourcesTemplate))"
+        },
+        {
+          "message": "at least one of steps, resources or resourcesTemplate must be set",
+          "rule": "has(self.steps) || has(self.resources) || has(self.resourcesTemplate)"
+        }
+      ]
     },
     "status": {
       "additionalProperties": false,
