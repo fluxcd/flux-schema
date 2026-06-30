@@ -19,7 +19,7 @@
             "pattern": "^(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
             "type": "string"
           },
-          "maxItems": 16,
+          "maxItems": 1024,
           "type": "array",
           "x-kubernetes-list-type": "atomic"
         },

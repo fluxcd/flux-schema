@@ -12,32 +12,6 @@
     "spec": {
       "additionalProperties": false,
       "properties": {
-        "hostnames": {
-          "items": {
-            "maxLength": 253,
-            "minLength": 1,
-            "pattern": "^(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
-            "type": "string"
-          },
-          "maxItems": 1024,
-          "minItems": 1,
-          "type": "array",
-          "x-kubernetes-list-type": "atomic",
-          "x-kubernetes-validations": [
-            {
-              "message": "Hostnames cannot contain an IP",
-              "rule": "self.all(h, !isIP(h))"
-            },
-            {
-              "message": "Hostnames must be valid based on RFC-1123",
-              "rule": "self.all(h, !h.contains('*') ? h.matches('^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\\\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)$') : true)"
-            },
-            {
-              "message": "Wildcards on hostnames must be the first label, and the rest of hostname must be valid based on RFC-1123",
-              "rule": "self.all(h, h.contains('*') ? (h.startsWith('*.') && h.substring(2).matches('^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\\\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)$')) : true)"
-            }
-          ]
-        },
         "parentRefs": {
           "items": {
             "additionalProperties": false,
@@ -172,14 +146,13 @@
             ],
             "type": "object"
           },
-          "maxItems": 1,
+          "maxItems": 16,
           "minItems": 1,
           "type": "array",
           "x-kubernetes-list-type": "atomic"
         }
       },
       "required": [
-        "hostnames",
         "rules"
       ],
       "type": "object"
