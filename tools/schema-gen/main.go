@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"unicode"
 
@@ -378,6 +379,7 @@ func transformNode(v any) any {
 		for k, child := range x {
 			x[k] = transformNode(child)
 		}
+		sortEnum(x)
 		if x["type"] == "object" {
 			if _, ok := x["properties"]; ok {
 				x["additionalProperties"] = false
@@ -406,6 +408,30 @@ func transformNode(v any) any {
 		return x
 	default:
 		return v
+	}
+}
+
+// sortEnum stabilizes the order of a schema node's enum values. controller-gen
+// emits enum members in a non-deterministic order (it flips between marker and
+// alphabetical order across runs), which makes the generated schema churn. We
+// only reorder when every member is a string, which holds for the Kubernetes
+// enums in this API; mixed or non-string enums are left untouched.
+func sortEnum(node map[string]any) {
+	values, ok := node["enum"].([]any)
+	if !ok {
+		return
+	}
+	strs := make([]string, 0, len(values))
+	for _, v := range values {
+		s, ok := v.(string)
+		if !ok {
+			return
+		}
+		strs = append(strs, s)
+	}
+	sort.Strings(strs)
+	for i, s := range strs {
+		values[i] = s
 	}
 }
 
