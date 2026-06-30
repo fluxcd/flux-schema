@@ -10,7 +10,7 @@ const (
 	ReportKind = "Report"
 
 	// ReportSchema is the canonical URL of the JSON Schema describing the Report shape.
-	ReportSchema = "https://raw.githubusercontent.com/fluxcd/flux-schema/main/docs/report/report-v1beta1.json"
+	ReportSchema = "https://raw.githubusercontent.com/fluxcd/flux-schema/main/docs/report-v1beta1.json"
 )
 
 // Report is the validation report envelope.

@@ -67,7 +67,7 @@ validate:
   output: text
 ```
 
-See the [validate config file reference](../../docs/guides/manifests-validation.md#config-file)
+See the [validate config file reference](../../docs/manifests-validation.md#config-file)
 for the full list of supported keys.
 
 If the file lives at a non-default path, point the action at it with `config`:

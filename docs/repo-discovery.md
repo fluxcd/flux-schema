@@ -1,13 +1,17 @@
+---
+weight: 30
+---
+
 # GitOps Repository Discovery with Flux Schema CLI
 
-The `flux-schema discover` command catalogs the Kubernetes manifests in a
+The `flux schema discover` command catalogs the Kubernetes manifests in a
 GitOps repository and emits a structured inventory. The inventory is
 designed for AI agents and automation auditing a repository: it maps the
 directory structure, lists every Flux resource with its defining file,
 and counts plain Kubernetes resources.
 
 ```shell
-flux-schema discover ./my-gitops-repo -o json
+flux schema discover ./my-gitops-repo -o json
 ```
 
 The scan is purely static: no kustomize builds, no Helm rendering, no
@@ -41,13 +45,13 @@ the read-and-grep loop that follows with one deterministic pass:
   not thousands); Helm chart and Terraform subtrees are pruned. A typical
   repository inventories in a few KB.
 - **The shape is a versioned contract.** The JSON envelope is validated
-  by a published [JSON Schema](../inventory/README.md), so agents can
+  by a published [JSON Schema](inventory.md), so agents can
   parse it programmatically instead of interpreting ad-hoc shell output.
 
 For very large repositories (hundreds of Flux resources), the inventory
 grows with the Flux resource count in every output format. Scope the
 scan to the subtree under audit
-(`flux-schema discover ./clusters/production -o json`) or exclude
+(`flux schema discover ./clusters/production -o json`) or exclude
 directories with `--skip-file` to keep the output small.
 
 `tree` remains useful for what `discover` deliberately ignores: READMEs,
@@ -148,7 +152,7 @@ Summary: 7 resources found in 8 files with 92 lines of YAML
 ```
 
 With `-o json` or `-o yaml` the command emits the versioned Inventory
-envelope documented in the [inventory reference](../inventory/README.md):
+envelope documented in the [inventory reference](inventory.md):
 `resources` counts everything per `apiVersion/Kind`, and `flux` maps
 each Flux kind to its defining files and the `namespace/name` identities
 they declare (the API version is already in the census):
@@ -157,7 +161,7 @@ they declare (the API version is already in the census):
 {
   "apiVersion": "schema.plugin.fluxcd.io/v1beta1",
   "kind": "Inventory",
-  "$schema": "https://raw.githubusercontent.com/fluxcd/flux-schema/main/docs/inventory/inventory-v1beta1.json",
+  "$schema": "https://raw.githubusercontent.com/fluxcd/flux-schema/main/docs/inventory-v1beta1.json",
   "inventory": {
     "reporter": "flux-schema/0.3.0",
     "timestamp": "2026-06-11T10:30:00Z",

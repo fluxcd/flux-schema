@@ -1,6 +1,6 @@
 # Flux Schema Catalog
 
-This is the catalog of JSON Schemas used by the `flux schema validation` tool
+This is the catalog of JSON Schemas used by the Flux Schema validation tool
 and the GitHub Action [fluxcd/flux-schema/actions/validate](../actions/validate).
 
 <!-- versions:start -->
@@ -38,13 +38,13 @@ channel, you can generate them with:
 
 ```shell
 kubectl kustomize https://github.com/kubernetes-sigs/gateway-api/config/crd/experimental?ref=main | \
-  flux-schema extract crd -d ./gwapi-experimental
+  flux schema extract crd -d ./gwapi-experimental
 ```
 
 And use them with `--schema-location`, before the `default` catalog, when validating:
 
 ```shell
-flux-schema validate ./manifests \
+flux schema validate ./manifests \
   --schema-location ./gwapi-experimental \
   --schema-location default
 ```

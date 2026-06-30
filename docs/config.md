@@ -1,6 +1,11 @@
+---
+linkTitle: Configuration
+weight: 10
+---
+
 # Flux Schema Config
 
-The `flux-schema validate` command can load default flag values from a YAML
+The `flux schema validate` command can load default flag values from a YAML
 configuration file. The file shape is versioned and documented by the JSON
 Schema in [`config-v1beta1.json`](config-v1beta1.json).
 
@@ -32,11 +37,11 @@ validate:
 Usage:
 
 ```shell
-flux-schema validate ./manifests --config .fluxschema.yml
+flux schema validate ./manifests --config .fluxschema.yml
 ```
 
 When `--config` is not set, the `FLUX_SCHEMA_CONFIG` environment variable is
-used. When neither is set, `flux-schema` looks for a config file at the
+used. When neither is set, Flux Schema looks for a config file at the
 executable path plus `.config`, for example `~/.fluxcd/plugins/flux-schema.config`.
 
 ## Specification
@@ -49,7 +54,7 @@ executable path plus `.config`, for example `~/.fluxcd/plugins/flux-schema.confi
 
 ### Validation
 
-The `validate` section configures defaults for the `flux-schema validate` flags.
+The `validate` section configures defaults for the `flux schema validate` flags.
 
 | Field                      | Description                                                    |
 |----------------------------|----------------------------------------------------------------|
@@ -65,4 +70,4 @@ The `validate` section configures defaults for the `flux-schema validate` flags.
 | `insecureSkipTLSVerify`    | Disable TLS certificate verification when downloading schemas. |
 | `output`                   | Output format: `text`, `json`, or `yaml`.                      |
 
-When the `output` field is set to `json` or `yaml`, the result has the [Report API](../report/README.md) shape.
+When the `output` field is set to `json` or `yaml`, the result has the [Report API](report.md) shape.
