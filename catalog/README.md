@@ -9,9 +9,9 @@ and the GitHub Action [fluxcd/flux-schema/actions/validate](../actions/validate)
 | [kubernetes/kubernetes](https://github.com/kubernetes/kubernetes) | v1.36.2 |
 | [kubernetes-sigs/gateway-api](https://github.com/kubernetes-sigs/gateway-api) | v1.6.0 |
 | [openshift/api](https://github.com/openshift/api) | v4.20 |
-| [fluxcd/flux2](https://github.com/fluxcd/flux2) | v2.8.8 |
+| [fluxcd/flux2](https://github.com/fluxcd/flux2) | v2.9.0 |
 | [fluxcd/flagger](https://github.com/fluxcd/flagger) | v1.43.0 |
-| [controlplaneio-fluxcd/flux-operator](https://github.com/controlplaneio-fluxcd/flux-operator) | v0.52.0 |
+| [controlplaneio-fluxcd/flux-operator](https://github.com/controlplaneio-fluxcd/flux-operator) | v0.53.0 |
 <!-- versions:end -->
 
 ## Flux APIs

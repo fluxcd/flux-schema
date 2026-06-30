@@ -158,6 +158,18 @@
                 "name"
               ],
               "type": "object"
+            },
+            "trustedRootSecretRef": {
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "type": "object"
             }
           },
           "required": [

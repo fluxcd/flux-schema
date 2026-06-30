@@ -52,6 +52,7 @@
         "provider": {
           "enum": [
             "generic",
+            "aws",
             "azure",
             "github"
           ],
@@ -165,8 +166,8 @@
       "type": "object",
       "x-kubernetes-validations": [
         {
-          "message": "serviceAccountName can only be set when provider is 'azure'",
-          "rule": "!has(self.serviceAccountName) || (has(self.provider) && self.provider == 'azure')"
+          "message": "serviceAccountName can only be set when provider is 'azure' or 'aws'",
+          "rule": "!has(self.serviceAccountName) || (has(self.provider) && (self.provider == 'azure' || self.provider == 'aws'))"
         }
       ]
     },

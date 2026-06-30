@@ -309,7 +309,13 @@
       "required": [
         "distribution"
       ],
-      "type": "object"
+      "type": "object",
+      "x-kubernetes-validations": [
+        {
+          "message": ".spec.storage must be set when .spec.sharding.storage is 'persistent'",
+          "rule": "!has(self.sharding) || !has(self.sharding.storage) || self.sharding.storage != 'persistent' || has(self.storage)"
+        }
+      ]
     },
     "status": {
       "additionalProperties": false,

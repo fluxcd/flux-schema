@@ -12,6 +12,16 @@
     "spec": {
       "additionalProperties": false,
       "properties": {
+        "buildMetadata": {
+          "items": {
+            "enum": [
+              "originAnnotations",
+              "transformerAnnotations"
+            ],
+            "type": "string"
+          },
+          "type": "array"
+        },
         "commonMetadata": {
           "additionalProperties": false,
           "properties": {
@@ -122,8 +132,7 @@
             },
             "required": [
               "apiVersion",
-              "current",
-              "kind"
+              "current"
             ],
             "type": "object"
           },
@@ -149,6 +158,51 @@
             "required": [
               "kind",
               "name"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "ignore": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "paths": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "target": {
+                "additionalProperties": false,
+                "properties": {
+                  "annotationSelector": {
+                    "type": "string"
+                  },
+                  "group": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": "string"
+                  },
+                  "labelSelector": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "namespace": {
+                    "type": "string"
+                  },
+                  "version": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "paths"
             ],
             "type": "object"
           },
@@ -320,6 +374,13 @@
                 "type": "object"
               },
               "type": "array"
+            },
+            "substituteStrategy": {
+              "enum": [
+                "WithVariables",
+                "Always"
+              ],
+              "type": "string"
             }
           },
           "type": "object"

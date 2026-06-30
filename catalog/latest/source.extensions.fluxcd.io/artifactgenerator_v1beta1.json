@@ -29,6 +29,7 @@
                     },
                     "from": {
                       "maxLength": 1024,
+                      "minLength": 1,
                       "pattern": "^@([a-z0-9]([a-z0-9_-]*[a-z0-9])?)/(.*)$",
                       "type": "string"
                     },
@@ -42,6 +43,7 @@
                     },
                     "to": {
                       "maxLength": 1024,
+                      "minLength": 1,
                       "pattern": "^@(artifact)/(.*)$",
                       "type": "string"
                     }
@@ -57,7 +59,7 @@
               },
               "name": {
                 "maxLength": 253,
-                "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+                "minLength": 1,
                 "type": "string"
               },
               "originRevision": {
@@ -80,6 +82,29 @@
           "maxItems": 1000,
           "minItems": 1,
           "type": "array"
+        },
+        "commonMetadata": {
+          "additionalProperties": false,
+          "properties": {
+            "annotations": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "labels": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            }
+          },
+          "type": "object"
+        },
+        "pathPattern": {
+          "maxLength": 1024,
+          "pattern": "^@([a-z0-9]([a-z0-9_-]*[a-z0-9])?)/(.*)$",
+          "type": "string"
         },
         "sources": {
           "items": {
@@ -128,7 +153,13 @@
         "artifacts",
         "sources"
       ],
-      "type": "object"
+      "type": "object",
+      "x-kubernetes-validations": [
+        {
+          "message": "artifact names must be valid Kubernetes object names when pathPattern is not set",
+          "rule": "has(self.pathPattern) && size(self.pathPattern) > 0 || self.artifacts.all(a, a.name.matches('^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'))"
+        }
+      ]
     },
     "status": {
       "additionalProperties": false,
