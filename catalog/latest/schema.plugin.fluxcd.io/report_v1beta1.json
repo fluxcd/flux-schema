@@ -89,9 +89,9 @@
               "status": {
                 "description": "Status is the validation outcome for the document.",
                 "enum": [
-                  "valid",
                   "invalid",
-                  "skipped"
+                  "skipped",
+                  "valid"
                 ],
                 "type": "string"
               },
