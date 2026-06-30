@@ -163,7 +163,7 @@
                 "minLength": 0,
                 "type": "string"
               },
-              "maxProperties": 8,
+              "maxProperties": 16,
               "type": "object",
               "x-kubernetes-validations": [
                 {
@@ -543,7 +543,7 @@
                             ],
                             "type": "object"
                           },
-                          "maxItems": 8,
+                          "maxItems": 16,
                           "minItems": 1,
                           "type": "array",
                           "x-kubernetes-list-type": "atomic"
@@ -615,7 +615,7 @@
                                   ],
                                   "type": "object"
                                 },
-                                "maxItems": 8,
+                                "maxItems": 16,
                                 "minItems": 1,
                                 "type": "array",
                                 "x-kubernetes-list-type": "atomic"
