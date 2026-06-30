@@ -1,8 +1,12 @@
+---
+weight: 40
+---
+
 # Maintaining Custom Catalogs with Flux Schema CLI
 
 A catalog is a directory tree of JSON Schemas laid out so that
-`flux-schema validate` can resolve a schema from a manifest's `apiVersion`
-and `kind`. The built-in [flux-schema catalog](../../catalog/README.md) ships
+`flux schema validate` can resolve a schema from a manifest's `apiVersion`
+and `kind`. The built-in [Flux Schema catalog](../catalog/README.md) ships
 schemas for Kubernetes, OpenShift, Gateway API, and the Flux ecosystem;
 custom catalogs let you cover internal CRDs, pin specific upstream versions,
 or assemble a layout that fits your tooling.
@@ -25,7 +29,7 @@ If you need a different layout (for example the kubeconform/kubeval flat
 form), pass a full template to `--schema-location`:
 
 ```shell
-flux-schema validate ./manifests \
+flux schema validate ./manifests \
   --schema-location './my-catalog/{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json'
 ```
 
@@ -49,7 +53,7 @@ everything you generate.
 
 ## Populating a catalog
 
-The `flux-schema extract` commands write one JSON Schema file per kind, using
+The `flux schema extract` commands write one JSON Schema file per kind, using
 the layout above by default. Mix and match these commands to cover the
 Kubernetes core APIs, OpenShift resources, and any CRDs your manifests rely
 on.
@@ -57,7 +61,7 @@ on.
 ### Kubernetes CRDs
 
 ```shell
-flux-schema extract crd [files...]
+flux schema extract crd [files...]
 ```
 
 Reads bare CRDs, a `List` of CRDs, or a multi-document YAML stream, and
@@ -73,13 +77,13 @@ emits one schema file per CRD version.
 Generate schemas for every CRD installed in a cluster:
 
 ```shell
-kubectl get crds -o yaml | flux-schema extract crd -d ./my-catalog
+kubectl get crds -o yaml | flux schema extract crd -d ./my-catalog
 ```
 
 Or from a kustomize build of an operator's CRD bundle:
 
 ```shell
-kustomize build ./config/crd | flux-schema extract crd -d ./my-catalog
+kustomize build ./config/crd | flux schema extract crd -d ./my-catalog
 ```
 
 > The output is also compatible with `kubeconform` and `kubeval`, making
@@ -90,7 +94,7 @@ kustomize build ./config/crd | flux-schema extract crd -d ./my-catalog
 ### Kubernetes APIs
 
 ```shell
-flux-schema extract k8s [swagger-file]
+flux schema extract k8s [swagger-file]
 ```
 
 Reads a Kubernetes OpenAPI v2 swagger document and emits one file per kind
@@ -108,13 +112,13 @@ standalone files.
 Pin the catalog to a specific Kubernetes release:
 
 ```shell
-flux-schema extract k8s --version 1.35.0 -d ./my-catalog
+flux schema extract k8s --version 1.35.0 -d ./my-catalog
 ```
 
 Or extract from a live cluster:
 
 ```shell
-kubectl get --raw /openapi/v2 | flux-schema extract k8s -d ./my-catalog
+kubectl get --raw /openapi/v2 | flux schema extract k8s -d ./my-catalog
 ```
 
 Core API kinds (`apiVersion: v1`) render under the `core/` group directory.
@@ -122,7 +126,7 @@ Core API kinds (`apiVersion: v1`) render under the `core/` group directory.
 ### OpenShift APIs
 
 ```shell
-flux-schema extract openshift [swagger-file]
+flux schema extract openshift [swagger-file]
 ```
 
 Reads an `openshift/api` OpenAPI v2 swagger document and emits one file per
@@ -139,14 +143,14 @@ emitted; embedded upstream Kubernetes types (e.g. `Pod`) are inlined.
 Pin to an OpenShift release branch:
 
 ```shell
-flux-schema extract openshift --ref release-4.20 -d ./my-catalog
+flux schema extract openshift --ref release-4.20 -d ./my-catalog
 ```
 
 Or feed in a downloaded swagger:
 
 ```shell
 curl -sL https://raw.githubusercontent.com/openshift/api/release-4.20/openapi/openapi.json | \
-  flux-schema extract openshift -d ./my-catalog
+  flux schema extract openshift -d ./my-catalog
 ```
 
 ### A typical refresh script
@@ -163,12 +167,12 @@ CATALOG=./my-catalog
 mkdir -p "$CATALOG"
 
 # Kubernetes core + built-ins
-flux-schema extract k8s --version 1.35.0 --strip-description -d "$CATALOG"
+flux schema extract k8s --version 1.35.0 --strip-description -d "$CATALOG"
 
 # Vendor CRDs at a pinned version
 kubectl kustomize \
   https://github.com/external-secrets/external-secrets/config/crds/bases?ref=v2.3.0 | \
-  flux-schema extract crd --strip-description -d "$CATALOG"
+  flux schema extract crd --strip-description -d "$CATALOG"
 ```
 
 Pass `--strip-description` to every generator to keep the catalog small —
@@ -176,7 +180,7 @@ the official catalog uses it everywhere and gets about a 54% size
 reduction on native Kubernetes schemas.
 
 The official catalog's generator scripts under
-[`scripts/`](../../scripts/) are a working reference: `gen-k8s-schemas.sh`,
+[`scripts/`](../scripts/) are a working reference: `gen-k8s-schemas.sh`,
 `gen-flux-schemas.sh`, `gen-crd-schemas.sh`, and `gen-openshift-schemas.sh`.
 
 ## Schema output
@@ -215,7 +219,7 @@ A 404 or `ENOENT` for a given `apiVersion`/`kind` falls through to the next
 one:
 
 ```shell
-flux-schema validate ./manifests \
+flux schema validate ./manifests \
   --schema-location ./my-catalog \
   --schema-location default
 ```
@@ -227,4 +231,4 @@ Order matters — the first match wins, so put your overrides before `default`.
 Custom catalogs go stale as upstream versions move. Schedule the refresh
 script in CI (cron workflow, scheduled pipeline, etc.) and commit the result
 back, the same way the official catalog is updated by
-[`.github/workflows/update-catalog.yaml`](../../.github/workflows/update-catalog.yaml).
+[`.github/workflows/update-catalog.yaml`](../.github/workflows/update-catalog.yaml).

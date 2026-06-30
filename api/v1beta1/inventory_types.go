@@ -10,7 +10,7 @@ const (
 	InventoryKind = "Inventory"
 
 	// InventorySchema is the canonical URL of the JSON Schema describing the Inventory shape.
-	InventorySchema = "https://raw.githubusercontent.com/fluxcd/flux-schema/main/docs/inventory/inventory-v1beta1.json"
+	InventorySchema = "https://raw.githubusercontent.com/fluxcd/flux-schema/main/docs/inventory-v1beta1.json"
 )
 
 // Inventory is the repository inventory envelope.

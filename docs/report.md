@@ -1,6 +1,10 @@
+---
+weight: 60
+---
+
 # Flux Schema Report
 
-The `flux-schema validate` command can emit a structured report of the
+The `flux schema validate` command can emit a structured report of the
 validation results by setting `--output` to `json` or `yaml`. The envelope
 shape is versioned and documented by the JSON Schema in
 [`report-v1beta1.json`](report-v1beta1.json).
@@ -8,7 +12,7 @@ shape is versioned and documented by the JSON Schema in
 ## Usage
 
 ```shell
-flux-schema validate ./manifests -o json
+flux schema validate ./manifests -o json
 ```
 
 Structured output always emits every result regardless of `--verbose`.
@@ -58,7 +62,7 @@ Every report is wrapped in a top-level envelope:
 {
   "apiVersion": "schema.plugin.fluxcd.io/v1beta1",
   "kind": "Report",
-  "$schema": "https://raw.githubusercontent.com/fluxcd/flux-schema/main/docs/report/report-v1beta1.json",
+  "$schema": "https://raw.githubusercontent.com/fluxcd/flux-schema/main/docs/report-v1beta1.json",
   "report": {
     "reporter": "flux-schema/v0.1.0",
     "timestamp": "2026-06-01T12:00:00Z",

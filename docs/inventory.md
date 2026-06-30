@@ -1,6 +1,10 @@
+---
+weight: 50
+---
+
 # Flux Schema Inventory
 
-The `flux-schema discover` command can emit a structured inventory of a
+The `flux schema discover` command can emit a structured inventory of a
 GitOps repository by setting `--output` to `json` or `yaml`. The envelope
 shape is versioned and documented by the JSON Schema in
 [`inventory-v1beta1.json`](inventory-v1beta1.json).
@@ -8,10 +12,10 @@ shape is versioned and documented by the JSON Schema in
 ## Usage
 
 ```shell
-flux-schema discover ./my-gitops-repo -o json
+flux schema discover ./my-gitops-repo -o json
 ```
 
-See the [repository discovery guide](../guides/repo-discovery.md) for the
+See the [repository discovery guide](repo-discovery.md) for the
 classification rules behind the inventory data.
 
 ## Envelope
@@ -99,7 +103,7 @@ mid-migration — its files merge under the kind key, while
 {
   "apiVersion": "schema.plugin.fluxcd.io/v1beta1",
   "kind": "Inventory",
-  "$schema": "https://raw.githubusercontent.com/fluxcd/flux-schema/main/docs/inventory/inventory-v1beta1.json",
+  "$schema": "https://raw.githubusercontent.com/fluxcd/flux-schema/main/docs/inventory-v1beta1.json",
   "inventory": {
     "reporter": "flux-schema/0.3.0",
     "timestamp": "2026-06-11T10:30:00Z",

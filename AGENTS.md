@@ -61,20 +61,20 @@ CI (`.github/workflows/test.yaml`) runs `make test` + `make lint` and fails if t
 User-facing changes (flags, commands, report shape, GitHub Action inputs) must be reflected in the docs. The tree is:
 
 - `README.md` — features list, install, quickstart, commands table, doc links.
-- `docs/guides/manifests-validation.md` — `validate` reference: flag table, schema resolution, skip rules, CEL rules, config file with example `.fluxschema.yml`.
-- `docs/guides/custom-schema-catalog.md` — `extract crd`/`extract k8s`/`extract openshift` reference and catalog hosting/refresh.
-- `docs/guides/repo-discovery.md` — `discover` reference: flags, classification rules, output formats, and how AI agents should read the inventory.
-- `docs/config/README.md` + `docs/config/config-v1beta1.json` — config file envelope and its JSON Schema.
-- `docs/report/README.md` + `docs/report/report-v1beta1.json` — report file envelope and its JSON Schema.
-- `docs/inventory/README.md` + `docs/inventory/inventory-v1beta1.json` — inventory envelope (`discover` output) and its JSON Schema.
+- `docs/manifests-validation.md` — `validate` reference: flag table, schema resolution, skip rules, CEL rules, config file with example `.fluxschema.yml`.
+- `docs/custom-schema-catalog.md` — `extract crd`/`extract k8s`/`extract openshift` reference and catalog hosting/refresh.
+- `docs/repo-discovery.md` — `discover` reference: flags, classification rules, output formats, and how AI agents should read the inventory.
+- `docs/config.md` + `docs/config-v1beta1.json` — config file envelope and its JSON Schema.
+- `docs/report.md` + `docs/report-v1beta1.json` — report file envelope and its JSON Schema.
+- `docs/inventory.md` + `docs/inventory-v1beta1.json` — inventory envelope (`discover` output) and its JSON Schema.
 - `actions/setup/README.md` + `actions/validate/README.md` — GitHub Action inputs and example workflows.
 
 Apply these rules:
 
 - New or changed flag: update the flag table in the matching guide. For `validate` flags that are config-file-eligible, also extend the example `.fluxschema.yml` block in the "Config file" section.
-- New subcommand: add a row to `README.md`'s "Commands" table and either a new section in an existing guide or a dedicated guide under `docs/guides/`.
-- Report shape change: update `docs/report/README.md` (and `schema-1.0.0.json` per its versioning rules) and the JSON example under "Output" in `docs/guides/manifests-validation.md`.
-- Inventory shape change: edit `api/v1beta1/inventory_types.go`, run `make generate-json-schemas` to regenerate `docs/inventory/inventory-v1beta1.json` (also copied into the catalog), then update `docs/inventory/README.md` and the examples in `docs/guides/repo-discovery.md`.
+- New subcommand: add a row to `README.md`'s "Commands" table and either a new section in an existing guide or a dedicated guide under `docs/`.
+- Report shape change: update `docs/report.md` (and `schema-1.0.0.json` per its versioning rules) and the JSON example under "Output" in `docs/manifests-validation.md`.
+- Inventory shape change: edit `api/v1beta1/inventory_types.go`, run `make generate-json-schemas` to regenerate `docs/inventory-v1beta1.json` (also copied into the catalog), then update `docs/inventory.md` and the examples in `docs/repo-discovery.md`.
 - GitHub Action change: when a `validate.sh` argument or an `action.yaml` input changes, refresh the inputs table and example workflow in `actions/validate/README.md`.
 
 ## Builtin Schema Catalog

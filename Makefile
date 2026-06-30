@@ -72,7 +72,7 @@ generate-api: controller-gen ## Generate API artifacts
 
 .PHONY: generate-json-schemas
 generate-json-schemas: generate-api ## Generate JSON Schemas
-	mkdir -p ./catalog/latest/schema.plugin.fluxcd.io ./docs/config ./docs/report ./docs/inventory
+	mkdir -p ./catalog/latest/schema.plugin.fluxcd.io ./docs
 	go run ./tools/schema-gen \
 		-controller-gen "$(CONTROLLER_GEN)" \
 		-group "schema.plugin.fluxcd.io" \
@@ -81,9 +81,9 @@ generate-json-schemas: generate-api ## Generate JSON Schemas
 		-type "github.com/fluxcd/flux-schema/api/v1beta1.ReportSpec" \
 		-field "report" \
 		-schema-field \
-		-id "https://raw.githubusercontent.com/fluxcd/flux-schema/main/docs/report/report-v1beta1.json" \
-		-out ./docs/report/report-v1beta1.json
-	cp ./docs/report/report-v1beta1.json ./catalog/latest/schema.plugin.fluxcd.io/report_v1beta1.json
+		-id "https://raw.githubusercontent.com/fluxcd/flux-schema/main/docs/report-v1beta1.json" \
+		-out ./docs/report-v1beta1.json
+	cp ./docs/report-v1beta1.json ./catalog/latest/schema.plugin.fluxcd.io/report_v1beta1.json
 	go run ./tools/schema-gen \
 		-controller-gen "$(CONTROLLER_GEN)" \
 		-group "schema.plugin.fluxcd.io" \
@@ -91,9 +91,9 @@ generate-json-schemas: generate-api ## Generate JSON Schemas
 		-kind "Config" \
 		-type "github.com/fluxcd/flux-schema/api/v1beta1.ValidateConfig" \
 		-field "validate" \
-		-id "https://raw.githubusercontent.com/fluxcd/flux-schema/main/docs/config/config-v1beta1.json" \
-		-out ./docs/config/config-v1beta1.json
-	cp ./docs/config/config-v1beta1.json ./catalog/latest/schema.plugin.fluxcd.io/config_v1beta1.json
+		-id "https://raw.githubusercontent.com/fluxcd/flux-schema/main/docs/config-v1beta1.json" \
+		-out ./docs/config-v1beta1.json
+	cp ./docs/config-v1beta1.json ./catalog/latest/schema.plugin.fluxcd.io/config_v1beta1.json
 	go run ./tools/schema-gen \
 		-controller-gen "$(CONTROLLER_GEN)" \
 		-group "schema.plugin.fluxcd.io" \
@@ -102,9 +102,9 @@ generate-json-schemas: generate-api ## Generate JSON Schemas
 		-type "github.com/fluxcd/flux-schema/api/v1beta1.InventorySpec" \
 		-field "inventory" \
 		-schema-field \
-		-id "https://raw.githubusercontent.com/fluxcd/flux-schema/main/docs/inventory/inventory-v1beta1.json" \
-		-out ./docs/inventory/inventory-v1beta1.json
-	cp ./docs/inventory/inventory-v1beta1.json ./catalog/latest/schema.plugin.fluxcd.io/inventory_v1beta1.json
+		-id "https://raw.githubusercontent.com/fluxcd/flux-schema/main/docs/inventory-v1beta1.json" \
+		-out ./docs/inventory-v1beta1.json
+	cp ./docs/inventory-v1beta1.json ./catalog/latest/schema.plugin.fluxcd.io/inventory_v1beta1.json
 
 ##@ Dependencies
 
