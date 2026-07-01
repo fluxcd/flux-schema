@@ -149,7 +149,7 @@ surface for tools and AI agents. It can be uploaded as a workflow artifact:
 | Name            | Description                                                                                                                   | Default           |
 |-----------------|-------------------------------------------------------------------------------------------------------------------------------|-------------------|
 | `path`          | Root directory to validate (relative to the repository root).                                                                 | `.`               |
-| `exclude`       | Newline-separated list of directories to exclude from validation.                                                             | `""`              |
+| `exclude`       | Newline-separated list of directories to exclude from validation and the bundle.                                              | `""`              |
 | `config`        | Path to Flux Schema CLI config file. When the file does not exist, sensible defaults targeting the built-in catalog are used. | `.fluxschema.yml` |
 | `helm-charts`   | Render Helm charts with `helm template` using their default values and validate the output. Requires `helm` on `PATH`.        | `"false"`         |
 | `output-bundle` | Path to a file where all manifests and rendered overlays are merged as a single YAML stream with provenance comments.         | `""`              |

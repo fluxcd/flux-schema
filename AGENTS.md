@@ -45,6 +45,8 @@ All development goes through the Makefile — do not invoke `go build` directly,
 - `make lint` — runs golangci-lint with revive, staticcheck, and goimports
 - `make run GO_RUN_ARGS="version -o json"` — build then run the CLI with args
 
+After changing any shell script under `scripts/` or `actions/`, run `shellcheck scripts/*.sh actions/validate/*.sh` — CI runs the same check and fails on any warning.
+
 CI (`.github/workflows/test.yaml`) runs `make test` + `make lint` and fails if the working tree becomes dirty, so always run `make test` before committing.
 
 ### Code Conventions
