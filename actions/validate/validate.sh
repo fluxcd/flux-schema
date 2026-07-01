@@ -24,8 +24,8 @@
 # are merged on the main branch that's synced by Flux.
 
 # Prerequisites
-# - flux-schema >= 0.2
-# - kubectl >= 1.36
+# - flux-schema >= 0.6 (standalone binary, or the 'flux schema' plugin)
+# - kustomize, or kubectl (uses its embedded kustomize via 'kubectl kustomize')
 # - helm >= 4.0 (only with --helm-charts)
 
 # Usage examples:
@@ -49,6 +49,15 @@ set -o pipefail
 # track validation and build failures
 errors=0
 
+# running tally of resources across every flux-schema invocation, parsed
+# in-memory from each run's "Summary:" line.
+# summaries_parsed stays 0 when output is non-text (e.g. a '--' or config
+# override to json/yaml), so the report can omit a misleading "0 valid".
+valid_count=0
+invalid_count=0
+skipped_count=0
+summaries_parsed=0
+
 # mirror kustomize-controller build options
 kustomize_flags=("--load-restrictor=LoadRestrictionsNone")
 kustomize_config="kustomization.yaml"
@@ -58,9 +67,10 @@ helm_flags=("--include-crds")
 helm_config="Chart.yaml"
 
 # Default flags used when no config file is found. Strip SOPS-encrypted
-# fields before validation (Flux removes these at apply time) and skip
-# documents whose schema is not in the catalog.
-default_flux_schema_flags=("--skip-json-path=/sops" "--skip-missing-schemas" "--verbose")
+# fields before validation (Flux removes these at apply time), skip documents
+# whose schema is not in the catalog, and pin text output so the per-resource
+# summary tally is parsed reliably (a config or '--' override owns the format).
+default_flux_schema_flags=("--skip-json-path=/sops" "--skip-missing-schemas" "--verbose" "--output=text")
 
 # Effective flags passed to flux-schema, populated by resolve_config.
 flux_schema_flags=()
@@ -69,10 +79,14 @@ flux_schema_flags=()
 # When set, they take precedence over the config file and default flags.
 flux_schema_args=()
 
-# Effective flux-schema invocation, populated by resolve_cli.
-# Either ("flux-schema") for the standalone CLI or ("flux" "schema") for the
-# Flux CLI plugin.
+# Effective flux-schema invocation, populated by resolve_flux_schema.
+# Either ("flux" "schema") for the Flux CLI plugin or ("flux-schema") for the
+# standalone CLI.
 flux_schema_cmd=()
+
+# Effective kustomize invocation, populated by resolve_kustomize.
+# Either ("kustomize" "build") or ("kubectl" "kustomize").
+kustomize_cmd=()
 
 # root directory to validate
 root_dir="."
@@ -107,7 +121,7 @@ usage() {
   echo "  -d, --dir <dir>             Root directory to validate (default: current directory)"
   echo "  -c, --config <file>         Path to a flux-schema config file (default: .fluxschema.yml)."
   echo "                              When the file does not exist, sensible defaults are used."
-  echo "  -e, --exclude <dir>         Directory to exclude from validation (can be repeated)"
+  echo "  -e, --exclude <dir>         Directory to exclude from validation and the bundle (can be repeated)"
   echo "  -b, --output-bundle <file>  Write all standalone manifests and rendered kustomize"
   echo "                              overlays to a single YAML file with provenance comments"
   echo "  -H, --helm-charts           Render Helm charts with 'helm template' using their"
@@ -175,8 +189,8 @@ parse_args() {
 }
 
 check_prerequisites() {
-  if ! command -v kubectl &> /dev/null; then
-    echo "ERROR - kubectl is not installed" >&2
+  if [[ ! -d "$root_dir" ]]; then
+    echo "ERROR - directory not found: $root_dir" >&2
     exit 1
   fi
   if [[ "$build_helm_charts" == true ]] && ! command -v helm &> /dev/null; then
@@ -185,15 +199,29 @@ check_prerequisites() {
   fi
 }
 
-# Pick the flux-schema invocation. Prefer the standalone CLI; fall back to
-# the Flux CLI plugin form ('flux schema') when only that is available.
-resolve_cli() {
-  if command -v flux-schema &> /dev/null; then
-    flux_schema_cmd=("flux-schema")
-  elif command -v flux &> /dev/null && flux schema --help &> /dev/null; then
+# Pick the flux-schema invocation. Prefer the 'flux schema' plugin dispatch
+# (the documented 'flux plugin install schema' path); fall back to a standalone
+# flux-schema binary on PATH.
+resolve_flux_schema() {
+  if command -v flux &> /dev/null && flux schema --help &> /dev/null; then
     flux_schema_cmd=("flux" "schema")
+  elif command -v flux-schema &> /dev/null; then
+    flux_schema_cmd=("flux-schema")
   else
-    echo "ERROR - flux-schema is not installed (tried 'flux-schema' and 'flux schema' plugin)" >&2
+    echo "ERROR - flux-schema is not installed (tried 'flux schema' plugin and 'flux-schema')" >&2
+    exit 1
+  fi
+}
+
+# Pick the kustomize invocation. Prefer the standalone CLI (independently
+# updatable); fall back to kubectl's embedded kustomize ('kubectl kustomize').
+resolve_kustomize() {
+  if command -v kustomize &> /dev/null; then
+    kustomize_cmd=("kustomize" "build")
+  elif command -v kubectl &> /dev/null; then
+    kustomize_cmd=("kubectl" "kustomize")
+  else
+    echo "ERROR - neither kustomize nor kubectl is installed" >&2
     exit 1
   fi
 }
@@ -336,21 +364,31 @@ is_non_kustomize_excluded_dir() {
 detect_excluded_dirs() {
   while IFS= read -r -d $'\0' file; do
     auto_skip_dirs+=("$(dirname "$file")")
-  done < <(find "$root_dir" -path '*/.*' -prune -o -type f -name '*.tf' -print0)
+  done < <(find "$root_dir" -mindepth 1 -name '.*' -prune -o -type f -name '*.tf' -print0)
 
   while IFS= read -r -d $'\0' file; do
     auto_skip_dirs+=("$(dirname "$file")")
     helm_chart_dirs+=("$(dirname "$file")")
-  done < <(find "$root_dir" -path '*/.*' -prune -o -type f -name "$helm_config" -print0)
+  done < <(find "$root_dir" -mindepth 1 -name '.*' -prune -o -type f -name "$helm_config" -print0)
 
   while IFS= read -r -d $'\0' file; do
     kustomize_dirs+=("$(dirname "$file")")
-  done < <(find "$root_dir" -path '*/.*' -prune -o -type f -name "$kustomize_config" -print0)
+  done < <(find "$root_dir" -mindepth 1 -name '.*' -prune -o -type f -name "$kustomize_config" -print0)
+}
+
+# Add a captured flux-schema run's "Summary:" counts to the running tally.
+accumulate_summary() {
+  if [[ "$1" =~ Valid:\ ([0-9]+),\ Invalid:\ ([0-9]+),\ Skipped:\ ([0-9]+) ]]; then
+    valid_count=$((valid_count + BASH_REMATCH[1]))
+    invalid_count=$((invalid_count + BASH_REMATCH[2]))
+    skipped_count=$((skipped_count + BASH_REMATCH[3]))
+    summaries_parsed=$((summaries_parsed + 1))
+  fi
 }
 
 validate_kubernetes_manifests() {
   echo "INFO - Validating Kubernetes manifests"
-  local files=()
+  local files=() output dir
   while IFS= read -r -d $'\0' file; do
     dir="$(dirname "$file")"
     if is_excluded_dir "$dir"; then
@@ -360,21 +398,27 @@ validate_kubernetes_manifests() {
       continue
     fi
     files+=("$file")
-  done < <(find "$root_dir" -path '*/.*' -prune -o -type f -name '*.yaml' -print0)
+  done < <(find "$root_dir" -mindepth 1 -name '.*' -prune -o -type f \( -name '*.yaml' -o -name '*.yml' \) -print0)
   if [[ ${#files[@]} -gt 0 ]]; then
     if [[ -n "$bundle_file" ]]; then
       for file in "${files[@]}"; do
+        # SC2094: $file is never the bundle file (filtered above via -ef)
+        # shellcheck disable=SC2094
         bundle_append "file: $(rel_path "$file")" < "$file"
       done
     fi
-    if ! "${flux_schema_cmd[@]}" validate "${flux_schema_flags[@]}" "${files[@]}"; then
+    # Capture stdout+stderr in memory so the run can be both printed and
+    # tallied; the assignment lives in the 'if' so errexit does not fire.
+    if ! output="$("${flux_schema_cmd[@]}" validate "${flux_schema_flags[@]}" "${files[@]}" 2>&1)"; then
       errors=$((errors + 1))
     fi
+    printf '%s\n' "$output"
+    accumulate_summary "$output"
   fi
 }
 
 validate_kustomize_overlays() {
-  local overlay build_output
+  local overlay build_output output dir
   while IFS= read -r -d $'\0' file; do
     dir="$(dirname "$file")"
     if is_non_kustomize_excluded_dir "$dir"; then
@@ -382,25 +426,27 @@ validate_kustomize_overlays() {
     fi
     overlay="${file/%$kustomize_config}"
     echo "INFO - Validating kustomize overlay $overlay"
-    if ! build_output=$(kubectl kustomize "$overlay" "${kustomize_flags[@]}"); then
+    if ! build_output=$("${kustomize_cmd[@]}" "$overlay" "${kustomize_flags[@]}"); then
       echo "ERROR - kustomize build failed for $overlay" >&2
       bundle_append "kustomize-overlay: $(rel_path "$overlay") (build failed)" < /dev/null
       errors=$((errors + 1))
       continue
     fi
-    bundle_append "kustomize-overlay: $(rel_path "$overlay")" <<< "$build_output"
-    if ! printf '%s\n' "$build_output" | \
-      "${flux_schema_cmd[@]}" validate "${flux_schema_flags[@]}"; then
+    [[ -n "$bundle_file" ]] && bundle_append "kustomize-overlay: $(rel_path "$overlay")" <<< "$build_output"
+    if ! output="$(printf '%s\n' "$build_output" | \
+      "${flux_schema_cmd[@]}" validate "${flux_schema_flags[@]}" 2>&1)"; then
       errors=$((errors + 1))
     fi
-  done < <(find "$root_dir" -path '*/.*' -prune -o -type f -name "$kustomize_config" -print0)
+    printf '%s\n' "$output"
+    accumulate_summary "$output"
+  done < <(find "$root_dir" -mindepth 1 -name '.*' -prune -o -type f -name "$kustomize_config" -print0)
 }
 
 validate_helm_charts() {
   if [[ "$build_helm_charts" != true ]]; then
     return 0
   fi
-  local chart build_output
+  local chart build_output output
   for chart in "${helm_chart_dirs[@]}"; do
     if is_user_excluded_dir "$chart" || is_nested_chart_dir "$chart"; then
       continue
@@ -412,30 +458,46 @@ validate_helm_charts() {
       errors=$((errors + 1))
       continue
     fi
-    bundle_append "helm-chart: $(rel_path "$chart")" <<< "$build_output"
-    if ! printf '%s\n' "$build_output" | \
-      "${flux_schema_cmd[@]}" validate "${flux_schema_flags[@]}"; then
+    [[ -n "$bundle_file" ]] && bundle_append "helm-chart: $(rel_path "$chart")" <<< "$build_output"
+    if ! output="$(printf '%s\n' "$build_output" | \
+      "${flux_schema_cmd[@]}" validate "${flux_schema_flags[@]}" 2>&1)"; then
       errors=$((errors + 1))
     fi
+    printf '%s\n' "$output"
+    accumulate_summary "$output"
   done
 }
 
-# Print the final outcome and exit non-zero when any build or validation failed
+# Print the final outcome and exit non-zero when any build or validation failed.
+# The exit decision comes from the per-invocation error count (robust even if
+# output is reformatted); the valid/invalid/skipped tally is parsed from the
+# collected "Summary:" lines for a precise, agent-readable breakdown.
 report_results() {
   if [[ -n "$bundle_file" ]]; then
     echo "INFO - Bundle written to $bundle_file"
   fi
+  # Only append the resource breakdown when text Summary lines were parsed;
+  # a non-text output override leaves the tally at zero, which would mislead.
+  local tally=""
+  if [[ $summaries_parsed -gt 0 ]]; then
+    tally=" (${valid_count} valid, ${skipped_count} skipped)"
+  fi
   if [[ $errors -gt 0 ]]; then
-    echo "ERROR - Validation failed with $errors error(s)" >&2
+    if [[ $summaries_parsed -gt 0 ]]; then
+      echo "ERROR - Validation failed: ${errors} error(s); ${invalid_count} invalid resource(s) (${valid_count} valid, ${skipped_count} skipped)" >&2
+    else
+      echo "ERROR - Validation failed with ${errors} error(s)" >&2
+    fi
     exit 1
   fi
-  echo "INFO - All validations passed"
+  echo "INFO - All validations passed${tally}"
 }
 
 # Main
 parse_args "$@"
 check_prerequisites
-resolve_cli
+resolve_flux_schema
+resolve_kustomize
 resolve_config
 init_bundle
 detect_excluded_dirs

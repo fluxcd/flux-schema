@@ -20,15 +20,28 @@ jobs:
           go-version: 1.26.x
       - name: Setup Flux CLI
         uses: fluxcd/flux2/action@1fd61a06264d71cf445ed55c4f14d401d26a1c64 # v2.8.8
+      - name: Run shellcheck
+        run: shellcheck scripts/*.sh actions/validate/*.sh
       - name: Run tests
         run: make test
       - name: Run linters
         run: make lint
       - name: Build binary
         run: make build
+      - name: Add flux-schema to PATH
+        run: echo "${GITHUB_WORKSPACE}/bin" >> "$GITHUB_PATH"
       - name: Run smoke test
         run: |
-          flux install --export | ./bin/flux-schema validate -v --schema-location ./catalog/latest
+          flux install --export | flux-schema validate -v --schema-location ./catalog/latest
+      - name: Checkout example repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          repository: fluxcd/flux2-kustomize-helm-example
+          path: example
+      - name: Test validate action
+        uses: ./actions/validate
+        with:
+          path: example
       - name: Build Docker image
         run: make docker-build
       - name: Run Docker smoke test

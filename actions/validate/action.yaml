@@ -10,7 +10,7 @@ inputs:
     required: false
     default: "."
   exclude:
-    description: Newline-separated list of directories to exclude from validation
+    description: Newline-separated list of directories to exclude from validation and the bundle
     required: false
     default: ""
   config:
