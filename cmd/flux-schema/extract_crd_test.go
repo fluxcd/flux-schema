@@ -6,6 +6,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -181,6 +182,118 @@ func TestExtractCRDCmd_HelmReleaseGolden(t *testing.T) {
 	want, err := os.ReadFile(goldenPath)
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(string(got)).To(Equal(string(want)))
+}
+
+// To refresh the field-index golden file, run:
+//
+//	make build
+//	tmp=$(mktemp -d)
+//	./bin/flux-schema extract crd \
+//	  cmd/flux-schema/testdata/extract/helmrelease-helm-v2.yaml \
+//	  --output-dir "$tmp" --with-field-index --strip-description
+//	cp "$tmp/helm.toolkit.fluxcd.io/helmrelease_v2.fields.txt" \
+//	  cmd/flux-schema/testdata/extract/helm.toolkit.fluxcd.io/helmrelease_v2.fields.txt
+func TestExtractCRDCmd_HelmReleaseFieldIndexGolden(t *testing.T) {
+	g := NewWithT(t)
+
+	inputPath := filepath.Join("testdata", "extract", "helmrelease-helm-v2.yaml")
+	goldenPath := filepath.Join("testdata", "extract", "helm.toolkit.fluxcd.io", "helmrelease_v2.fields.txt")
+
+	outDir := t.TempDir()
+	_, err := executeCommand([]string{
+		"extract", "crd", inputPath,
+		"--output-dir", outDir,
+		"--with-field-index",
+		"--strip-description",
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	got, err := os.ReadFile(filepath.Join(outDir, "helm.toolkit.fluxcd.io", "helmrelease_v2.fields.txt"))
+	g.Expect(err).ToNot(HaveOccurred())
+
+	want, err := os.ReadFile(goldenPath)
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(string(got)).To(Equal(string(want)))
+
+	jsonData, err := os.ReadFile(filepath.Join(outDir, "helm.toolkit.fluxcd.io", "helmrelease_v2.json"))
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(string(jsonData)).ToNot(ContainSubstring(`"description"`))
+}
+
+func TestExtractCRDCmd_WithFieldIndexFlagOff(t *testing.T) {
+	g := NewWithT(t)
+
+	outDir := t.TempDir()
+	input := writeCRDFixture(t)
+
+	_, err := executeCommand([]string{"extract", "crd", input, "--output-dir", outDir})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	_, err = os.Stat(filepath.Join(outDir, "example.com", "widget_v1.fields.txt"))
+	g.Expect(os.IsNotExist(err)).To(BeTrue())
+}
+
+func TestExtractCRDCmd_WithFieldIndexNonJSONTemplate(t *testing.T) {
+	g := NewWithT(t)
+
+	outDir := t.TempDir()
+	input := writeCRDFixture(t)
+
+	_, err := executeCommand([]string{
+		"extract", "crd", input,
+		"--output-dir", outDir,
+		"--output-format", "{{ .Kind }}_{{ .Version }}.yaml",
+		"--with-field-index",
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	_, err = os.Stat(filepath.Join(outDir, "widget_v1.yaml.fields.txt"))
+	g.Expect(err).ToNot(HaveOccurred())
+}
+
+func TestExtractCRDCmd_WithFieldIndexClusterScope(t *testing.T) {
+	g := NewWithT(t)
+
+	fixture := `apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: clusterwidgets.example.com
+spec:
+  group: example.com
+  scope: Cluster
+  names:
+    kind: ClusterWidget
+  versions:
+    - name: v1
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                name:
+                  type: string
+`
+	tmp := t.TempDir()
+	input := filepath.Join(tmp, "fixture.yaml")
+	if err := os.WriteFile(input, []byte(fixture), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+	outDir := filepath.Join(tmp, "out")
+
+	_, err := executeCommand([]string{"extract", "crd", input, "--output-dir", outDir, "--with-field-index"})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	data, err := os.ReadFile(filepath.Join(outDir, "example.com", "clusterwidget_v1.fields.txt"))
+	g.Expect(err).ToNot(HaveOccurred())
+	lines := strings.Split(strings.TrimSuffix(string(data), "\n"), "\n")
+	g.Expect(lines[:3]).To(Equal([]string{
+		"apiVersion <string> enum=example.com/v1",
+		"kind <string> enum=ClusterWidget",
+		"metadata.name <string> (required)",
+	}))
+	g.Expect(string(data)).ToNot(ContainSubstring("metadata.namespace"))
 }
 
 func TestExtractCRDCmd_StripDescription(t *testing.T) {

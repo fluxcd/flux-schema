@@ -91,15 +91,23 @@ func extractCRDCmdRun(cmd *cobra.Command, args []string) error {
 			continue
 		}
 		crds, errs := extractor.ExtractCRDs(data)
-		if extractCRDArgs.StripDescription {
-			for _, c := range crds {
-				extractor.StripDescriptions(c.JSON)
-			}
-		}
 		for _, e := range errs {
 			failures = append(failures, fmt.Errorf("%s: %w", path, e))
 		}
 		for _, crd := range crds {
+			var index string
+			if extractCRDArgs.WithFieldIndex {
+				var err error
+				index, err = flattenSchema(crd)
+				if err != nil {
+					failures = append(failures, fmt.Errorf("%s: %w", path, err))
+				}
+			}
+
+			if extractCRDArgs.StripDescription {
+				extractor.StripDescriptions(crd.JSON)
+			}
+
 			relPath, err := writeCRDSchema(path, crd, destDir)
 			if err != nil {
 				failures = append(failures, err)
@@ -111,6 +119,19 @@ func extractCRDCmdRun(cmd *cobra.Command, args []string) error {
 			}
 			cmd.Printf("OK   %s -> %s\n", path, displayPath)
 			written++
+
+			if extractCRDArgs.WithFieldIndex && index != "" {
+				indexRelPath, err := writeFieldIndex(destDir, relPath, index)
+				if err != nil {
+					failures = append(failures, fmt.Errorf("%s: %w", path, err))
+					continue
+				}
+				displayPath := filepath.Join(destDir, indexRelPath)
+				if archive != "" {
+					displayPath = indexRelPath
+				}
+				cmd.Printf("OK   %s -> %s\n", path, displayPath)
+			}
 		}
 	}
 

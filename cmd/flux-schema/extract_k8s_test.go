@@ -35,10 +35,46 @@ const minimalSwagger = `{
   }
 }`
 
+const minimalNamespacedSwagger = `{
+  "paths": {
+    "/apis/example.com/v1/namespaces/{namespace}/widgets": {
+      "get": {
+        "x-kubernetes-group-version-kind": {
+          "group": "example.com",
+          "version": "v1",
+          "kind": "Widget"
+        }
+      }
+    }
+  },
+  "definitions": {
+    "example.v1.Widget": {
+      "type": "object",
+      "properties": {
+        "spec": {
+          "type": "object",
+          "properties": {
+            "name": {"type": "string"}
+          },
+          "required": ["name"]
+        }
+      },
+      "x-kubernetes-group-version-kind": [
+        {"group": "example.com", "version": "v1", "kind": "Widget"}
+      ]
+    }
+  }
+}`
+
 func writeSwaggerFixture(t *testing.T) string {
 	t.Helper()
+	return writeSwaggerDataFixture(t, minimalSwagger)
+}
+
+func writeSwaggerDataFixture(t *testing.T, data string) string {
+	t.Helper()
 	path := filepath.Join(t.TempDir(), "swagger.json")
-	if err := os.WriteFile(path, []byte(minimalSwagger), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte(data), 0o644); err != nil {
 		t.Fatalf("write fixture: %v", err)
 	}
 	return path
@@ -78,6 +114,37 @@ func TestExtractK8sCmd_StripDescription(t *testing.T) {
 	data, err := os.ReadFile(filepath.Join(outDir, "example.com", "widget_v1.json"))
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(string(data)).ToNot(ContainSubstring(`"description"`))
+}
+
+func TestExtractK8sCmd_WithFieldIndexNamespacedScope(t *testing.T) {
+	g := NewWithT(t)
+
+	outDir := t.TempDir()
+	input := writeSwaggerDataFixture(t, minimalNamespacedSwagger)
+
+	out, err := executeCommand([]string{"extract", "k8s", input, "--output-dir", outDir, "--with-field-index"})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("OK   " + filepath.Join("example.com", "widget_v1.fields.txt")))
+	g.Expect(out).To(ContainSubstring("Summary: 1 schemas extracted"))
+
+	data, err := os.ReadFile(filepath.Join(outDir, "example.com", "widget_v1.fields.txt"))
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(string(data)).To(ContainSubstring("metadata.namespace <string> (required)\n"))
+}
+
+func TestExtractK8sCmd_WithFieldIndexUnknownScope(t *testing.T) {
+	g := NewWithT(t)
+
+	outDir := t.TempDir()
+	input := writeSwaggerFixture(t)
+
+	_, err := executeCommand([]string{"extract", "k8s", input, "--output-dir", outDir, "--with-field-index"})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	data, err := os.ReadFile(filepath.Join(outDir, "example.com", "widget_v1.fields.txt"))
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(string(data)).To(ContainSubstring("metadata.namespace <string>\n"))
+	g.Expect(string(data)).ToNot(ContainSubstring("metadata.namespace <string> (required)"))
 }
 
 func TestExtractK8sCmd_StdinDash(t *testing.T) {
