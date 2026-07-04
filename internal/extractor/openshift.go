@@ -79,10 +79,12 @@ var (
 // The returned slice is sorted by (Group, Version, Kind). Errors are
 // aggregated: a malformed definition does not stop extraction of the rest.
 func ExtractOpenShift(data []byte) ([]Schema, []error) {
-	definitions, names, errs := parseSwaggerDefinitions(data)
+	root, definitions, names, errs := parseSwaggerDocument(data)
 	if errs != nil {
 		return nil, errs
 	}
+	scopes := scopeFromPaths(root)
+	source := sourceWithVersion("OpenShift", openShiftInfoVersion(root))
 
 	var out []Schema
 	for _, name := range names {
@@ -125,12 +127,20 @@ func ExtractOpenShift(data []byte) ([]Schema, []error) {
 			Group:   gvk.Group,
 			Version: gvk.Version,
 			Kind:    gvk.Kind,
+			Scope:   scopes[gvk],
+			Source:  source,
 			JSON:    schema,
 		})
 	}
 
 	sortSchemasByGVK(out)
 	return out, errs
+}
+
+func openShiftInfoVersion(root map[string]any) string {
+	info, _ := root["info"].(map[string]any)
+	version, _ := info["version"].(string)
+	return version
 }
 
 // hasGitOpsShape reports whether def carries the apiVersion, kind, and

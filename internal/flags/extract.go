@@ -14,6 +14,8 @@ type ExtractOutput struct {
 	Dir              string
 	Format           string
 	StripDescription bool
+	WithFieldIndex   bool
+	IndexSource      string
 }
 
 // NewExtractOutput returns an ExtractOutput populated with the default values
@@ -26,8 +28,8 @@ func NewExtractOutput() ExtractOutput {
 	}
 }
 
-// Register wires -d/--output-dir, -f/--output-format and --strip-description
-// onto cmd with completion hints and help text.
+// Register wires the shared extract output flags onto cmd with completion
+// hints and help text.
 func (e *ExtractOutput) Register(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&e.Dir, "output-dir", "d", e.Dir,
 		"directory where JSON Schema files are written (created if missing)")
@@ -36,5 +38,12 @@ func (e *ExtractOutput) Register(cmd *cobra.Command) {
 			"variables: .Group, .GroupPrefix, .Kind, .Version")
 	cmd.Flags().BoolVar(&e.StripDescription, "strip-description", e.StripDescription,
 		"strip description fields from the extracted schemas to reduce their size")
+	cmd.Flags().BoolVar(&e.WithFieldIndex, "with-field-index", e.WithFieldIndex,
+		"also write a .fields.txt field index next to each schema: one greppable line "+
+			"per field with its dotted path, type, constraints, and description; "+
+			"map values are addressed as path.<key>.field")
+	cmd.Flags().StringVar(&e.IndexSource, "index-source", e.IndexSource,
+		"source name and version recorded in the field index header, overriding auto-detection "+
+			"(e.g. 'my-operator v1.2.3')")
 	_ = cmd.MarkFlagDirname("output-dir")
 }

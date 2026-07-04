@@ -136,7 +136,72 @@ func TestExtractCRDs_BareCRD(t *testing.T) {
 	g.Expect(crds[0].Group).To(Equal("example.com"))
 	g.Expect(crds[0].Kind).To(Equal("Widget"))
 	g.Expect(crds[0].Version).To(Equal("v1"))
+	g.Expect(crds[0].Source).To(BeEmpty())
 	g.Expect(crds[0].JSON).To(HaveKey("properties"))
+}
+
+func TestExtractCRDs_Source(t *testing.T) {
+	tests := []struct {
+		name   string
+		labels string
+		want   string
+	}{
+		{
+			name: "part of and version",
+			labels: `
+    app.kubernetes.io/part-of: flux
+    app.kubernetes.io/version: v1.2.3`,
+			want: "flux v1.2.3",
+		},
+		{
+			name: "part of only",
+			labels: `
+    app.kubernetes.io/part-of: flux`,
+			want: "flux",
+		},
+		{
+			name: "version only",
+			labels: `
+    app.kubernetes.io/version: v1.2.3`,
+			want: "v1.2.3",
+		},
+		{name: "no labels"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			labelsBlock := ""
+			if tt.labels != "" {
+				labelsBlock = "\n  labels:" + tt.labels
+			}
+			fixture := `
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: widgets.example.com` + labelsBlock + `
+spec:
+  group: example.com
+  names:
+    kind: Widget
+  versions:
+    - name: v1beta1
+      schema:
+        openAPIV3Schema:
+          type: object
+    - name: v1
+      schema:
+        openAPIV3Schema:
+          type: object
+`
+
+			crds, errs := ExtractCRDs([]byte(fixture))
+			g.Expect(errs).To(BeEmpty())
+			g.Expect(crds).To(HaveLen(2))
+			g.Expect(crds[0].Source).To(Equal(tt.want))
+			g.Expect(crds[1].Source).To(Equal(tt.want))
+		})
+	}
 }
 
 func TestExtractCRDs_List(t *testing.T) {
@@ -173,6 +238,125 @@ func TestExtractCRDs_MissingSchemaOnOneVersion(t *testing.T) {
 	g.Expect(errs[0].Error()).To(ContainSubstring(`"v1alpha1" has no schema.openAPIV3Schema`))
 	g.Expect(crds).To(HaveLen(1))
 	g.Expect(crds[0].Version).To(Equal("v1"))
+}
+
+func TestExtractCRDs_Scope(t *testing.T) {
+	tests := []struct {
+		name       string
+		crd        string
+		wantScopes []string
+	}{
+		{
+			name: "namespaced",
+			crd: `
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: widgets.example.com
+spec:
+  group: example.com
+  scope: Namespaced
+  names:
+    kind: Widget
+  versions:
+    - name: v1
+      schema:
+        openAPIV3Schema:
+          type: object
+    - name: v1beta1
+      schema:
+        openAPIV3Schema:
+          type: object
+`,
+			wantScopes: []string{"Namespaced", "Namespaced"},
+		},
+		{
+			name: "cluster",
+			crd: `
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: widgets.example.com
+spec:
+  group: example.com
+  scope: Cluster
+  names:
+    kind: Widget
+  versions:
+    - name: v1
+      schema:
+        openAPIV3Schema:
+          type: object
+`,
+			wantScopes: []string{"Cluster"},
+		},
+		{
+			name: "absent",
+			crd: `
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: widgets.example.com
+spec:
+  group: example.com
+  names:
+    kind: Widget
+  versions:
+    - name: v1
+      schema:
+        openAPIV3Schema:
+          type: object
+`,
+			wantScopes: []string{""},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			crds, errs := ExtractCRDs([]byte(tt.crd))
+			g.Expect(errs).To(BeEmpty())
+			g.Expect(crds).To(HaveLen(len(tt.wantScopes)))
+			for i, wantScope := range tt.wantScopes {
+				g.Expect(crds[i].Scope).To(Equal(wantScope))
+			}
+		})
+	}
+}
+
+func TestExtractCRDs_DeprecatedVersions(t *testing.T) {
+	g := NewWithT(t)
+	fixture := `
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: widgets.example.com
+spec:
+  group: example.com
+  names:
+    kind: Widget
+  versions:
+    - name: v1beta1
+      deprecated: true
+      deprecationWarning: use v1 instead
+      schema:
+        openAPIV3Schema:
+          type: object
+    - name: v1
+      schema:
+        openAPIV3Schema:
+          type: object
+`
+
+	crds, errs := ExtractCRDs([]byte(fixture))
+	g.Expect(errs).To(BeEmpty())
+	g.Expect(crds).To(HaveLen(2))
+	g.Expect(crds[0].Version).To(Equal("v1beta1"))
+	g.Expect(crds[0].Deprecated).To(BeTrue())
+	g.Expect(crds[0].DeprecationWarning).To(Equal("use v1 instead"))
+	g.Expect(crds[1].Version).To(Equal("v1"))
+	g.Expect(crds[1].Deprecated).To(BeFalse())
+	g.Expect(crds[1].DeprecationWarning).To(BeEmpty())
 }
 
 func TestExtractCRDs_NonMappingDocumentIsError(t *testing.T) {

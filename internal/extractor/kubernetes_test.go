@@ -41,6 +41,20 @@ func TestExtractKubernetes_NonObjectRoot(t *testing.T) {
 	g.Expect(errs[0].Error()).To(ContainSubstring("not a JSON object"))
 }
 
+func TestParseSwaggerDefinitions(t *testing.T) {
+	g := NewWithT(t)
+	doc := map[string]any{
+		"definitions": map[string]any{
+			"b": map[string]any{"type": "object"},
+			"a": map[string]any{"type": "object"},
+		},
+	}
+	definitions, names, errs := parseSwaggerDefinitions(mustMarshal(t, doc))
+	g.Expect(errs).To(BeNil())
+	g.Expect(definitions).To(HaveLen(2))
+	g.Expect(names).To(Equal([]string{"a", "b"}))
+}
+
 func TestExtractKubernetes_SkipsWatchEventAndOptions(t *testing.T) {
 	g := NewWithT(t)
 	doc := map[string]any{
@@ -82,6 +96,42 @@ func TestExtractKubernetes_SkipsDefinitionsWithoutGVK(t *testing.T) {
 	out, errs := ExtractKubernetes(mustMarshal(t, doc))
 	g.Expect(errs).To(BeEmpty())
 	g.Expect(out).To(BeEmpty())
+}
+
+func TestExtractKubernetes_Source(t *testing.T) {
+	tests := []struct {
+		name    string
+		version string
+		want    string
+	}{
+		{name: "version present", version: "v1.35.0", want: "Kubernetes v1.35.0"},
+		{name: "version missing", want: "Kubernetes"},
+		{name: "unversioned placeholder", version: "unversioned", want: "Kubernetes"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			doc := map[string]any{
+				"definitions": map[string]any{
+					"example.v1.Widget": map[string]any{
+						"type": "object",
+						"x-kubernetes-group-version-kind": []any{
+							map[string]any{"group": "example.com", "version": "v1", "kind": "Widget"},
+						},
+					},
+				},
+			}
+			if tt.version != "" {
+				doc["info"] = map[string]any{"version": tt.version}
+			}
+
+			out, errs := ExtractKubernetes(mustMarshal(t, doc))
+			g.Expect(errs).To(BeEmpty())
+			g.Expect(out).To(HaveLen(1))
+			g.Expect(out[0].Source).To(Equal(tt.want))
+		})
+	}
 }
 
 func TestExtractKubernetes_InlinesRef(t *testing.T) {
@@ -138,6 +188,59 @@ func TestExtractKubernetes_CoreGroupKept(t *testing.T) {
 	// Group left empty here; tmpl.Execute normalizes to "core".
 	g.Expect(out[0].Group).To(Equal(""))
 	g.Expect(out[0].Kind).To(Equal("Pod"))
+}
+
+func TestExtractKubernetes_ScopeFromPaths(t *testing.T) {
+	g := NewWithT(t)
+	doc := map[string]any{
+		"paths": map[string]any{
+			"/api/v1/namespaces/{namespace}/pods": map[string]any{
+				"get": map[string]any{
+					"x-kubernetes-group-version-kind": map[string]any{
+						"group": "", "version": "v1", "kind": "Pod",
+					},
+				},
+			},
+			"/api/v1/nodes": map[string]any{
+				"x-kubernetes-group-version-kind": map[string]any{
+					"group": "", "version": "v1", "kind": "Node",
+				},
+			},
+		},
+		"definitions": map[string]any{
+			"io.k8s.api.core.v1.Node": map[string]any{
+				"type": "object",
+				"x-kubernetes-group-version-kind": []any{
+					map[string]any{"group": "", "version": "v1", "kind": "Node"},
+				},
+			},
+			"io.k8s.api.core.v1.Pod": map[string]any{
+				"type": "object",
+				"x-kubernetes-group-version-kind": []any{
+					map[string]any{"group": "", "version": "v1", "kind": "Pod"},
+				},
+			},
+			"example.v1.Widget": map[string]any{
+				"type": "object",
+				"x-kubernetes-group-version-kind": []any{
+					map[string]any{"group": "example.com", "version": "v1", "kind": "Widget"},
+				},
+			},
+		},
+	}
+	out, errs := ExtractKubernetes(mustMarshal(t, doc))
+	g.Expect(errs).To(BeEmpty())
+	g.Expect(out).To(HaveLen(3))
+
+	scopesByKind := map[string]string{}
+	for _, schema := range out {
+		scopesByKind[schema.Kind] = schema.Scope
+	}
+	g.Expect(scopesByKind).To(Equal(map[string]string{
+		"Node":   "Cluster",
+		"Pod":    "Namespaced",
+		"Widget": "",
+	}))
 }
 
 func TestExtractKubernetes_IntOrString(t *testing.T) {

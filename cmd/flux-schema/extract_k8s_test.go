@@ -35,10 +35,63 @@ const minimalSwagger = `{
   }
 }`
 
+const minimalNamespacedSwagger = `{
+  "paths": {
+    "/apis/example.com/v1/namespaces/{namespace}/widgets": {
+      "get": {
+        "x-kubernetes-group-version-kind": {
+          "group": "example.com",
+          "version": "v1",
+          "kind": "Widget"
+        }
+      }
+    }
+  },
+  "definitions": {
+    "example.v1.Widget": {
+      "type": "object",
+      "properties": {
+        "spec": {
+          "type": "object",
+          "properties": {
+            "name": {"type": "string"}
+          },
+          "required": ["name"]
+        }
+      },
+      "x-kubernetes-group-version-kind": [
+        {"group": "example.com", "version": "v1", "kind": "Widget"}
+      ]
+    }
+  }
+}`
+
+const minimalListKindSwagger = `{
+  "definitions": {
+    "example.v1.WidgetList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {"type": "object"}
+        }
+      },
+      "x-kubernetes-group-version-kind": [
+        {"group": "example.com", "version": "v1", "kind": "WidgetList"}
+      ]
+    }
+  }
+}`
+
 func writeSwaggerFixture(t *testing.T) string {
 	t.Helper()
+	return writeSwaggerDataFixture(t, minimalSwagger)
+}
+
+func writeSwaggerDataFixture(t *testing.T, data string) string {
+	t.Helper()
 	path := filepath.Join(t.TempDir(), "swagger.json")
-	if err := os.WriteFile(path, []byte(minimalSwagger), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte(data), 0o644); err != nil {
 		t.Fatalf("write fixture: %v", err)
 	}
 	return path
@@ -78,6 +131,76 @@ func TestExtractK8sCmd_StripDescription(t *testing.T) {
 	data, err := os.ReadFile(filepath.Join(outDir, "example.com", "widget_v1.json"))
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(string(data)).ToNot(ContainSubstring(`"description"`))
+}
+
+func TestExtractK8sCmd_WithFieldIndexNamespacedScope(t *testing.T) {
+	g := NewWithT(t)
+
+	outDir := t.TempDir()
+	input := writeSwaggerDataFixture(t, minimalNamespacedSwagger)
+
+	out, err := executeCommand([]string{"extract", "k8s", input, "--output-dir", outDir, "--with-field-index"})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("OK   " + filepath.Join("example.com", "widget_v1.fields.txt")))
+	g.Expect(out).To(ContainSubstring("Summary: 1 schemas extracted"))
+
+	data, err := os.ReadFile(filepath.Join(outDir, "example.com", "widget_v1.fields.txt"))
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(string(data)).To(HavePrefix("# schema source: Kubernetes\napiVersion <string> enum=example.com/v1\n"))
+	g.Expect(string(data)).ToNot(ContainSubstring("flux-schema"))
+	g.Expect(string(data)).To(ContainSubstring("metadata.namespace <string> (required)\n"))
+}
+
+func TestExtractK8sCmd_IndexSourceOverride(t *testing.T) {
+	g := NewWithT(t)
+
+	outDir := t.TempDir()
+	input := writeSwaggerFixture(t)
+
+	_, err := executeCommand([]string{
+		"extract", "k8s", input,
+		"--output-dir", outDir,
+		"--with-field-index",
+		"--index-source", "my-operator v1.2.3",
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	data, err := os.ReadFile(filepath.Join(outDir, "example.com", "widget_v1.fields.txt"))
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(string(data)).To(HavePrefix("# schema source: my-operator v1.2.3\n"))
+}
+
+func TestExtractK8sCmd_WithFieldIndexUnknownScope(t *testing.T) {
+	g := NewWithT(t)
+
+	outDir := t.TempDir()
+	input := writeSwaggerFixture(t)
+
+	_, err := executeCommand([]string{"extract", "k8s", input, "--output-dir", outDir, "--with-field-index"})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	data, err := os.ReadFile(filepath.Join(outDir, "example.com", "widget_v1.fields.txt"))
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(string(data)).To(ContainSubstring("metadata.namespace <string>\n"))
+	g.Expect(string(data)).ToNot(ContainSubstring("metadata.namespace <string> (required)"))
+	g.Expect(string(data)).ToNot(ContainSubstring("(cluster-scoped)"))
+}
+
+func TestExtractK8sCmd_WithFieldIndexSkipsListKind(t *testing.T) {
+	g := NewWithT(t)
+
+	outDir := t.TempDir()
+	input := writeSwaggerDataFixture(t, minimalListKindSwagger)
+
+	out, err := executeCommand([]string{"extract", "k8s", input, "--output-dir", outDir, "--with-field-index"})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("OK   " + filepath.Join("example.com", "widgetlist_v1.json")))
+	g.Expect(out).ToNot(ContainSubstring("widgetlist_v1.fields.txt"))
+
+	_, err = os.Stat(filepath.Join(outDir, "example.com", "widgetlist_v1.json"))
+	g.Expect(err).ToNot(HaveOccurred())
+	_, err = os.Stat(filepath.Join(outDir, "example.com", "widgetlist_v1.fields.txt"))
+	g.Expect(os.IsNotExist(err)).To(BeTrue())
 }
 
 func TestExtractK8sCmd_StdinDash(t *testing.T) {
@@ -259,4 +382,34 @@ func TestExtractK8sCmd_VersionFetch(t *testing.T) {
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(source).To(Equal(srv.URL + "/v1.35.0/swagger.json"))
 	g.Expect(data).To(ContainSubstring("Widget"))
+}
+
+func TestK8sExtractWithVersionFallback(t *testing.T) {
+	g := NewWithT(t)
+
+	// The minimal swagger has no info.version: --version fills it, normalized.
+	schemas, errs := k8sExtractWithVersionFallback("1.35.0")([]byte(minimalSwagger))
+	g.Expect(errs).To(BeEmpty())
+	g.Expect(schemas).ToNot(BeEmpty())
+	g.Expect(schemas[0].Source).To(Equal("Kubernetes v1.35.0"))
+
+	// A swagger info.version placeholder is discarded, then filled by --version.
+	unversioned := `{"info": {"version": "unversioned"}, ` + minimalSwagger[1:]
+	schemas, errs = k8sExtractWithVersionFallback("v1.34.1")([]byte(unversioned))
+	g.Expect(errs).To(BeEmpty())
+	g.Expect(schemas).ToNot(BeEmpty())
+	g.Expect(schemas[0].Source).To(Equal("Kubernetes v1.34.1"))
+
+	// A real swagger info.version wins over the flag.
+	versioned := `{"info": {"version": "v1.33.0"}, ` + minimalSwagger[1:]
+	schemas, errs = k8sExtractWithVersionFallback("v1.34.1")([]byte(versioned))
+	g.Expect(errs).To(BeEmpty())
+	g.Expect(schemas).ToNot(BeEmpty())
+	g.Expect(schemas[0].Source).To(Equal("Kubernetes v1.33.0"))
+
+	// No flag, no info.version: records only the source system.
+	schemas, errs = k8sExtractWithVersionFallback("")([]byte(minimalSwagger))
+	g.Expect(errs).To(BeEmpty())
+	g.Expect(schemas).ToNot(BeEmpty())
+	g.Expect(schemas[0].Source).To(Equal("Kubernetes"))
 }

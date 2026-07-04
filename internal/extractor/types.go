@@ -17,6 +17,21 @@ type Schema struct {
 	// Kind is the Kubernetes kind name (e.g. "GitRepository", "Pod").
 	Kind string
 
+	// Scope is the Kubernetes resource scope: "Namespaced", "Cluster", or empty
+	// when unknown.
+	Scope string
+
+	// Source is the upstream source system and version the schema was extracted
+	// from. Empty when unknown.
+	Source string
+
+	// Deprecated reports whether this API version is deprecated.
+	Deprecated bool
+
+	// DeprecationWarning is the optional warning message for a deprecated API
+	// version.
+	DeprecationWarning string
+
 	// JSON is the transformed JSON Schema document for this kind, decoded
 	// with json.Decoder.UseNumber so numeric literals round-trip exactly.
 	JSON map[string]any

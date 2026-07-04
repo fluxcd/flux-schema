@@ -72,7 +72,9 @@ emits one schema file per CRD version.
 | `-d, --output-dir`     | Directory to write JSON Schema files to (mutually exclusive with `--output-archive`).        |
 | `-a, --output-archive` | Path to write a gzipped tar archive of JSON Schema files to.                                 |
 | `-f, --output-format`  | Go template for output file paths (default: `{{ .Group }}/{{ .Kind }}_{{ .Version }}.json`). |
+| `--index-source`       | Source name and version recorded in field index headers, overriding auto-detection.          |
 | `--strip-description`  | Drop `description` fields from the generated schemas to reduce their size.                   |
+| `--with-field-index`   | Also write a `.fields.txt` field index next to each schema.                                  |
 
 Generate schemas for every CRD installed in a cluster:
 
@@ -107,7 +109,9 @@ standalone files.
 | `--version X.Y.Z`     | Fetch the swagger from `github.com/kubernetes/kubernetes` for the given release tag (mutually exclusive with a swagger file). |
 | `-d, --output-dir`    | Directory to write JSON Schema files to.                                                                                      |
 | `-f, --output-format` | Go template for output file paths (default: `{{ .Group }}/{{ .Kind }}_{{ .Version }}.json`).                                  |
+| `--index-source`      | Source name and version recorded in field index headers, overriding auto-detection.                                           |
 | `--strip-description` | Drop `description` fields from the generated schemas to reduce their size.                                                    |
+| `--with-field-index`  | Also write a `.fields.txt` field index next to each schema.                                                                   |
 
 Pin the catalog to a specific Kubernetes release:
 
@@ -138,7 +142,9 @@ emitted; embedded upstream Kubernetes types (e.g. `Pod`) are inlined.
 | `--ref REF`           | Fetch the swagger from `github.com/openshift/api` at the given git ref (e.g. `release-4.20`); mutually exclusive with a swagger file. |
 | `-d, --output-dir`    | Directory to write JSON Schema files to.                                                                                              |
 | `-f, --output-format` | Go template for output file paths (default: `{{ .Group }}/{{ .Kind }}_{{ .Version }}.json`).                                          |
+| `--index-source`      | Source name and version recorded in field index headers, overriding auto-detection.                                                   |
 | `--strip-description` | Drop `description` fields from the generated schemas to reduce their size.                                                            |
+| `--with-field-index`  | Also write a `.fields.txt` field index next to each schema.                                                                           |
 
 Pin to an OpenShift release branch:
 
@@ -201,6 +207,14 @@ constraints the Kubernetes API server enforces:
   API server's behavior of accepting `null` for unset optional values.
 - `apiVersion` and `kind` are injected into every kind's properties and
   required list.
+
+## Field indexes
+
+Pass `--with-field-index` to the `extract` commands to write greppable,
+LLM-friendly field indexes alongside the extracted schemas: one
+`.fields.txt` file per schema, with one self-contained line per field.
+See the [field index reference](field-index.md) for the file naming, line
+grammar, and annotations.
 
 ## Hosting
 

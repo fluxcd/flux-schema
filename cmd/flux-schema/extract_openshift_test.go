@@ -71,6 +71,25 @@ func TestExtractOpenShiftCmd_File(t *testing.T) {
 	g.Expect(string(data)).ToNot(ContainSubstring(`"$schema"`))
 }
 
+func TestExtractOpenShiftCmd_IndexSourceOverride(t *testing.T) {
+	g := NewWithT(t)
+
+	outDir := t.TempDir()
+	input := writeOpenShiftSwaggerFixture(t)
+
+	_, err := executeCommand([]string{
+		"extract", "openshift", input,
+		"--output-dir", outDir,
+		"--with-field-index",
+		"--index-source", "my-operator v1.2.3",
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	data, err := os.ReadFile(filepath.Join(outDir, "route.openshift.io", "route_v1.fields.txt"))
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(string(data)).To(HavePrefix("# schema source: my-operator v1.2.3\n"))
+}
+
 func TestExtractOpenShiftCmd_OutputPathsAreOpenShiftOnly(t *testing.T) {
 	// Walk every output file and assert each lives under <group>.openshift.io/.
 	// The catalog-safety invariant: extract openshift must never write
@@ -207,6 +226,26 @@ func TestExtractOpenShiftCmd_RefFetch(t *testing.T) {
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(source).To(Equal(srv.URL + "/release-4.20/openapi.json"))
 	g.Expect(data).To(ContainSubstring("Route"))
+}
+
+func TestOpenShiftExtractWithSourceRef(t *testing.T) {
+	g := NewWithT(t)
+
+	schemas, errs := openShiftExtractWithSourceRef("release-4.20")([]byte(minimalOpenShiftSwagger))
+	g.Expect(errs).To(BeEmpty())
+	g.Expect(schemas).ToNot(BeEmpty())
+	g.Expect(schemas[0].Source).To(Equal("OpenShift release-4.20"))
+
+	versioned := `{"info": {"version": "v4.20.0"}, ` + minimalOpenShiftSwagger[1:]
+	schemas, errs = openShiftExtractWithSourceRef("release-4.20")([]byte(versioned))
+	g.Expect(errs).To(BeEmpty())
+	g.Expect(schemas).ToNot(BeEmpty())
+	g.Expect(schemas[0].Source).To(Equal("OpenShift v4.20.0"))
+
+	schemas, errs = openShiftExtractWithSourceRef("")([]byte(minimalOpenShiftSwagger))
+	g.Expect(errs).To(BeEmpty())
+	g.Expect(schemas).ToNot(BeEmpty())
+	g.Expect(schemas[0].Source).To(Equal("OpenShift"))
 }
 
 func TestExtractOpenShiftCmd_AutoCreatesOutputDir(t *testing.T) {

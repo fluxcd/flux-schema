@@ -9,10 +9,13 @@ import (
 	"fmt"
 	"regexp"
 	"sort"
+	"strings"
 )
 
 // k8sSkipKindRe matches kind names that are not GitOps-applicable.
 var k8sSkipKindRe = regexp.MustCompile(`^(WatchEvent|[A-Za-z]+Options)$`)
+
+var swaggerOperations = []string{"get", "put", "post", "delete", "patch", "head", "options"}
 
 // ExtractKubernetes walks a Kubernetes OpenAPI v2 swagger document and returns
 // one Schema per x-kubernetes-group-version-kind entry with all $refs inlined
@@ -21,10 +24,12 @@ var k8sSkipKindRe = regexp.MustCompile(`^(WatchEvent|[A-Za-z]+Options)$`)
 // across runs. Errors are aggregated: a malformed definition does not stop
 // extraction of the rest.
 func ExtractKubernetes(data []byte) ([]Schema, []error) {
-	definitions, names, errs := parseSwaggerDefinitions(data)
+	root, definitions, names, errs := parseSwaggerDocument(data)
 	if errs != nil {
 		return nil, errs
 	}
+	scopes := scopeFromPaths(root)
+	source := kubernetesSource(root)
 
 	var out []Schema
 	for _, name := range names {
@@ -49,6 +54,8 @@ func ExtractKubernetes(data []byte) ([]Schema, []error) {
 				Group:   gvk.Group,
 				Version: gvk.Version,
 				Kind:    gvk.Kind,
+				Scope:   scopes[gvk],
+				Source:  source,
 				JSON:    schema,
 			})
 		}
@@ -63,22 +70,29 @@ func ExtractKubernetes(data []byte) ([]Schema, []error) {
 // Number-preserving decode (UseNumber) lets integer literals round-trip
 // through downstream transforms unchanged.
 func parseSwaggerDefinitions(data []byte) (map[string]any, []string, []error) {
+	_, definitions, names, errs := parseSwaggerDocument(data)
+	return definitions, names, errs
+}
+
+// parseSwaggerDocument decodes a swagger document and returns its root object,
+// definitions map, and definition names sorted alphabetically.
+func parseSwaggerDocument(data []byte) (map[string]any, map[string]any, []string, []error) {
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.UseNumber()
 
 	var doc any
 	if err := dec.Decode(&doc); err != nil {
-		return nil, nil, []error{fmt.Errorf("decode swagger: %w", err)}
+		return nil, nil, nil, []error{fmt.Errorf("decode swagger: %w", err)}
 	}
 
 	root, ok := doc.(map[string]any)
 	if !ok {
-		return nil, nil, []error{fmt.Errorf("swagger document is not a JSON object")}
+		return nil, nil, nil, []error{fmt.Errorf("swagger document is not a JSON object")}
 	}
 
 	definitions, ok := root["definitions"].(map[string]any)
 	if !ok {
-		return nil, nil, []error{fmt.Errorf("swagger document has no 'definitions'")}
+		return nil, nil, nil, []error{fmt.Errorf("swagger document has no 'definitions'")}
 	}
 
 	names := make([]string, 0, len(definitions))
@@ -86,7 +100,82 @@ func parseSwaggerDefinitions(data []byte) (map[string]any, []string, []error) {
 		names = append(names, name)
 	}
 	sort.Strings(names)
-	return definitions, names, nil
+	return root, definitions, names, nil
+}
+
+func kubernetesSource(root map[string]any) string {
+	info, _ := root["info"].(map[string]any)
+	version, _ := info["version"].(string)
+	// The swagger checked into kubernetes/kubernetes release tags carries the
+	// literal placeholder "unversioned"; treat it as no version information.
+	if version == "unversioned" {
+		version = ""
+	}
+	return sourceWithVersion("Kubernetes", version)
+}
+
+func sourceWithVersion(name, version string) string {
+	if version == "" {
+		return name
+	}
+	return name + " " + version
+}
+
+// scopeFromPaths derives resource scope from OpenAPI operation paths. A GVK is
+// namespaced if any operation path contains /namespaces/{namespace}/; otherwise,
+// a GVK seen only on non-namespaced paths is cluster-scoped.
+func scopeFromPaths(root map[string]any) map[GVK]string {
+	scopes := map[GVK]string{}
+	paths, ok := root["paths"].(map[string]any)
+	if !ok {
+		return scopes
+	}
+
+	for path, rawItem := range paths {
+		item, ok := rawItem.(map[string]any)
+		if !ok {
+			continue
+		}
+		namespaced := strings.Contains(path, "/namespaces/{namespace}/")
+		recordPathScope(scopes, item, namespaced)
+		for _, operation := range swaggerOperations {
+			op, ok := item[operation].(map[string]any)
+			if !ok {
+				continue
+			}
+			recordPathScope(scopes, op, namespaced)
+		}
+	}
+
+	return scopes
+}
+
+func recordPathScope(scopes map[GVK]string, node map[string]any, namespaced bool) {
+	gvk, ok := readOperationGVK(node)
+	if !ok {
+		return
+	}
+	if namespaced {
+		scopes[gvk] = "Namespaced"
+		return
+	}
+	if _, seen := scopes[gvk]; !seen {
+		scopes[gvk] = "Cluster"
+	}
+}
+
+func readOperationGVK(node map[string]any) (GVK, bool) {
+	raw, ok := node["x-kubernetes-group-version-kind"].(map[string]any)
+	if !ok {
+		return GVK{}, false
+	}
+	g, _ := raw["group"].(string)
+	v, _ := raw["version"].(string)
+	k, _ := raw["kind"].(string)
+	if k == "" || v == "" {
+		return GVK{}, false
+	}
+	return GVK{Group: g, Version: v, Kind: k}, true
 }
 
 // sortSchemasByGVK orders schemas by (Group, Version, Kind) so output is

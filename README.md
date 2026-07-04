@@ -29,6 +29,8 @@ refreshed automatically from upstream stable releases.
   Gateway API, Flux, Flagger, and Flux Operator CRDs, refreshed automatically against upstream.
 - **Custom catalogs** — extract JSON Schemas from Kubernetes CRDs and OpenAPI swagger files,
   then layer your catalog on top of the default schemas.
+- **Field indexes** — generate greppable field indexes from extracted schemas
+  for AI agents and line-oriented tools.
 - **SOPS-aware** — strip SOPS metadata fields so the rest of the document can be validated without decryption.
 - **Repository discovery** — catalog a GitOps repository into a structured inventory
   designed for AI agents: directory classification, Flux resources with their defining
@@ -81,10 +83,12 @@ Emit a structured report for CI tooling:
 flux schema validate ./manifests -o json
 ```
 
-Extract JSON Schemas from your CRDs and layer them on top of the built-in catalog:
+Extract JSON Schemas and field indexes from your CRDs, then layer them on top of the built-in catalog:
 
 ```shell
-kubectl get crds -o yaml | flux schema extract crd -d ./my-catalog
+kubectl get crds -o yaml | flux schema extract crd \
+  -d ./my-catalog \
+  --with-field-index
 
 flux schema validate ./manifests \
   --schema-location ./my-catalog \
@@ -165,6 +169,8 @@ Run `flux schema <command> --help` for the full flag list.
   and config files.
 - [Custom catalog guide](docs/custom-schema-catalog.md) — populate,
   layout, host, and refresh your own catalog with the `extract` commands.
+- [Field index reference](docs/field-index.md) — the greppable
+  `.fields.txt` format emitted by `extract --with-field-index` for AI agents.
 - [Repository discovery guide](docs/repo-discovery.md) — catalog a
   GitOps repository with the `discover` command.
 - [Validation report reference](docs/report.md) — envelope shape and

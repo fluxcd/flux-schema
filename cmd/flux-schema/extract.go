@@ -9,10 +9,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
+	k8sschema "k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/fluxcd/flux-schema/internal/extractor"
+	"github.com/fluxcd/flux-schema/internal/fields"
 	"github.com/fluxcd/flux-schema/internal/flags"
 	"github.com/fluxcd/flux-schema/internal/tmpl"
 )
@@ -41,26 +44,42 @@ func runSwaggerExtract(cmd *cobra.Command, source string, data []byte, out flags
 
 	schemas, errs := extract(data)
 
-	if out.StripDescription {
-		for _, s := range schemas {
-			extractor.StripDescriptions(s.JSON)
-		}
-	}
-
 	var failures []error
 	for _, e := range errs {
 		failures = append(failures, fmt.Errorf("%s: %w", source, e))
 	}
 
 	written := 0
-	for _, schema := range schemas {
-		relPath, err := writeSwaggerSchema(schema, destDir, out.Format)
+	for _, schemaDoc := range schemas {
+		var index string
+		if out.WithFieldIndex && !strings.HasSuffix(schemaDoc.Kind, "List") {
+			var err error
+			index, err = flattenSchema(schemaDoc, out.IndexSource)
+			if err != nil {
+				failures = append(failures, err)
+			}
+		}
+
+		if out.StripDescription {
+			extractor.StripDescriptions(schemaDoc.JSON)
+		}
+
+		relPath, err := writeSwaggerSchema(schemaDoc, destDir, out.Format)
 		if err != nil {
 			failures = append(failures, err)
 			continue
 		}
 		cmd.Printf("OK   %s\n", relPath)
 		written++
+
+		if out.WithFieldIndex && index != "" {
+			indexRelPath, err := writeFieldIndex(destDir, relPath, index)
+			if err != nil {
+				failures = append(failures, err)
+				continue
+			}
+			cmd.Printf("OK   %s\n", indexRelPath)
+		}
 	}
 
 	cmd.Printf("Summary: %d schemas extracted\n", written)
@@ -72,6 +91,43 @@ func runSwaggerExtract(cmd *cobra.Command, source string, data []byte, out flags
 		return fmt.Errorf("%d error(s) during extraction", len(failures))
 	}
 	return nil
+}
+
+func flattenSchema(schemaDoc extractor.Schema, indexSource string) (string, error) {
+	source := schemaDoc.Source
+	if indexSource != "" {
+		source = indexSource
+	}
+	return fields.FlattenMap(schemaDoc.JSON, fields.Options{
+		GVK: k8sschema.GroupVersionKind{
+			Group:   schemaDoc.Group,
+			Version: schemaDoc.Version,
+			Kind:    schemaDoc.Kind,
+		},
+		Scope:              schemaDoc.Scope,
+		Source:             source,
+		Deprecated:         schemaDoc.Deprecated,
+		DeprecationWarning: schemaDoc.DeprecationWarning,
+	})
+}
+
+func fieldIndexRelPath(relPath string) string {
+	if strings.HasSuffix(relPath, ".json") {
+		return strings.TrimSuffix(relPath, ".json") + ".fields.txt"
+	}
+	return relPath + ".fields.txt"
+}
+
+func writeFieldIndex(destDir, relPath, index string) (string, error) {
+	indexRelPath := fieldIndexRelPath(relPath)
+	outPath := filepath.Join(destDir, indexRelPath)
+	if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
+		return "", fmt.Errorf("create %s: %w", filepath.Dir(outPath), err)
+	}
+	if err := os.WriteFile(outPath, []byte(index), 0o644); err != nil {
+		return "", fmt.Errorf("write %s: %w", outPath, err)
+	}
+	return indexRelPath, nil
 }
 
 // writeSwaggerSchema renders the output template, writes the schema as
