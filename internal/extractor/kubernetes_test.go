@@ -98,6 +98,42 @@ func TestExtractKubernetes_SkipsDefinitionsWithoutGVK(t *testing.T) {
 	g.Expect(out).To(BeEmpty())
 }
 
+func TestExtractKubernetes_Source(t *testing.T) {
+	tests := []struct {
+		name    string
+		version string
+		want    string
+	}{
+		{name: "version present", version: "v1.35.0", want: "Kubernetes v1.35.0"},
+		{name: "version missing", want: "Kubernetes"},
+		{name: "unversioned placeholder", version: "unversioned", want: "Kubernetes"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			doc := map[string]any{
+				"definitions": map[string]any{
+					"example.v1.Widget": map[string]any{
+						"type": "object",
+						"x-kubernetes-group-version-kind": []any{
+							map[string]any{"group": "example.com", "version": "v1", "kind": "Widget"},
+						},
+					},
+				},
+			}
+			if tt.version != "" {
+				doc["info"] = map[string]any{"version": tt.version}
+			}
+
+			out, errs := ExtractKubernetes(mustMarshal(t, doc))
+			g.Expect(errs).To(BeEmpty())
+			g.Expect(out).To(HaveLen(1))
+			g.Expect(out[0].Source).To(Equal(tt.want))
+		})
+	}
+}
+
 func TestExtractKubernetes_InlinesRef(t *testing.T) {
 	g := NewWithT(t)
 	doc := map[string]any{

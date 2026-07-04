@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strings"
+	"unicode"
 )
 
 const jsonTypeNull = "null"
@@ -147,6 +149,9 @@ func isNullType(schema map[string]any) bool {
 func stringifyEnumValue(value any) (string, error) {
 	switch typed := value.(type) {
 	case string:
+		if strings.Contains(typed, "|") || strings.ContainsFunc(typed, unicode.IsSpace) {
+			return stringifyDefault(typed)
+		}
 		return typed, nil
 	case json.Number:
 		return typed.String(), nil

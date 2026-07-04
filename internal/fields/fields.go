@@ -23,8 +23,11 @@ const (
 
 // Options controls field index generation for a single Kubernetes kind.
 type Options struct {
-	GVK   schema.GroupVersionKind
-	Scope string
+	GVK                schema.GroupVersionKind
+	Scope              string
+	Source             string
+	Deprecated         bool
+	DeprecationWarning string
 }
 
 // Flatten decodes schemaJSON and returns its greppable field index.
@@ -64,12 +67,30 @@ func FlattenMap(root map[string]any, opts Options) (string, error) {
 }
 
 func writeHeader(builder *strings.Builder, opts Options) {
+	if opts.Source != "" {
+		builder.WriteString("# schema source: ")
+		builder.WriteString(opts.Source)
+		builder.WriteByte('\n')
+	}
+
 	builder.WriteString("apiVersion <string> enum=")
 	builder.WriteString(opts.GVK.GroupVersion().String())
+	if opts.Deprecated {
+		builder.WriteString(" (deprecated)")
+	}
+	if opts.Deprecated && opts.DeprecationWarning != "" {
+		if cleaned := cleanDescription(opts.DeprecationWarning); cleaned != "" {
+			builder.WriteString("\t# ")
+			builder.WriteString(cleaned)
+		}
+	}
 	builder.WriteByte('\n')
 
 	builder.WriteString("kind <string> enum=")
 	builder.WriteString(opts.GVK.Kind)
+	if opts.Scope == ScopeCluster {
+		builder.WriteString(" (cluster-scoped)")
+	}
 	builder.WriteByte('\n')
 
 	builder.WriteString("metadata.name <string> (required)")
@@ -166,6 +187,34 @@ func writeLine(builder *strings.Builder, path string, property map[string]any, r
 		builder.WriteString(stringValue)
 	}
 
+	if value, ok := property["format"].(string); ok && value != "" {
+		builder.WriteString(" format=")
+		builder.WriteString(value)
+	}
+
+	if value, ok := property["pattern"].(string); ok {
+		stringValue, err := stringifyDefault(value)
+		if err != nil {
+			return fmt.Errorf("stringify pattern for %s: %w", path, err)
+		}
+		builder.WriteString(" pattern=")
+		builder.WriteString(stringValue)
+	}
+
+	if value, ok := minimum(property); ok {
+		builder.WriteString(" min=")
+		builder.WriteString(value.String())
+	}
+
+	if value, ok := maximum(property); ok {
+		builder.WriteString(" max=")
+		builder.WriteString(value.String())
+	}
+
+	if isImmutable(property) {
+		builder.WriteString(" (immutable)")
+	}
+
 	if description, ok := property["description"].(string); ok {
 		if cleaned := cleanDescription(description); cleaned != "" {
 			builder.WriteString("\t# ")
@@ -175,6 +224,65 @@ func writeLine(builder *strings.Builder, path string, property map[string]any, r
 
 	builder.WriteByte('\n')
 	return nil
+}
+
+func minimum(property map[string]any) (json.Number, bool) {
+	if valueType, ok := singleType(property); ok {
+		switch valueType {
+		case "number", "integer":
+			return numberConstraint(property, "minimum")
+		case "string":
+			return numberConstraint(property, "minLength")
+		case "array":
+			return numberConstraint(property, "minItems")
+		}
+	}
+	return "", false
+}
+
+func maximum(property map[string]any) (json.Number, bool) {
+	if valueType, ok := singleType(property); ok {
+		switch valueType {
+		case "number", "integer":
+			return numberConstraint(property, "maximum")
+		case "string":
+			return numberConstraint(property, "maxLength")
+		case "array":
+			return numberConstraint(property, "maxItems")
+		}
+	}
+	return "", false
+}
+
+func numberConstraint(property map[string]any, key string) (json.Number, bool) {
+	value, ok := property[key].(json.Number)
+	return value, ok
+}
+
+func isImmutable(property map[string]any) bool {
+	if description, ok := property["description"].(string); ok && strings.Contains(description, "Cannot be updated.") {
+		return true
+	}
+
+	validations, ok := property["x-kubernetes-validations"].([]any)
+	if !ok {
+		return false
+	}
+	for _, validation := range validations {
+		entry, ok := validation.(map[string]any)
+		if !ok {
+			continue
+		}
+		rule, ok := entry["rule"].(string)
+		if !ok {
+			continue
+		}
+		switch strings.TrimSpace(rule) {
+		case "self == oldSelf", "oldSelf == self":
+			return true
+		}
+	}
+	return false
 }
 
 func requiredSet(value any) map[string]bool {

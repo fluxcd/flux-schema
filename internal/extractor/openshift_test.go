@@ -70,6 +70,36 @@ func TestExtractOpenShift_RouteHappyPath(t *testing.T) {
 	g.Expect(hasSchema).To(BeFalse())
 }
 
+func TestExtractOpenShift_Source(t *testing.T) {
+	tests := []struct {
+		name    string
+		version string
+		want    string
+	}{
+		{name: "version present", version: "v4.20.0", want: "OpenShift v4.20.0"},
+		{name: "version missing", want: "OpenShift"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			doc := map[string]any{
+				"definitions": map[string]any{
+					"com.github.openshift.api.route.v1.Route": gitopsKindDef(nil),
+				},
+			}
+			if tt.version != "" {
+				doc["info"] = map[string]any{"version": tt.version}
+			}
+
+			schemas, errs := ExtractOpenShift(mustMarshal(t, doc))
+			g.Expect(errs).To(BeEmpty())
+			g.Expect(schemas).To(HaveLen(1))
+			g.Expect(schemas[0].Source).To(Equal(tt.want))
+		})
+	}
+}
+
 func TestExtractOpenShift_AlphaVersion(t *testing.T) {
 	g := NewWithT(t)
 	data := swaggerWith(t, map[string]any{

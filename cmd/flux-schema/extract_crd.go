@@ -98,7 +98,7 @@ func extractCRDCmdRun(cmd *cobra.Command, args []string) error {
 			var index string
 			if extractCRDArgs.WithFieldIndex {
 				var err error
-				index, err = flattenSchema(crd)
+				index, err = flattenSchema(crd, extractCRDArgs.IndexSource)
 				if err != nil {
 					failures = append(failures, fmt.Errorf("%s: %w", path, err))
 				}

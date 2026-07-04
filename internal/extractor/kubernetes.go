@@ -29,6 +29,7 @@ func ExtractKubernetes(data []byte) ([]Schema, []error) {
 		return nil, errs
 	}
 	scopes := scopeFromPaths(root)
+	source := kubernetesSource(root)
 
 	var out []Schema
 	for _, name := range names {
@@ -54,6 +55,7 @@ func ExtractKubernetes(data []byte) ([]Schema, []error) {
 				Version: gvk.Version,
 				Kind:    gvk.Kind,
 				Scope:   scopes[gvk],
+				Source:  source,
 				JSON:    schema,
 			})
 		}
@@ -99,6 +101,24 @@ func parseSwaggerDocument(data []byte) (map[string]any, map[string]any, []string
 	}
 	sort.Strings(names)
 	return root, definitions, names, nil
+}
+
+func kubernetesSource(root map[string]any) string {
+	info, _ := root["info"].(map[string]any)
+	version, _ := info["version"].(string)
+	// The swagger checked into kubernetes/kubernetes release tags carries the
+	// literal placeholder "unversioned"; treat it as no version information.
+	if version == "unversioned" {
+		version = ""
+	}
+	return sourceWithVersion("Kubernetes", version)
+}
+
+func sourceWithVersion(name, version string) string {
+	if version == "" {
+		return name
+	}
+	return name + " " + version
 }
 
 // scopeFromPaths derives resource scope from OpenAPI operation paths. A GVK is

@@ -169,6 +169,8 @@ Run `flux schema <command> --help` for the full flag list.
   and config files.
 - [Custom catalog guide](docs/custom-schema-catalog.md) — populate,
   layout, host, and refresh your own catalog with the `extract` commands.
+- [Field index reference](docs/field-index.md) — the greppable
+  `.fields.txt` format emitted by `extract --with-field-index` for AI agents.
 - [Repository discovery guide](docs/repo-discovery.md) — catalog a
   GitOps repository with the `discover` command.
 - [Validation report reference](docs/report.md) — envelope shape and

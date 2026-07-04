@@ -15,6 +15,7 @@ type ExtractOutput struct {
 	Format           string
 	StripDescription bool
 	WithFieldIndex   bool
+	IndexSource      string
 }
 
 // NewExtractOutput returns an ExtractOutput populated with the default values
@@ -41,5 +42,8 @@ func (e *ExtractOutput) Register(cmd *cobra.Command) {
 		"also write a .fields.txt field index next to each schema: one greppable line "+
 			"per field with its dotted path, type, constraints, and description; "+
 			"map values are addressed as path.<key>.field")
+	cmd.Flags().StringVar(&e.IndexSource, "index-source", e.IndexSource,
+		"source name and version recorded in the field index header, overriding auto-detection "+
+			"(e.g. 'my-operator v1.2.3')")
 	_ = cmd.MarkFlagDirname("output-dir")
 }

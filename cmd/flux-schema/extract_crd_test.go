@@ -186,13 +186,18 @@ func TestExtractCRDCmd_HelmReleaseGolden(t *testing.T) {
 
 // To refresh the field-index golden file, run:
 //
-//	make build
 //	tmp=$(mktemp -d)
-//	./bin/flux-schema extract crd \
+//	go run ./cmd/flux-schema extract crd \
 //	  cmd/flux-schema/testdata/extract/helmrelease-helm-v2.yaml \
 //	  --output-dir "$tmp" --with-field-index --strip-description
 //	cp "$tmp/helm.toolkit.fluxcd.io/helmrelease_v2.fields.txt" \
 //	  cmd/flux-schema/testdata/extract/helm.toolkit.fluxcd.io/helmrelease_v2.fields.txt
+//
+// If the golden differs, this test writes the actual output to:
+//
+//	<test-temp-dir>/actual-helmrelease_v2.fields.txt
+//
+// where <test-temp-dir> is the output directory from the failure log.
 func TestExtractCRDCmd_HelmReleaseFieldIndexGolden(t *testing.T) {
 	g := NewWithT(t)
 
@@ -213,6 +218,11 @@ func TestExtractCRDCmd_HelmReleaseFieldIndexGolden(t *testing.T) {
 
 	want, err := os.ReadFile(goldenPath)
 	g.Expect(err).ToNot(HaveOccurred())
+	if string(got) != string(want) {
+		actualPath := filepath.Join(outDir, "actual-helmrelease_v2.fields.txt")
+		g.Expect(os.WriteFile(actualPath, got, 0o644)).To(Succeed())
+		t.Logf("actual field-index golden written to %s", actualPath)
+	}
 	g.Expect(string(got)).To(Equal(string(want)))
 
 	jsonData, err := os.ReadFile(filepath.Join(outDir, "helm.toolkit.fluxcd.io", "helmrelease_v2.json"))
@@ -231,6 +241,25 @@ func TestExtractCRDCmd_WithFieldIndexFlagOff(t *testing.T) {
 
 	_, err = os.Stat(filepath.Join(outDir, "example.com", "widget_v1.fields.txt"))
 	g.Expect(os.IsNotExist(err)).To(BeTrue())
+}
+
+func TestExtractCRDCmd_IndexSourceOverride(t *testing.T) {
+	g := NewWithT(t)
+
+	outDir := t.TempDir()
+	input := writeCRDFixture(t)
+
+	_, err := executeCommand([]string{
+		"extract", "crd", input,
+		"--output-dir", outDir,
+		"--with-field-index",
+		"--index-source", "my-operator v1.2.3",
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	data, err := os.ReadFile(filepath.Join(outDir, "example.com", "widget_v1.fields.txt"))
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(string(data)).To(HavePrefix("# schema source: my-operator v1.2.3\n"))
 }
 
 func TestExtractCRDCmd_WithFieldIndexNonJSONTemplate(t *testing.T) {
@@ -290,9 +319,11 @@ spec:
 	lines := strings.Split(strings.TrimSuffix(string(data), "\n"), "\n")
 	g.Expect(lines[:3]).To(Equal([]string{
 		"apiVersion <string> enum=example.com/v1",
-		"kind <string> enum=ClusterWidget",
+		"kind <string> enum=ClusterWidget (cluster-scoped)",
 		"metadata.name <string> (required)",
 	}))
+	g.Expect(string(data)).ToNot(ContainSubstring("# source"))
+	g.Expect(string(data)).ToNot(ContainSubstring("flux-schema"))
 	g.Expect(string(data)).ToNot(ContainSubstring("metadata.namespace"))
 }
 

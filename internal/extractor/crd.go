@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"sigs.k8s.io/yaml"
 
@@ -97,6 +98,7 @@ func versionsFromCRD(crd map[string]any) ([]Schema, []error) {
 	if kind == "" || group == "" {
 		return nil, []error{fmt.Errorf("CRD missing spec.names.kind or spec.group")}
 	}
+	source := crdSource(crd)
 
 	versions, ok := spec["versions"].([]any)
 	if !ok || len(versions) == 0 {
@@ -118,16 +120,39 @@ func versionsFromCRD(crd map[string]any) ([]Schema, []error) {
 			continue
 		}
 
+		deprecated, _ := vm["deprecated"].(bool)
+		deprecationWarning, _ := vm["deprecationWarning"].(string)
 		closeAdditionalPropertiesChildren(schema)
 		transformed, _ := replaceIntOrString(schema).(map[string]any)
 
 		out = append(out, Schema{
-			Group:   group,
-			Version: versionName,
-			Kind:    kind,
-			Scope:   scope,
-			JSON:    transformed,
+			Group:              group,
+			Version:            versionName,
+			Kind:               kind,
+			Scope:              scope,
+			Source:             source,
+			Deprecated:         deprecated,
+			DeprecationWarning: deprecationWarning,
+			JSON:               transformed,
 		})
 	}
 	return out, errs
+}
+
+func crdSource(crd map[string]any) string {
+	metadata, _ := crd["metadata"].(map[string]any)
+	labels, _ := metadata["labels"].(map[string]any)
+	partOf, _ := labels["app.kubernetes.io/part-of"].(string)
+	version, _ := labels["app.kubernetes.io/version"].(string)
+	return strings.Join(compactStrings(partOf, version), " ")
+}
+
+func compactStrings(values ...string) []string {
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		if value != "" {
+			out = append(out, value)
+		}
+	}
+	return out
 }

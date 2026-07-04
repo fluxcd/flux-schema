@@ -87,7 +87,20 @@ func extractOpenShiftCmdRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	return runSwaggerExtract(cmd, source, data, extractOpenShiftArgs.ExtractOutput, extractor.ExtractOpenShift)
+	return runSwaggerExtract(cmd, source, data, extractOpenShiftArgs.ExtractOutput,
+		openShiftExtractWithSourceRef(extractOpenShiftArgs.ref))
+}
+
+func openShiftExtractWithSourceRef(ref string) func([]byte) ([]extractor.Schema, []error) {
+	return func(data []byte) ([]extractor.Schema, []error) {
+		schemas, errs := extractor.ExtractOpenShift(data)
+		for i := range schemas {
+			if schemas[i].Source == "OpenShift" && ref != "" {
+				schemas[i].Source = "OpenShift " + ref
+			}
+		}
+		return schemas, errs
+	}
 }
 
 // resolveOpenShiftInput returns (source, data). source is the file path or

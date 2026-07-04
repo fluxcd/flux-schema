@@ -94,7 +94,29 @@ func extractK8sCmdRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	return runSwaggerExtract(cmd, source, data, extractK8sArgs.ExtractOutput, extractor.ExtractKubernetes)
+	return runSwaggerExtract(cmd, source, data, extractK8sArgs.ExtractOutput,
+		k8sExtractWithVersionFallback(extractK8sArgs.k8sVersion))
+}
+
+// k8sExtractWithVersionFallback wraps ExtractKubernetes so that when the swagger
+// document carries no usable info.version, the release requested via
+// --version is recorded as the schemas' source instead.
+func k8sExtractWithVersionFallback(version string) func([]byte) ([]extractor.Schema, []error) {
+	normalized := ""
+	if version != "" {
+		if v, err := normalizeK8sVersion(version); err == nil {
+			normalized = v
+		}
+	}
+	return func(data []byte) ([]extractor.Schema, []error) {
+		schemas, errs := extractor.ExtractKubernetes(data)
+		for i := range schemas {
+			if schemas[i].Source == "Kubernetes" && normalized != "" {
+				schemas[i].Source = "Kubernetes " + normalized
+			}
+		}
+		return schemas, errs
+	}
 }
 
 func newDefaultK8sHTTPClient() *retryablehttp.Client {

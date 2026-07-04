@@ -84,6 +84,7 @@ func ExtractOpenShift(data []byte) ([]Schema, []error) {
 		return nil, errs
 	}
 	scopes := scopeFromPaths(root)
+	source := sourceWithVersion("OpenShift", openShiftInfoVersion(root))
 
 	var out []Schema
 	for _, name := range names {
@@ -127,12 +128,19 @@ func ExtractOpenShift(data []byte) ([]Schema, []error) {
 			Version: gvk.Version,
 			Kind:    gvk.Kind,
 			Scope:   scopes[gvk],
+			Source:  source,
 			JSON:    schema,
 		})
 	}
 
 	sortSchemasByGVK(out)
 	return out, errs
+}
+
+func openShiftInfoVersion(root map[string]any) string {
+	info, _ := root["info"].(map[string]any)
+	version, _ := info["version"].(string)
+	return version
 }
 
 // hasGitOpsShape reports whether def carries the apiVersion, kind, and

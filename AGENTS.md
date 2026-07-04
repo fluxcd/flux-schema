@@ -65,6 +65,7 @@ User-facing changes (flags, commands, report shape, GitHub Action inputs) must b
 - `README.md` — features list, install, quickstart, commands table, doc links.
 - `docs/manifests-validation.md` — `validate` reference: flag table, schema resolution, skip rules, CEL rules, config file with example `.fluxschema.yml`.
 - `docs/custom-schema-catalog.md` — `extract crd`/`extract k8s`/`extract openshift` reference and catalog hosting/refresh.
+- `docs/field-index.md` — the `.fields.txt` field index format emitted by `extract --with-field-index`: naming, line grammar, annotations.
 - `docs/repo-discovery.md` — `discover` reference: flags, classification rules, output formats, and how AI agents should read the inventory.
 - `docs/config.md` + `docs/config-v1beta1.json` — config file envelope and its JSON Schema.
 - `docs/report.md` + `docs/report-v1beta1.json` — report file envelope and its JSON Schema.

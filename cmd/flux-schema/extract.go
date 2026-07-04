@@ -52,9 +52,9 @@ func runSwaggerExtract(cmd *cobra.Command, source string, data []byte, out flags
 	written := 0
 	for _, schemaDoc := range schemas {
 		var index string
-		if out.WithFieldIndex {
+		if out.WithFieldIndex && !strings.HasSuffix(schemaDoc.Kind, "List") {
 			var err error
-			index, err = flattenSchema(schemaDoc)
+			index, err = flattenSchema(schemaDoc, out.IndexSource)
 			if err != nil {
 				failures = append(failures, err)
 			}
@@ -93,14 +93,21 @@ func runSwaggerExtract(cmd *cobra.Command, source string, data []byte, out flags
 	return nil
 }
 
-func flattenSchema(schemaDoc extractor.Schema) (string, error) {
+func flattenSchema(schemaDoc extractor.Schema, indexSource string) (string, error) {
+	source := schemaDoc.Source
+	if indexSource != "" {
+		source = indexSource
+	}
 	return fields.FlattenMap(schemaDoc.JSON, fields.Options{
 		GVK: k8sschema.GroupVersionKind{
 			Group:   schemaDoc.Group,
 			Version: schemaDoc.Version,
 			Kind:    schemaDoc.Kind,
 		},
-		Scope: schemaDoc.Scope,
+		Scope:              schemaDoc.Scope,
+		Source:             source,
+		Deprecated:         schemaDoc.Deprecated,
+		DeprecationWarning: schemaDoc.DeprecationWarning,
 	})
 }
 
