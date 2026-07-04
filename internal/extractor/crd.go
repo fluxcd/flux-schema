@@ -93,6 +93,7 @@ func versionsFromCRD(crd map[string]any) ([]Schema, []error) {
 	names, _ := spec["names"].(map[string]any)
 	kind, _ := names["kind"].(string)
 	group, _ := spec["group"].(string)
+	scope, _ := spec["scope"].(string)
 	if kind == "" || group == "" {
 		return nil, []error{fmt.Errorf("CRD missing spec.names.kind or spec.group")}
 	}
@@ -124,6 +125,7 @@ func versionsFromCRD(crd map[string]any) ([]Schema, []error) {
 			Group:   group,
 			Version: versionName,
 			Kind:    kind,
+			Scope:   scope,
 			JSON:    transformed,
 		})
 	}

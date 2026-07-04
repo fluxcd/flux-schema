@@ -175,6 +175,90 @@ func TestExtractCRDs_MissingSchemaOnOneVersion(t *testing.T) {
 	g.Expect(crds[0].Version).To(Equal("v1"))
 }
 
+func TestExtractCRDs_Scope(t *testing.T) {
+	tests := []struct {
+		name       string
+		crd        string
+		wantScopes []string
+	}{
+		{
+			name: "namespaced",
+			crd: `
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: widgets.example.com
+spec:
+  group: example.com
+  scope: Namespaced
+  names:
+    kind: Widget
+  versions:
+    - name: v1
+      schema:
+        openAPIV3Schema:
+          type: object
+    - name: v1beta1
+      schema:
+        openAPIV3Schema:
+          type: object
+`,
+			wantScopes: []string{"Namespaced", "Namespaced"},
+		},
+		{
+			name: "cluster",
+			crd: `
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: widgets.example.com
+spec:
+  group: example.com
+  scope: Cluster
+  names:
+    kind: Widget
+  versions:
+    - name: v1
+      schema:
+        openAPIV3Schema:
+          type: object
+`,
+			wantScopes: []string{"Cluster"},
+		},
+		{
+			name: "absent",
+			crd: `
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: widgets.example.com
+spec:
+  group: example.com
+  names:
+    kind: Widget
+  versions:
+    - name: v1
+      schema:
+        openAPIV3Schema:
+          type: object
+`,
+			wantScopes: []string{""},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			crds, errs := ExtractCRDs([]byte(tt.crd))
+			g.Expect(errs).To(BeEmpty())
+			g.Expect(crds).To(HaveLen(len(tt.wantScopes)))
+			for i, wantScope := range tt.wantScopes {
+				g.Expect(crds[i].Scope).To(Equal(wantScope))
+			}
+		})
+	}
+}
+
 func TestExtractCRDs_NonMappingDocumentIsError(t *testing.T) {
 	g := NewWithT(t)
 	_, errs := ExtractCRDs([]byte("- just\n- a\n- list\n"))
