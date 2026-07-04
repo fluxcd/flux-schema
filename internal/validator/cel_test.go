@@ -22,6 +22,15 @@ func schemaFromJSON(t *testing.T, src string) map[string]any {
 	return m
 }
 
+func docFromJSON(t *testing.T, src string) map[string]any {
+	t.Helper()
+	var m map[string]any
+	if err := json.Unmarshal([]byte(src), &m); err != nil {
+		t.Fatalf("decode document: %v", err)
+	}
+	return m
+}
+
 func TestNewCELValidator_NoRulesReturnsNil(t *testing.T) {
 	g := NewWithT(t)
 	schema := schemaFromJSON(t, `{
@@ -80,6 +89,340 @@ func TestNewCELValidator_RulePassesWhenSatisfied(t *testing.T) {
 
 	doc := map[string]any{"spec": map[string]any{"foo": "ok"}}
 	g.Expect(v.Validate(context.Background(), doc)).To(BeEmpty())
+}
+
+func TestNewCELValidator_DefaultsBeforeCELAllowsUnguardedGatewayFields(t *testing.T) {
+	g := NewWithT(t)
+	schema := schemaFromJSON(t, `{
+		"type": "object",
+		"properties": {
+			"spec": {
+				"type": "object",
+				"properties": {
+					"backendRef": {
+						"type": "object",
+						"properties": {
+							"group": { "type": "string", "default": "" },
+							"kind": { "type": "string", "default": "Service" },
+							"port": { "type": "integer" }
+						},
+						"x-kubernetes-validations": [
+							{
+								"rule": "(size(self.group) == 0 && self.kind == 'Service') ? has(self.port) : true",
+								"message": "Must have port for Service reference"
+							}
+						]
+					}
+				}
+			}
+		}
+	}`)
+	v, err := newCELValidator(schema)
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(v).ToNot(BeNil())
+	g.Expect(v.hasDefault).To(BeTrue())
+
+	doc := map[string]any{
+		"spec": map[string]any{
+			"backendRef": map[string]any{
+				"port": int64(9898),
+			},
+		},
+	}
+	g.Expect(v.Validate(context.Background(), doc)).To(BeEmpty())
+}
+
+func TestNewCELValidator_PrunesNonNullableNullsBeforeCEL(t *testing.T) {
+	g := NewWithT(t)
+	schema := schemaFromJSON(t, `{
+		"type": "object",
+		"properties": {
+			"spec": {
+				"type": "object",
+				"properties": {
+					"target": { "type": "string" }
+				},
+				"x-kubernetes-validations": [
+					{
+						"rule": "!has(self.target)",
+						"message": "target must be pruned before CEL"
+					}
+				]
+			}
+		}
+	}`)
+	v, err := newCELValidator(schema)
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(v).ToNot(BeNil())
+	g.Expect(v.hasDefault).To(BeFalse())
+
+	doc := docFromJSON(t, `{
+		"spec": {
+			"target": null
+		}
+	}`)
+	g.Expect(v.Validate(context.Background(), doc)).To(BeEmpty())
+	g.Expect(doc["spec"].(map[string]any)).To(HaveKey("target"))
+}
+
+func TestNewCELValidator_DefaultsBeforeCELStillReportsRuleViolation(t *testing.T) {
+	g := NewWithT(t)
+	schema := schemaFromJSON(t, `{
+		"type": "object",
+		"properties": {
+			"spec": {
+				"type": "object",
+				"properties": {
+					"backendRef": {
+						"type": "object",
+						"properties": {
+							"group": { "type": "string", "default": "" },
+							"kind": { "type": "string", "default": "Service" },
+							"port": { "type": "integer" }
+						},
+						"x-kubernetes-validations": [
+							{
+								"rule": "(size(self.group) == 0 && self.kind == 'Service') ? has(self.port) : true",
+								"message": "Must have port for Service reference"
+							}
+						]
+					}
+				}
+			}
+		}
+	}`)
+	v, err := newCELValidator(schema)
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(v).ToNot(BeNil())
+
+	doc := docFromJSON(t, `{
+		"spec": {
+			"backendRef": {}
+		}
+	}`)
+	errs := v.Validate(context.Background(), doc)
+	g.Expect(errs).To(HaveLen(1))
+	g.Expect(errs[0].Path).To(Equal("/spec/backendRef"))
+	g.Expect(errs[0].Msg).To(ContainSubstring("Must have port for Service reference"))
+}
+
+func TestNewCELValidator_DefaultsArrayFieldsBeforeCEL(t *testing.T) {
+	g := NewWithT(t)
+	schema := schemaFromJSON(t, `{
+		"type": "object",
+		"properties": {
+			"spec": {
+				"type": "object",
+				"properties": {
+					"rules": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"matches": {
+									"type": "array",
+									"default": [
+										{
+											"path": {
+												"type": "PathPrefix",
+												"value": "/"
+											}
+										}
+									],
+									"items": {
+										"type": "object",
+										"properties": {
+											"path": {
+												"type": "object",
+												"properties": {
+													"type": { "type": "string" },
+													"value": { "type": "string" }
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"x-kubernetes-validations": [
+					{
+						"rule": "self.rules.all(r, r.matches.exists(m, m.path.type == 'PathPrefix' && m.path.value == '/'))",
+						"message": "rule must have default path match"
+					}
+				]
+			}
+		}
+	}`)
+	v, err := newCELValidator(schema)
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(v).ToNot(BeNil())
+
+	doc := docFromJSON(t, `{
+		"spec": {
+			"rules": [
+				{}
+			]
+		}
+	}`)
+	g.Expect(v.Validate(context.Background(), doc)).To(BeEmpty())
+}
+
+func TestNewCELValidator_DefaultsParentRefsListMapBeforeCEL(t *testing.T) {
+	g := NewWithT(t)
+	schema := schemaFromJSON(t, `{
+		"type": "object",
+		"properties": {
+			"spec": {
+				"type": "object",
+				"properties": {
+					"parentRefs": {
+						"type": "array",
+						"x-kubernetes-list-type": "map",
+						"x-kubernetes-list-map-keys": ["group", "kind", "name"],
+						"items": {
+							"type": "object",
+							"required": ["name"],
+							"properties": {
+								"group": { "type": "string", "default": "gateway.networking.k8s.io" },
+								"kind": { "type": "string", "default": "Gateway" },
+								"name": { "type": "string" },
+								"sectionName": { "type": "string" }
+							}
+						},
+						"x-kubernetes-validations": [
+							{
+								"rule": "self.all(p1, self.exists_one(p2, p1.group == p2.group && p1.kind == p2.kind && p1.name == p2.name))",
+								"message": "sectionName must be specified when parentRefs includes 2 or more references to the same parent"
+							}
+						]
+					}
+				}
+			}
+		}
+	}`)
+	v, err := newCELValidator(schema)
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(v).ToNot(BeNil())
+	g.Expect(v.hasDefault).To(BeTrue())
+
+	singleParent := docFromJSON(t, `{
+		"spec": {
+			"parentRefs": [
+				{ "name": "main-gateway" }
+			]
+		}
+	}`)
+	g.Expect(v.Validate(context.Background(), singleParent)).To(BeEmpty())
+
+	duplicateParent := docFromJSON(t, `{
+		"spec": {
+			"parentRefs": [
+				{ "name": "main-gateway" },
+				{ "name": "main-gateway" }
+			]
+		}
+	}`)
+	errs := v.Validate(context.Background(), duplicateParent)
+	g.Expect(errs).To(HaveLen(1))
+	g.Expect(errs[0].Path).To(Equal("/spec/parentRefs"))
+	g.Expect(errs[0].Msg).To(ContainSubstring("sectionName must be specified"))
+}
+
+func TestNewCELValidator_DefaultsDoNotMutateInputDocument(t *testing.T) {
+	g := NewWithT(t)
+	schema := schemaFromJSON(t, `{
+		"type": "object",
+		"properties": {
+			"spec": {
+				"type": "object",
+				"properties": {
+					"backendRef": {
+						"type": "object",
+						"properties": {
+							"group": { "type": "string", "default": "" },
+							"kind": { "type": "string", "default": "Service" },
+							"port": { "type": "integer" }
+						},
+						"x-kubernetes-validations": [
+							{
+								"rule": "(size(self.group) == 0 && self.kind == 'Service') ? has(self.port) : true",
+								"message": "Must have port for Service reference"
+							}
+						]
+					},
+					"rules": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"matches": {
+									"type": "array",
+									"default": [
+										{
+											"path": {
+												"type": "PathPrefix",
+												"value": "/"
+											}
+										}
+									],
+									"items": {
+										"type": "object",
+										"properties": {
+											"path": {
+												"type": "object",
+												"properties": {
+													"type": { "type": "string" },
+													"value": { "type": "string" }
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"x-kubernetes-validations": [
+					{
+						"rule": "self.rules.all(r, r.matches.exists(m, m.path.type == 'PathPrefix' && m.path.value == '/'))",
+						"message": "rule must have default path match"
+					}
+				]
+			}
+		}
+	}`)
+	v, err := newCELValidator(schema)
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(v).ToNot(BeNil())
+
+	doc := map[string]any{
+		"spec": map[string]any{
+			"backendRef": map[string]any{
+				"port": int64(9898),
+			},
+			"rules": []any{
+				map[string]any{},
+			},
+		},
+	}
+	original := map[string]any{
+		"spec": map[string]any{
+			"backendRef": map[string]any{
+				"port": int64(9898),
+			},
+			"rules": []any{
+				map[string]any{},
+			},
+		},
+	}
+	g.Expect(v.Validate(context.Background(), doc)).To(BeEmpty())
+	g.Expect(doc).To(Equal(original))
+	spec := doc["spec"].(map[string]any)
+	g.Expect(spec["backendRef"].(map[string]any)).ToNot(HaveKey("group"))
+	g.Expect(spec["backendRef"].(map[string]any)).ToNot(HaveKey("kind"))
+	g.Expect(spec["rules"].([]any)[0].(map[string]any)).ToNot(HaveKey("matches"))
 }
 
 func TestNewCELValidator_TransitionRuleSkippedWithNilOldObj(t *testing.T) {

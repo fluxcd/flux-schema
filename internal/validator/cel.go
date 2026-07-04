@@ -14,6 +14,8 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextschema "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
 	apiextschemacel "k8s.io/apiextensions-apiserver/pkg/apiserver/schema/cel"
+	"k8s.io/apiextensions-apiserver/pkg/apiserver/schema/defaulting"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
@@ -21,9 +23,13 @@ import (
 // for a single resolved schema. Construction can fail (bad JSON shape,
 // unsupported structural features); evaluation cannot fail to start, but rule
 // compile errors and runtime violations both surface as field.ErrorList
-// entries from Validate.
+// entries from Validate. Validation mirrors kube-apiserver ordering by applying
+// structural defaults before CEL evaluation, so rules can safely dereference
+// defaulted fields as real CRDs do.
 type celValidator struct {
-	v *apiextschemacel.Validator
+	v          *apiextschemacel.Validator
+	structural *apiextschema.Structural
+	hasDefault bool
 }
 
 // newCELValidator builds a validator from a raw JSON Schema map (the same
@@ -76,13 +82,24 @@ func newCELValidator(raw map[string]any) (*celValidator, error) {
 	if v == nil {
 		return nil, nil
 	}
-	return &celValidator{v: v}, nil
+	return &celValidator{
+		v:          v,
+		structural: structural,
+		hasDefault: structuralHasDefaults(structural),
+	}, nil
 }
 
-// Validate runs every compiled CEL rule over obj. oldObj is always nil — this
-// is a static validator with no prior state — so kube-apiserver's transition-
-// rule semantics apply: rules referencing oldSelf without optionalOldSelf:true
-// are skipped, and rules with optionalOldSelf:true run with oldSelf unbound.
+// Validate runs every compiled CEL rule over obj after applying the same
+// structural-schema preprocessing kube-apiserver does for CREATE: prune
+// non-defaultable nulls, then apply defaults. The input map is not mutated
+// because validator.go reuses it after CEL. Applying structural defaults before
+// CEL prevents false positives for rules such as Gateway API's, which
+// dereference defaulted fields unguarded.
+//
+// oldObj is always nil — this is a static validator with no prior state — so
+// kube-apiserver's transition-rule semantics apply: rules referencing oldSelf
+// without optionalOldSelf:true are skipped, and rules with optionalOldSelf:true
+// run with oldSelf unbound.
 //
 // Both rule-compile errors (e.g. malformed CEL syntax in a schema) and
 // runtime rule violations come back through the same field.ErrorList; the
@@ -92,8 +109,19 @@ func (c *celValidator) Validate(ctx context.Context, obj map[string]any) []Valid
 	if c == nil || c.v == nil {
 		return nil
 	}
+	validatedObj := any(obj)
+	if c.hasDefault || hasJSONNull(obj) {
+		// DeepCopyJSON requires JSON-shaped input (int64, not int) and panics
+		// otherwise; decodeDoc guarantees that shape via apimachinery util/json.
+		validatedObj = runtime.DeepCopyJSON(obj)
+		defaulting.PruneNonNullableNullsWithoutDefaults(validatedObj, c.structural)
+		if c.hasDefault {
+			defaulting.Default(validatedObj, c.structural)
+		}
+	}
+
 	// The structural arg is documented as ignored by Validate; pass nil.
-	errs, _ := c.v.Validate(ctx, field.NewPath(""), nil, obj, nil, math.MaxInt64)
+	errs, _ := c.v.Validate(ctx, field.NewPath(""), nil, validatedObj, nil, math.MaxInt64)
 	if len(errs) == 0 {
 		return nil
 	}
@@ -105,6 +133,47 @@ func (c *celValidator) Validate(ctx context.Context, obj map[string]any) []Valid
 		})
 	}
 	return out
+}
+
+func structuralHasDefaults(s *apiextschema.Structural) bool {
+	if s == nil {
+		return false
+	}
+	if s.Default.Object != nil {
+		return true
+	}
+	if structuralHasDefaults(s.Items) {
+		return true
+	}
+	for _, prop := range s.Properties {
+		if structuralHasDefaults(&prop) {
+			return true
+		}
+	}
+	if s.AdditionalProperties != nil && structuralHasDefaults(s.AdditionalProperties.Structural) {
+		return true
+	}
+	return false
+}
+
+func hasJSONNull(node any) bool {
+	switch n := node.(type) {
+	case nil:
+		return true
+	case map[string]any:
+		for _, v := range n {
+			if hasJSONNull(v) {
+				return true
+			}
+		}
+	case []any:
+		for _, v := range n {
+			if hasJSONNull(v) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // hasCELRules walks the raw schema tree and returns true on the first
