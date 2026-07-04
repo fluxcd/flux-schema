@@ -73,6 +73,7 @@ emits one schema file per CRD version.
 | `-a, --output-archive` | Path to write a gzipped tar archive of JSON Schema files to.                                 |
 | `-f, --output-format`  | Go template for output file paths (default: `{{ .Group }}/{{ .Kind }}_{{ .Version }}.json`). |
 | `--strip-description`  | Drop `description` fields from the generated schemas to reduce their size.                   |
+| `--with-field-index`   | Also write a `.fields.txt` field index next to each schema.                                  |
 
 Generate schemas for every CRD installed in a cluster:
 
@@ -108,6 +109,7 @@ standalone files.
 | `-d, --output-dir`    | Directory to write JSON Schema files to.                                                                                      |
 | `-f, --output-format` | Go template for output file paths (default: `{{ .Group }}/{{ .Kind }}_{{ .Version }}.json`).                                  |
 | `--strip-description` | Drop `description` fields from the generated schemas to reduce their size.                                                    |
+| `--with-field-index`  | Also write a `.fields.txt` field index next to each schema.                                                                   |
 
 Pin the catalog to a specific Kubernetes release:
 
@@ -139,6 +141,7 @@ emitted; embedded upstream Kubernetes types (e.g. `Pod`) are inlined.
 | `-d, --output-dir`    | Directory to write JSON Schema files to.                                                                                              |
 | `-f, --output-format` | Go template for output file paths (default: `{{ .Group }}/{{ .Kind }}_{{ .Version }}.json`).                                          |
 | `--strip-description` | Drop `description` fields from the generated schemas to reduce their size.                                                            |
+| `--with-field-index`  | Also write a `.fields.txt` field index next to each schema.                                                                           |
 
 Pin to an OpenShift release branch:
 
@@ -182,6 +185,77 @@ reduction on native Kubernetes schemas.
 The official catalog's generator scripts under
 [`scripts/`](../scripts/) are a working reference: `gen-k8s-schemas.sh`,
 `gen-flux-schemas.sh`, `gen-crd-schemas.sh`, and `gen-openshift-schemas.sh`.
+
+## Field indexes
+
+Pass `--with-field-index` to `extract crd`, `extract k8s`, or
+`extract openshift` to write greppable, LLM-friendly field indexes alongside
+the extracted schemas. Each index is a plain-text UTF-8 file with one
+self-contained line per field: full dotted path, type, constraints, and
+description when available.
+
+The index path is derived from the rendered schema path. If `--output-format`
+renders a path ending in `.json`, that suffix is replaced with `.fields.txt`;
+otherwise `.fields.txt` is appended. For example,
+`helm.toolkit.fluxcd.io/helmrelease_v2.json` gets
+`helm.toolkit.fluxcd.io/helmrelease_v2.fields.txt`.
+
+Each field line has `path <type>`, optional annotations such as `(required)`,
+`enum=...`, and `default=...`, then an optional description separated by one
+TAB and written as `# description`. Tokens before the description are
+separated by one space. Example lines from a HelmRelease index:
+
+```text
+apiVersion <string> enum=helm.toolkit.fluxcd.io/v2
+kind <string> enum=HelmRelease
+metadata.name <string> (required)
+metadata.namespace <string> (required)
+spec <object>	# HelmReleaseSpec defines the desired state of a Helm release.
+```
+
+Path notation:
+
+| Notation | Meaning | Example |
+|----------|---------|---------|
+| `a.b.c` | Nested object field. | `spec.chart.spec` |
+| `a[]` | Array of objects; child fields continue below the array. | `spec.dependsOn[]` -> `spec.dependsOn[].name` |
+| `a.<key>.` | Object map value fields. | `spec.tenants.<key>.role` |
+
+The `.<key>.` segment means "for each key in this map"; it is used when a map
+has object values with known fields.
+
+Type notation uses Kubernetes schema types in angle brackets. Scalars are
+`<string>`, `<integer>`, `<number>`, and `<boolean>`; objects are `<object>`;
+free-form objects are `<object (free-form)>`; scalar arrays are `<[]string>`
+or the matching scalar type; object arrays are `<[]object>`; maps are
+`<map[string]string>` or the matching value type; object maps are
+`<map[string]object>` with child fields under `.<key>.`; integer-or-string
+fields are `<int-or-string>`; untyped fields are `<any>`.
+
+Annotations are suffix tokens after the type: `(required)` marks fields in the
+parent schema's required list, `enum=a|b|c` lists allowed values, and
+`default=<json>` records the schema default.
+
+Every index starts with header lines for `apiVersion`, `kind`,
+`metadata.name`, and, when applicable, `metadata.namespace`. `apiVersion` and
+`kind` use `enum=` values from the extracted GVK, and `metadata.name` is always
+emitted with `(required)`. For namespaced kinds, `metadata.namespace` is
+emitted with `(required)`; for cluster-scoped kinds it is omitted; when scope
+is unknown it is emitted without `(required)`. `extract crd` reads exact scope
+from `spec.scope`, `extract k8s` derives it from swagger paths, and
+`extract openshift` emits unknown scope because its swagger source does not
+include scope metadata.
+
+Indexes are generated before `--strip-description` is applied, so field index
+descriptions are preserved even when the JSON Schemas are stripped.
+
+Useful grep recipes:
+
+```shell
+grep '^spec\.chart\.' helmrelease_v2.fields.txt # subtree listing
+grep 'valuesFrom' helmrelease_v2.fields.txt     # locate a field
+grep '(required)' helmrelease_v2.fields.txt     # all required fields
+```
 
 ## Schema output
 
