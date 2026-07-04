@@ -225,9 +225,10 @@ rules from the schemas and evaluates them as CEL expressions using the same
 engine as the Kubernetes API.
 
 CEL evaluation runs only after JSON Schema validation passes, and any rule
-violations are reported with the `cel-violation` reason. Transition rules
-referencing `oldSelf` evaluate with no prior state, matching the Kubernetes
-API behavior on `CREATE`.
+violations are reported with the `cel-violation` reason. Before evaluating
+rules, flux-schema applies the schema's structural defaults in memory, matching
+kube-apiserver ordering. Transition rules referencing `oldSelf` evaluate with
+no prior state, matching the Kubernetes API behavior on `CREATE`.
 
 The CEL validation can be disabled with the `--skip-cel-rules` flag.
 

@@ -19,6 +19,8 @@ import (
 
 	"github.com/hashicorp/go-retryablehttp"
 	. "github.com/onsi/gomega"
+
+	"github.com/fluxcd/flux-schema/internal/extractor"
 )
 
 // writeWidgetSchema writes a minimal CRD-style JSON Schema for testing.
@@ -200,6 +202,115 @@ spec:
 	g.Expect(results[0].Reason).To(Equal(ReasonCELViolation))
 	g.Expect(results[0].Errors).ToNot(BeEmpty())
 	g.Expect(results[0].Errors[0].Msg).To(ContainSubstring("port must be positive"))
+}
+
+const gatewayParentRefsCRD = `
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: httproutes.gateway.networking.k8s.io
+spec:
+  group: gateway.networking.k8s.io
+  scope: Namespaced
+  names:
+    kind: HTTPRoute
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: [apiVersion, kind, metadata, spec]
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+              x-kubernetes-preserve-unknown-fields: true
+            spec:
+              type: object
+              required: [parentRefs]
+              properties:
+                parentRefs:
+                  type: array
+                  x-kubernetes-list-type: map
+                  x-kubernetes-list-map-keys: [group, kind, name]
+                  items:
+                    type: object
+                    required: [name]
+                    properties:
+                      group:
+                        type: string
+                        default: gateway.networking.k8s.io
+                      kind:
+                        type: string
+                        default: Gateway
+                      name:
+                        type: string
+                      sectionName:
+                        type: string
+                  x-kubernetes-validations:
+                    - rule: "self.all(p1, self.exists_one(p2, p1.group == p2.group && p1.kind == p2.kind && p1.name == p2.name))"
+                      message: "sectionName must be specified when parentRefs includes 2 or more references to the same parent"
+`
+
+func writeExtractedGatewaySchema(t *testing.T, dir string) {
+	t.Helper()
+	schemas, errs := extractor.ExtractCRDs([]byte(gatewayParentRefsCRD))
+	if len(errs) > 0 {
+		t.Fatalf("extract CRD: %v", errs)
+	}
+	if len(schemas) != 1 {
+		t.Fatalf("extract CRD: got %d schemas, want 1", len(schemas))
+	}
+	b, err := json.MarshalIndent(schemas[0].JSON, "", "  ")
+	if err != nil {
+		t.Fatalf("marshal schema: %v", err)
+	}
+	path := filepath.Join(dir, "httproute-gateway-v1.json")
+	if err := os.WriteFile(path, b, 0o644); err != nil {
+		t.Fatalf("write schema: %v", err)
+	}
+}
+
+func TestValidateBytes_ExtractedCRDDefaultsBeforeCEL(t *testing.T) {
+	g := NewWithT(t)
+	dir := t.TempDir()
+	writeExtractedGatewaySchema(t, dir)
+	v := newLocalValidator(t, dir, false)
+
+	valid := []byte(`apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: podinfo
+  namespace: default
+spec:
+  parentRefs:
+    - name: main-gateway
+`)
+	results := v.ValidateBytes(context.Background(), "httproute.yaml", valid)
+	g.Expect(results).To(HaveLen(1))
+	g.Expect(results[0].Status).To(Equal(StatusValid), "errors: %+v", results[0].Errors)
+
+	invalid := []byte(`apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: podinfo
+  namespace: default
+spec:
+  parentRefs:
+    - name: main-gateway
+    - name: main-gateway
+`)
+	results = v.ValidateBytes(context.Background(), "httproute.yaml", invalid)
+	g.Expect(results).To(HaveLen(1))
+	g.Expect(results[0].Status).To(Equal(StatusInvalid))
+	g.Expect(results[0].Reason).To(Equal(ReasonCELViolation))
+	g.Expect(results[0].Errors).ToNot(BeEmpty())
+	g.Expect(results[0].Errors[0].Msg).To(ContainSubstring("sectionName must be specified"))
 }
 
 func TestValidateBytes_InvalidFieldType(t *testing.T) {
