@@ -15,11 +15,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Test suite setup
-        uses: fluxcd/gha-workflows/.github/actions/setup-kubernetes@v0.11.0
+        uses: fluxcd/gha-workflows/.github/actions/setup-kubernetes@v0.12.0
         with:
           go-version: 1.26.x
       - name: Setup Flux CLI
-        uses: fluxcd/flux2/action@1fd61a06264d71cf445ed55c4f14d401d26a1c64 # v2.8.8
+        uses: fluxcd/flux2/action@dcc7def046cba2fe8d15d9737a4c250100f62fe0 # v2.9.0
       - name: Run shellcheck
         run: shellcheck scripts/*.sh actions/validate/*.sh
       - name: Run tests
@@ -34,7 +34,7 @@ jobs:
         run: |
           flux install --export | flux-schema validate -v --schema-location ./catalog/latest
       - name: Checkout example repository
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: fluxcd/flux2-kustomize-helm-example
           path: example
