@@ -359,6 +359,15 @@ spec:
 	g.Expect(crds[1].DeprecationWarning).To(BeEmpty())
 }
 
+func TestExtractCRDs_CommentOnlyDocumentIsSkipped(t *testing.T) {
+	g := NewWithT(t)
+	data := "# Copyright The Flux Authors\n# SPDX-License-Identifier: Apache-2.0\n---\n" + bareCRD
+	crds, errs := ExtractCRDs([]byte(data))
+	g.Expect(errs).To(BeEmpty())
+	g.Expect(crds).To(HaveLen(1))
+	g.Expect(crds[0].Kind).To(Equal("Widget"))
+}
+
 func TestExtractCRDs_NonMappingDocumentIsError(t *testing.T) {
 	g := NewWithT(t)
 	_, errs := ExtractCRDs([]byte("- just\n- a\n- list\n"))

@@ -44,6 +44,97 @@ func TestNewCELValidator_NoRulesReturnsNil(t *testing.T) {
 	g.Expect(v).To(BeNil())
 }
 
+func TestRewriteIntOrStringOneOfForCEL(t *testing.T) {
+	g := NewWithT(t)
+	raw := schemaFromJSON(t, `{
+		"type": "object",
+		"properties": {
+			"forward": {
+				"oneOf": [
+					{ "type": "string" },
+					{ "type": "integer" }
+				]
+			},
+			"reverse": {
+				"description": "resource quantity",
+				"oneOf": [
+					{ "type": "integer" },
+					{ "type": "string" }
+				]
+			},
+			"typed": {
+				"type": "string",
+				"oneOf": [
+					{ "type": "string" },
+					{ "type": "integer" }
+				]
+			},
+			"extraMember": {
+				"oneOf": [
+					{ "type": "string" },
+					{ "type": "integer" },
+					{ "type": "null" }
+				]
+			},
+			"otherType": {
+				"oneOf": [
+					{ "type": "string" },
+					{ "type": "number" }
+				]
+			},
+			"extraConstraint": {
+				"oneOf": [
+					{ "type": "string", "pattern": "^[0-9]+$" },
+					{ "type": "integer" }
+				]
+			},
+			"array": {
+				"type": "array",
+				"items": {
+					"oneOf": [
+						{ "type": "string" },
+						{ "type": "integer" }
+					]
+				}
+			},
+			"map": {
+				"type": "object",
+				"additionalProperties": {
+					"oneOf": [
+						{ "type": "integer" },
+						{ "type": "string" }
+					]
+				}
+			}
+		}
+	}`)
+
+	got := rewriteIntOrStringOneOfForCEL(raw).(map[string]any)
+	props := got["properties"].(map[string]any)
+	g.Expect(props["forward"]).To(Equal(map[string]any{
+		"x-kubernetes-int-or-string": true,
+	}))
+	g.Expect(props["reverse"]).To(Equal(map[string]any{
+		"description":                "resource quantity",
+		"x-kubernetes-int-or-string": true,
+	}))
+	g.Expect(props["array"].(map[string]any)["items"]).To(Equal(map[string]any{
+		"x-kubernetes-int-or-string": true,
+	}))
+	g.Expect(props["map"].(map[string]any)["additionalProperties"]).To(Equal(map[string]any{
+		"x-kubernetes-int-or-string": true,
+	}))
+	for _, name := range []string{"typed", "extraMember", "otherType", "extraConstraint"} {
+		prop := props[name].(map[string]any)
+		g.Expect(prop).To(HaveKey("oneOf"))
+		g.Expect(prop).ToNot(HaveKey("x-kubernetes-int-or-string"))
+	}
+
+	rawProps := raw["properties"].(map[string]any)
+	g.Expect(rawProps["forward"].(map[string]any)).To(HaveKey("oneOf"))
+	g.Expect(rawProps["forward"].(map[string]any)).ToNot(HaveKey("x-kubernetes-int-or-string"))
+}
+
 func TestNewCELValidator_RuleViolationProducesError(t *testing.T) {
 	g := NewWithT(t)
 	// Top-level rule: spec.foo must equal "ok".

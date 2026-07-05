@@ -313,6 +313,164 @@ spec:
 	g.Expect(results[0].Errors[0].Msg).To(ContainSubstring("sectionName must be specified"))
 }
 
+const clusterQueueIntOrStringCRD = `
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: clusterqueues.kueue.x-k8s.io
+spec:
+  group: kueue.x-k8s.io
+  scope: Cluster
+  names:
+    kind: ClusterQueue
+  versions:
+    - name: v1beta1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: [apiVersion, kind, metadata, spec]
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+              x-kubernetes-preserve-unknown-fields: true
+            spec:
+              type: object
+              properties:
+                cohort:
+                  type: string
+                namespaceSelector:
+                  type: object
+                resourceGroups:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      coveredResources:
+                        type: array
+                        items:
+                          type: string
+                      flavors:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            resources:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  name:
+                                    type: string
+                                  nominalQuota:
+                                    x-kubernetes-int-or-string: true
+                                  borrowingLimit:
+                                    x-kubernetes-int-or-string: true
+                                  lendingLimit:
+                                    x-kubernetes-int-or-string: true
+              x-kubernetes-validations:
+                - rule: "!has(self.cohort) && has(self.resourceGroups) ? self.resourceGroups.all(rg, rg.flavors.all(f, f.resources.all(r, !has(r.borrowingLimit)))) : true"
+                  message: "borrowingLimit must not be set when cohort is empty"
+`
+
+func writeExtractedClusterQueueSchema(t *testing.T, dir string, reverseOneOf bool) {
+	t.Helper()
+	schemas, errs := extractor.ExtractCRDs([]byte(clusterQueueIntOrStringCRD))
+	if len(errs) > 0 {
+		t.Fatalf("extract CRD: %v", errs)
+	}
+	if len(schemas) != 1 {
+		t.Fatalf("extract CRD: got %d schemas, want 1", len(schemas))
+	}
+	if reverseOneOf {
+		reverseIntOrStringOneOfMembers(schemas[0].JSON)
+	}
+	b, err := json.MarshalIndent(schemas[0].JSON, "", "  ")
+	if err != nil {
+		t.Fatalf("marshal schema: %v", err)
+	}
+	path := filepath.Join(dir, "clusterqueue-kueue-v1beta1.json")
+	if err := os.WriteFile(path, b, 0o644); err != nil {
+		t.Fatalf("write schema: %v", err)
+	}
+}
+
+func reverseIntOrStringOneOfMembers(node any) {
+	switch n := node.(type) {
+	case map[string]any:
+		if oneOf, ok := n["oneOf"].([]any); ok && isStringIntegerOneOf(oneOf) {
+			oneOf[0], oneOf[1] = oneOf[1], oneOf[0]
+		}
+		for _, v := range n {
+			reverseIntOrStringOneOfMembers(v)
+		}
+	case []any:
+		for _, v := range n {
+			reverseIntOrStringOneOfMembers(v)
+		}
+	}
+}
+
+func isStringIntegerOneOf(oneOf []any) bool {
+	if len(oneOf) != 2 {
+		return false
+	}
+	first, ok := oneOf[0].(map[string]any)
+	if !ok || len(first) != 1 {
+		return false
+	}
+	second, ok := oneOf[1].(map[string]any)
+	if !ok || len(second) != 1 {
+		return false
+	}
+	firstType, _ := first["type"].(string)
+	secondType, _ := second["type"].(string)
+	return firstType == "string" && secondType == "integer"
+}
+
+func TestValidateBytes_ExtractedCRDIntOrStringCEL(t *testing.T) {
+	cases := map[string]bool{
+		"string integer": false,
+		"integer string": true,
+	}
+	for name, reverseOneOf := range cases {
+		t.Run(name, func(t *testing.T) {
+			g := NewWithT(t)
+			dir := t.TempDir()
+			writeExtractedClusterQueueSchema(t, dir, reverseOneOf)
+			v := newLocalValidator(t, dir, false)
+
+			valid := []byte(`apiVersion: kueue.x-k8s.io/v1beta1
+kind: ClusterQueue
+metadata:
+  name: cluster-queue
+spec:
+  namespaceSelector: {}
+  resourceGroups:
+    - coveredResources: ["cpu", "memory"]
+      flavors:
+        - name: default-flavor
+          resources:
+            - name: cpu
+              nominalQuota: 100
+            - name: memory
+              nominalQuota: 200Gi
+`)
+			results := v.ValidateBytes(context.Background(), "clusterqueue.yaml", valid)
+			g.Expect(results).To(HaveLen(1))
+			g.Expect(results[0].Status).To(Equal(StatusValid), "errors: %+v", results[0].Errors)
+			g.Expect(results[0].Errors).To(BeEmpty())
+		})
+	}
+}
+
 func TestValidateBytes_InvalidFieldType(t *testing.T) {
 	g := NewWithT(t)
 	dir := t.TempDir()

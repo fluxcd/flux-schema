@@ -19,6 +19,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
+const (
+	jsonSchemaTypeInteger = "integer"
+	jsonSchemaTypeString  = "string"
+)
+
 // celValidator wraps the kube-apiserver's x-kubernetes-validations evaluator
 // for a single resolved schema. Construction can fail (bad JSON shape,
 // unsupported structural features); evaluation cannot fail to start, but rule
@@ -51,10 +56,15 @@ func newCELValidator(raw map[string]any) (*celValidator, error) {
 		return nil, nil
 	}
 
+	// The JSON Schema path still needs the extracted oneOf form. Build the
+	// structural/CEL schema from a private copy that restores int-or-string to
+	// the representation Kubernetes' CEL type-checker understands.
+	celRaw := rewriteIntOrStringOneOfForCEL(raw).(map[string]any)
+
 	// The internal apiextensions.JSONSchemaProps has no JSON tags, so the
 	// versioned type is the only viable unmarshal target on the way to
 	// NewStructural.
-	body, err := json.Marshal(raw)
+	body, err := json.Marshal(celRaw)
 	if err != nil {
 		return nil, fmt.Errorf("marshal schema: %w", err)
 	}
@@ -174,6 +184,63 @@ func hasJSONNull(node any) bool {
 		}
 	}
 	return false
+}
+
+// rewriteIntOrStringOneOfForCEL deep-copies node while rewriting the exact
+// int-or-string oneOf shape emitted by the extractor back to the Kubernetes
+// structural-schema extension required by CEL. Parent metadata/default siblings
+// are preserved; oneOf branches with extra constraints are left untouched.
+func rewriteIntOrStringOneOfForCEL(node any) any {
+	switch n := node.(type) {
+	case map[string]any:
+		if isExtractedIntOrStringOneOf(n) {
+			out := make(map[string]any, len(n))
+			for k, v := range n {
+				if k == "oneOf" {
+					continue
+				}
+				out[k] = rewriteIntOrStringOneOfForCEL(v)
+			}
+			out["x-kubernetes-int-or-string"] = true
+			return out
+		}
+		out := make(map[string]any, len(n))
+		for k, v := range n {
+			out[k] = rewriteIntOrStringOneOfForCEL(v)
+		}
+		return out
+	case []any:
+		out := make([]any, len(n))
+		for i, v := range n {
+			out[i] = rewriteIntOrStringOneOfForCEL(v)
+		}
+		return out
+	default:
+		return n
+	}
+}
+
+func isExtractedIntOrStringOneOf(m map[string]any) bool {
+	if _, hasType := m["type"]; hasType {
+		return false
+	}
+	oneOf, ok := m["oneOf"].([]any)
+	if !ok || len(oneOf) != 2 {
+		return false
+	}
+	seen := map[string]bool{}
+	for _, branch := range oneOf {
+		bm, ok := branch.(map[string]any)
+		if !ok || len(bm) != 1 {
+			return false
+		}
+		t, ok := bm["type"].(string)
+		if !ok || (t != jsonSchemaTypeString && t != jsonSchemaTypeInteger) || seen[t] {
+			return false
+		}
+		seen[t] = true
+	}
+	return seen[jsonSchemaTypeString] && seen[jsonSchemaTypeInteger]
 }
 
 // hasCELRules walks the raw schema tree and returns true on the first
