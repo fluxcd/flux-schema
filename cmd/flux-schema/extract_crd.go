@@ -81,8 +81,9 @@ func extractCRDCmdRun(cmd *cobra.Command, args []string) error {
 	}
 
 	var (
-		failures []error
-		written  int
+		failures            []error
+		written             int
+		explainIndexSchemas []extractor.Schema
 	)
 	for _, path := range inputs {
 		data, err := readSource(path)
@@ -104,6 +105,9 @@ func extractCRDCmdRun(cmd *cobra.Command, args []string) error {
 				}
 			}
 
+			if !extractCRDArgs.WithExplainMetadata {
+				extractor.StripExplainMetadata(crd.JSON)
+			}
 			if extractCRDArgs.StripDescription {
 				extractor.StripDescriptions(crd.JSON)
 			}
@@ -119,6 +123,24 @@ func extractCRDCmdRun(cmd *cobra.Command, args []string) error {
 			}
 			cmd.Printf("OK   %s -> %s\n", path, displayPath)
 			written++
+			if extractCRDArgs.WithExplainMetadata {
+				explainIndexSchemas = append(explainIndexSchemas, crd)
+			}
+
+			if extractCRDArgs.WithExplainMetadata {
+				aliasPaths, err := writeExplainAliases(crd, destDir, extractCRDArgs.Format, relPath)
+				if err != nil {
+					failures = append(failures, fmt.Errorf("%s: %w", path, err))
+					continue
+				}
+				for _, aliasPath := range aliasPaths {
+					displayPath := filepath.Join(destDir, aliasPath)
+					if archive != "" {
+						displayPath = aliasPath
+					}
+					cmd.Printf("OK   %s -> %s\n", path, displayPath)
+				}
+			}
 
 			if extractCRDArgs.WithFieldIndex && index != "" {
 				indexRelPath, err := writeFieldIndex(destDir, relPath, index)
@@ -132,6 +154,19 @@ func extractCRDCmdRun(cmd *cobra.Command, args []string) error {
 				}
 				cmd.Printf("OK   %s -> %s\n", path, displayPath)
 			}
+		}
+	}
+
+	if extractCRDArgs.WithExplainMetadata {
+		indexRelPath, err := writeExplainIndex(explainIndexSchemas, destDir)
+		if err != nil {
+			failures = append(failures, err)
+		} else if indexRelPath != "" {
+			displayPath := filepath.Join(destDir, indexRelPath)
+			if archive != "" {
+				displayPath = indexRelPath
+			}
+			cmd.Printf("OK   %s\n", displayPath)
 		}
 	}
 

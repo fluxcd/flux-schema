@@ -89,8 +89,8 @@ generate-json-schemas: generate-api ## Generate JSON Schemas
 		-group "schema.plugin.fluxcd.io" \
 		-version "v1beta1" \
 		-kind "Config" \
-		-type "github.com/fluxcd/flux-schema/api/v1beta1.ValidateConfig" \
-		-field "validate" \
+		-type "github.com/fluxcd/flux-schema/api/v1beta1.Config" \
+		-direct \
 		-id "https://raw.githubusercontent.com/fluxcd/flux-schema/main/docs/config-v1beta1.json" \
 		-out ./docs/config-v1beta1.json
 	cp ./docs/config-v1beta1.json ./catalog/latest/schema.plugin.fluxcd.io/config_v1beta1.json

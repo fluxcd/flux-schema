@@ -1,0 +1,3 @@
+apiVersion <string> enum=v1
+kind <string> enum=Pod
+metadata.name <string> (required)

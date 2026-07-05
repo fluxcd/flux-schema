@@ -1,0 +1,30 @@
+{
+  "description": "OCIRepository is the Schema for the ocirepositories API.",
+  "type": "object",
+  "x-flux-schema-type": "OCIRepository",
+  "x-flux-schema-group-version-kind": {
+    "group": "source.toolkit.fluxcd.io",
+    "version": "v1",
+    "kind": "OCIRepository"
+  },
+  "properties": {
+    "spec": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "x-flux-schema-type": "OCIRepositorySpec",
+      "description": "OCIRepositorySpec specifies the required configuration to produce an Artifact for an OCI image.",
+      "properties": {
+        "verify": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "x-flux-schema-type": "OCIRepositoryVerification",
+          "description": "Verify contains the secret name containing the trusted public keys used to verify the image signature."
+        }
+      }
+    }
+  }
+}

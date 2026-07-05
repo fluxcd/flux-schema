@@ -84,6 +84,7 @@ func ExtractOpenShift(data []byte) ([]Schema, []error) {
 		return nil, errs
 	}
 	scopes := scopeFromPaths(root)
+	resources := resourceNamesFromPaths(root)
 	source := sourceWithVersion("OpenShift", openShiftInfoVersion(root))
 
 	var out []Schema
@@ -123,13 +124,16 @@ func ExtractOpenShift(data []byte) ([]Schema, []error) {
 			errs = append(errs, fmt.Errorf("%s: %w", name, err))
 			continue
 		}
+		resource := resources[gvk]
+		injectExplainMetadata(schema, name, gvk, resource)
 		out = append(out, Schema{
-			Group:   gvk.Group,
-			Version: gvk.Version,
-			Kind:    gvk.Kind,
-			Scope:   scopes[gvk],
-			Source:  source,
-			JSON:    schema,
+			Group:    gvk.Group,
+			Version:  gvk.Version,
+			Kind:     gvk.Kind,
+			Scope:    scopes[gvk],
+			Source:   source,
+			Resource: resource,
+			JSON:     schema,
 		})
 	}
 

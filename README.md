@@ -154,6 +154,7 @@ validation guide for details on running the CLI in CI using the container image.
 | Command                                   | Description                                                   |
 |-------------------------------------------|---------------------------------------------------------------|
 | `flux schema validate [paths...]`         | Validate Kubernetes YAML against JSON Schema and CEL rules.   |
+| `flux schema explain TYPE`                | Print kubectl-style field documentation from schema catalogs. |
 | `flux schema discover [path]`             | Catalog Flux and Kubernetes resources in a GitOps repository. |
 | `flux schema extract crd [files...]`      | Extract JSON Schemas from CRD YAMLs.                          |
 | `flux schema extract k8s [swagger]`       | Extract JSON Schemas from Kubernetes OpenAPI v2 swagger.      |
@@ -169,6 +170,8 @@ Run `flux schema <command> --help` for the full flag list.
   and config files.
 - [Custom catalog guide](docs/custom-schema-catalog.md) — populate,
   layout, host, and refresh your own catalog with the `extract` commands.
+- [Explain guide](docs/explain.md) — print kubectl-style field
+  documentation from schema catalogs without a live cluster.
 - [Field index reference](docs/field-index.md) — the greppable
   `.fields.txt` format emitted by `extract --with-field-index` for AI agents.
 - [Repository discovery guide](docs/repo-discovery.md) — catalog a

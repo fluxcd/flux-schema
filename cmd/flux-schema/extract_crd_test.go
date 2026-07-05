@@ -26,6 +26,42 @@ func TestExtractCRDCmd_DefaultFormat(t *testing.T) {
 	got, err := os.ReadFile(filepath.Join(outDir, "example.com", "widget_v1.json"))
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(string(got)).To(Equal(minimalCRDGolden))
+	_, err = os.Stat(filepath.Join(outDir, "explain-index.json"))
+	g.Expect(os.IsNotExist(err)).To(BeTrue())
+}
+
+func TestExtractCRDCmd_WithExplainMetadata(t *testing.T) {
+	g := NewWithT(t)
+
+	outDir := t.TempDir()
+	input := writeCRDFixture(t)
+
+	_, err := executeCommand([]string{
+		"extract", "crd", input,
+		"--output-dir", outDir,
+		"--with-explain-metadata",
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	got, err := os.ReadFile(filepath.Join(outDir, "example.com", "widget_v1.json"))
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(string(got)).To(ContainSubstring(`"x-flux-schema-type": "Widget"`))
+	g.Expect(string(got)).To(ContainSubstring(`"x-flux-schema-group-version-kind"`))
+	g.Expect(string(got)).To(ContainSubstring(`"x-flux-schema-resource"`))
+
+	for _, alias := range []string{"widgets_v1.json", "wdg_v1.json"} {
+		got, err := os.ReadFile(filepath.Join(outDir, "example.com", alias))
+		g.Expect(err).ToNot(HaveOccurred())
+		g.Expect(string(got)).To(ContainSubstring(`"x-flux-schema-alias"`))
+		g.Expect(string(got)).To(ContainSubstring(`"kind": "Widget"`))
+	}
+
+	got, err = os.ReadFile(filepath.Join(outDir, "explain-index.json"))
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(string(got)).To(ContainSubstring(`"kind": "ExplainIndex"`))
+	g.Expect(string(got)).To(ContainSubstring(`"plural": "widgets"`))
+	g.Expect(string(got)).To(ContainSubstring(`"shortNames": [`))
+	g.Expect(string(got)).To(ContainSubstring(`"wdg"`))
 }
 
 func TestExtractCRDCmd_FlatFormat(t *testing.T) {
@@ -338,6 +374,10 @@ spec:
   group: example.com
   names:
     kind: Widget
+    plural: widgets
+    shortNames:
+      - wdg
+    singular: widget
   versions:
     - name: v1
       schema:
@@ -417,6 +457,10 @@ spec:
   group: example.com
   names:
     kind: Widget
+    plural: widgets
+    shortNames:
+      - wdg
+    singular: widget
   versions:
     - name: v1
       schema:

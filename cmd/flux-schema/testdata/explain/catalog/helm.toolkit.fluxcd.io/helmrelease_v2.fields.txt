@@ -1,0 +1,3 @@
+apiVersion <string> enum=helm.toolkit.fluxcd.io/v2
+kind <string> enum=HelmRelease
+metadata.name <string> (required)

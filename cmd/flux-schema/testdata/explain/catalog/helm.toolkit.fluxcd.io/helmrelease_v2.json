@@ -1,0 +1,13 @@
+{
+  "description": "HelmRelease is the Schema for the helmreleases API",
+  "type": "object",
+  "properties": {
+    "spec": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "HelmReleaseSpec defines the desired state of a Helm release."
+    }
+  }
+}

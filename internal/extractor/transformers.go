@@ -17,6 +17,12 @@ import (
 // fields from the output.
 
 const keyProperties = "properties"
+const keyFluxSchemaType = "x-flux-schema-type"
+const keyFluxSchemaGVK = "x-flux-schema-group-version-kind"
+const keyFluxSchemaResource = "x-flux-schema-resource"
+
+// KeyFluxSchemaAlias marks a small redirect file for explain resource aliases.
+const KeyFluxSchemaAlias = "x-flux-schema-alias"
 
 // --- $ref inlining ---
 
@@ -91,7 +97,45 @@ func resolveRef(node map[string]any, refVal string, defs map[string]any, visitin
 	if !ok {
 		return resolved
 	}
+	if _, ok := m[keyFluxSchemaType]; !ok {
+		m[keyFluxSchemaType] = shortDefinitionName(name)
+	}
 	return overlaySiblings(m, node)
+}
+
+func injectExplainMetadata(schema map[string]any, definitionName string, gvk GVK, resource ResourceNames) {
+	if _, ok := schema[keyFluxSchemaType]; !ok {
+		schema[keyFluxSchemaType] = shortDefinitionName(definitionName)
+	}
+	schema[keyFluxSchemaGVK] = map[string]any{
+		"group":   gvk.Group,
+		"version": gvk.Version,
+		"kind":    gvk.Kind,
+	}
+	resourceMeta := map[string]any{}
+	if resource.Singular != "" {
+		resourceMeta["singular"] = resource.Singular
+	}
+	if resource.Plural != "" {
+		resourceMeta["plural"] = resource.Plural
+	}
+	if len(resource.ShortNames) > 0 {
+		shortNames := make([]any, len(resource.ShortNames))
+		for i, name := range resource.ShortNames {
+			shortNames[i] = name
+		}
+		resourceMeta["shortNames"] = shortNames
+	}
+	if len(resourceMeta) > 0 {
+		schema[keyFluxSchemaResource] = resourceMeta
+	}
+}
+
+func shortDefinitionName(name string) string {
+	if i := strings.LastIndex(name, "."); i >= 0 && i+1 < len(name) {
+		return name[i+1:]
+	}
+	return name
 }
 
 // unresolvedPlaceholder returns a stand-in object used by resolveRef when a
@@ -449,6 +493,36 @@ func keepVendorExtension(k string) bool {
 		return true
 	}
 	return false
+}
+
+// --- explain metadata stripping ---
+
+// StripExplainMetadata removes flux-schema explain annotations from the tree.
+// The annotations are useful for `flux schema explain`, but are opt-in for
+// catalogs because they are documentation-only and increase schema size.
+func StripExplainMetadata(node any) {
+	switch n := node.(type) {
+	case map[string]any:
+		delete(n, keyFluxSchemaType)
+		delete(n, keyFluxSchemaGVK)
+		delete(n, keyFluxSchemaResource)
+		delete(n, KeyFluxSchemaAlias)
+		for k, v := range n {
+			if isSchemaNameMap(k) {
+				if m, ok := v.(map[string]any); ok {
+					for _, child := range m {
+						StripExplainMetadata(child)
+					}
+					continue
+				}
+			}
+			StripExplainMetadata(v)
+		}
+	case []any:
+		for _, v := range n {
+			StripExplainMetadata(v)
+		}
+	}
 }
 
 // --- description stripping ---
