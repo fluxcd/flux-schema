@@ -64,6 +64,98 @@ func TestCloseAdditionalProperties_ClosesRoot(t *testing.T) {
 	g.Expect(schema["additionalProperties"]).To(BeFalse(), "root must be closed")
 }
 
+// A structural object that also carries oneOf/anyOf branches (Cilium's
+// CiliumNetworkPolicy spec pattern): the object itself is closed, but the
+// branch subschemas — which list only a subset of properties to anchor a
+// requirement — must stay open, else a real resource carrying sibling
+// properties matches no branch and is wrongly rejected.
+func TestCloseAdditionalProperties_LeavesCombinatorBranchesOpen(t *testing.T) {
+	g := NewWithT(t)
+	schema := map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"endpointSelector": map[string]any{
+				"type":       "object",
+				"properties": map[string]any{"matchLabels": map[string]any{"type": "object"}},
+			},
+			"ingress":      map[string]any{"type": "array"},
+			"nodeSelector": map[string]any{"type": "object"},
+		},
+		"oneOf": []any{
+			map[string]any{
+				"properties": map[string]any{"endpointSelector": map[string]any{}},
+				"required":   []any{"endpointSelector"},
+			},
+			map[string]any{
+				"properties": map[string]any{"nodeSelector": map[string]any{}},
+				"required":   []any{"nodeSelector"},
+			},
+		},
+		"anyOf": []any{
+			map[string]any{"required": []any{"ingress"}},
+		},
+		"allOf": []any{
+			map[string]any{
+				"properties": map[string]any{"ingress": map[string]any{}},
+			},
+		},
+		"not": map[string]any{
+			"properties": map[string]any{"ingress": map[string]any{}},
+			"required":   []any{"ingress", "nodeSelector"},
+		},
+	}
+	closeAdditionalProperties(schema)
+
+	g.Expect(schema["additionalProperties"]).To(BeFalse(), "structural object must be closed")
+
+	for _, key := range []string{"oneOf", "anyOf", "allOf"} {
+		for i, branch := range schema[key].([]any) {
+			_, hasAP := branch.(map[string]any)["additionalProperties"]
+			g.Expect(hasAP).To(BeFalse(), "%s branch %d must stay open", key, i)
+		}
+	}
+	_, notHasAP := schema["not"].(map[string]any)["additionalProperties"]
+	g.Expect(notHasAP).To(BeFalse(), "not subschema must stay open")
+	// The structural properties themselves are still closed.
+	sel := schema["properties"].(map[string]any)["endpointSelector"].(map[string]any)
+	g.Expect(sel["additionalProperties"]).To(BeFalse(), "nested structural object must be closed")
+}
+
+// Combinators at the openAPIV3Schema root (e.g. oneOf requiring spec or
+// specs) must stay open on the CRD pipeline's root pass too, not only when
+// reached through recursion.
+func TestCloseAdditionalPropertiesChildren_LeavesRootCombinatorBranchesOpen(t *testing.T) {
+	g := NewWithT(t)
+	schema := map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"spec": map[string]any{
+				"type":       "object",
+				"properties": map[string]any{"name": map[string]any{"type": "string"}},
+			},
+			"specs": map[string]any{"type": "array"},
+		},
+		"oneOf": []any{
+			map[string]any{
+				"properties": map[string]any{"spec": map[string]any{}},
+				"required":   []any{"spec"},
+			},
+			map[string]any{
+				"properties": map[string]any{"specs": map[string]any{}},
+				"required":   []any{"specs"},
+			},
+		},
+	}
+	closeAdditionalPropertiesChildren(schema)
+
+	for i, branch := range schema["oneOf"].([]any) {
+		_, hasAP := branch.(map[string]any)["additionalProperties"]
+		g.Expect(hasAP).To(BeFalse(), "root oneOf branch %d must stay open", i)
+	}
+	spec := schema["properties"].(map[string]any)["spec"].(map[string]any)
+	g.Expect(spec["additionalProperties"]).To(BeFalse(), "structural child must be closed")
+}
+
 func TestReplaceIntOrString_LegacyFormat(t *testing.T) {
 	g := NewWithT(t)
 	input := map[string]any{
