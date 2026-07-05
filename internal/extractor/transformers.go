@@ -346,6 +346,16 @@ func markNullable(prop map[string]any) {
 // server accepts arbitrary keys there (status subresources, free-form map
 // fields like HelmRelease.spec.values); forcing additionalProperties:false
 // would reject valid documents.
+//
+// The oneOf/anyOf/allOf/not branch subschemas are NOT closed: they are partial
+// value-validation constraints combined with the structural (parent) schema,
+// not standalone objects. A branch that lists a subset of properties — e.g.
+// Cilium's spec.oneOf anchors a requirement with {properties:{endpointSelector:
+// {}}, required:[endpointSelector]} — would, with additionalProperties:false,
+// reject every sibling property the parent legitimately defines, making the
+// combinator unsatisfiable for real resources. Kubernetes derives
+// additionalProperties from the structural schema only, never from these
+// value-validation keywords, so we mirror that and leave the branches open.
 func closeAdditionalProperties(node any) {
 	switch n := node.(type) {
 	case map[string]any:
@@ -357,7 +367,10 @@ func closeAdditionalProperties(node any) {
 				n["additionalProperties"] = false
 			}
 		}
-		for _, v := range n {
+		for k, v := range n {
+			if isCombinatorKey(k) {
+				continue
+			}
 			closeAdditionalProperties(v)
 		}
 	case []any:
@@ -367,11 +380,24 @@ func closeAdditionalProperties(node any) {
 	}
 }
 
+// isCombinatorKey reports whether k is a JSON Schema value-validation combinator
+// whose branch subschemas must not have additionalProperties:false injected.
+func isCombinatorKey(k string) bool {
+	switch k {
+	case "oneOf", "anyOf", "allOf", "not":
+		return true
+	default:
+		return false
+	}
+}
+
 // closeAdditionalPropertiesChildren is closeAdditionalProperties but leaves
 // the root object's own additionalProperties untouched. Used by the CRD
 // pipeline, where the openAPIV3Schema describes a custom resource whose root
 // often omits the apiVersion/kind/metadata wrapper added by the API server;
-// closing the root would reject that wrapper.
+// closing the root would reject that wrapper. Combinators at the root are
+// skipped for the same reason as everywhere else: their branches are partial
+// value-validation constraints, not standalone objects.
 func closeAdditionalPropertiesChildren(node any) {
 	m, ok := node.(map[string]any)
 	if !ok {
@@ -380,7 +406,10 @@ func closeAdditionalPropertiesChildren(node any) {
 	if preserve, _ := m["x-kubernetes-preserve-unknown-fields"].(bool); preserve {
 		return
 	}
-	for _, v := range m {
+	for k, v := range m {
+		if isCombinatorKey(k) {
+			continue
+		}
 		closeAdditionalProperties(v)
 	}
 }
