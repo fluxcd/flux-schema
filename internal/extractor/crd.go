@@ -59,6 +59,11 @@ func parseDocument(raw []byte) ([]map[string]any, error) {
 		return nil, fmt.Errorf("JSON decode error: %w", err)
 	}
 
+	// Comment-only documents parse to null; treat them as empty.
+	if doc == nil {
+		return nil, nil
+	}
+
 	m, ok := doc.(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("document is not a YAML mapping")
