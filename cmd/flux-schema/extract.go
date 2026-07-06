@@ -52,7 +52,7 @@ func runSwaggerExtract(cmd *cobra.Command, source string, data []byte, out flags
 	}
 
 	written := 0
-	var explainIndexSchemas []extractor.Schema
+	var explainMetadataSchemas []extractor.Schema
 	for _, schemaDoc := range schemas {
 		var index string
 		if out.WithFieldIndex && !strings.HasSuffix(schemaDoc.Kind, "List") {
@@ -78,7 +78,7 @@ func runSwaggerExtract(cmd *cobra.Command, source string, data []byte, out flags
 		cmd.Printf("OK   %s\n", relPath)
 		written++
 		if out.WithExplainMetadata {
-			explainIndexSchemas = append(explainIndexSchemas, schemaDoc)
+			explainMetadataSchemas = append(explainMetadataSchemas, schemaDoc)
 		}
 
 		if out.WithExplainMetadata {
@@ -103,11 +103,13 @@ func runSwaggerExtract(cmd *cobra.Command, source string, data []byte, out flags
 	}
 
 	if out.WithExplainMetadata {
-		indexRelPath, err := writeExplainIndex(explainIndexSchemas, destDir)
+		metadataPaths, err := writeExplainMetadata(explainMetadataSchemas, destDir)
 		if err != nil {
 			failures = append(failures, err)
-		} else if indexRelPath != "" {
-			cmd.Printf("OK   %s\n", indexRelPath)
+		} else {
+			for _, metadataPath := range metadataPaths {
+				cmd.Printf("OK   %s\n", metadataPath)
+			}
 		}
 	}
 
@@ -159,82 +161,226 @@ func writeFieldIndex(destDir, relPath, index string) (string, error) {
 	return indexRelPath, nil
 }
 
-type explainIndexDocument struct {
-	APIVersion string                 `json:"apiVersion"`
-	Kind       string                 `json:"kind"`
-	Resources  []explainIndexResource `json:"resources"`
+type explainReferenceDocument struct {
+	APIVersion string                   `json:"apiVersion"`
+	Kind       string                   `json:"kind"`
+	Targets    []explainReferenceTarget `json:"targets"`
 }
 
-type explainIndexResource struct {
-	Group      string   `json:"group,omitempty"`
-	Version    string   `json:"version"`
-	Kind       string   `json:"kind"`
-	Singular   string   `json:"singular,omitempty"`
-	Plural     string   `json:"plural,omitempty"`
-	ShortNames []string `json:"shortNames,omitempty"`
-	Scope      string   `json:"scope,omitempty"`
+type explainReferenceTarget struct {
+	Group   string `json:"group,omitempty"`
+	Version string `json:"version"`
+	Kind    string `json:"kind"`
 }
 
-func writeExplainIndex(schemas []extractor.Schema, destDir string) (string, error) {
-	resources := explainIndexResources(schemas)
-	if len(resources) == 0 {
-		return "", nil
+type explainCompletionShard struct {
+	APIVersion string                      `json:"apiVersion"`
+	Kind       string                      `json:"kind"`
+	Resources  []explainCompletionResource `json:"resources"`
+}
+
+type explainCompletionResource struct {
+	Name    string   `json:"name"`
+	Aliases []string `json:"aliases,omitempty"`
+}
+
+func writeExplainMetadata(schemas []extractor.Schema, destDir string) ([]string, error) {
+	var written []string
+	references := explainReferences(schemas)
+	for _, key := range sortedKeys(references) {
+		relPath := filepath.Join(explainer.MetadataDir, explainer.ReferencesDir, key+".json")
+		if err := writeJSONDocument(filepath.Join(destDir, relPath), explainReferenceDocument{
+			APIVersion: "schema.plugin.fluxcd.io/v1beta1",
+			Kind:       "ExplainResourceReference",
+			Targets:    references[key],
+		}); err != nil {
+			return nil, err
+		}
+		written = append(written, relPath)
 	}
-	doc := explainIndexDocument{
-		APIVersion: "schema.plugin.fluxcd.io/v1beta1",
-		Kind:       "ExplainIndex",
-		Resources:  resources,
+
+	shards := explainCompletionShards(schemas)
+	for _, key := range sortedKeys(shards) {
+		relPath := filepath.Join(explainer.MetadataDir, explainer.CompletionDir, key+".json")
+		if err := writeJSONDocument(filepath.Join(destDir, relPath), explainCompletionShard{
+			APIVersion: "schema.plugin.fluxcd.io/v1beta1",
+			Kind:       "ExplainCompletionShard",
+			Resources:  shards[key],
+		}); err != nil {
+			return nil, err
+		}
+		written = append(written, relPath)
+	}
+	return written, nil
+}
+
+func explainReferences(schemas []extractor.Schema) map[string][]explainReferenceTarget {
+	refs := map[string]map[string]explainReferenceTarget{}
+	for _, schemaDoc := range schemas {
+		if !hasDiscoveryResource(schemaDoc.Resource) {
+			continue
+		}
+		target := explainReferenceTarget{Group: schemaDoc.Group, Version: schemaDoc.Version, Kind: schemaDoc.Kind}
+		for _, alias := range explainAliases(schemaDoc) {
+			if refs[alias] == nil {
+				refs[alias] = map[string]explainReferenceTarget{}
+			}
+			refs[alias][targetKey(target)] = target
+		}
+	}
+	out := make(map[string][]explainReferenceTarget, len(refs))
+	for alias, targets := range refs {
+		for _, key := range sortedKeys(targets) {
+			out[alias] = append(out[alias], targets[key])
+		}
+	}
+	return out
+}
+
+func explainCompletionShards(schemas []extractor.Schema) map[string][]explainCompletionResource {
+	shards := map[string]map[string]explainCompletionResource{}
+	for _, schemaDoc := range schemas {
+		if !hasDiscoveryResource(schemaDoc.Resource) {
+			continue
+		}
+		name := canonicalExplainName(schemaDoc)
+		if name == "" {
+			continue
+		}
+		resource := explainCompletionResource{Name: name, Aliases: explainAliases(schemaDoc)}
+		for _, alias := range resource.Aliases {
+			for _, key := range explainShardKeys(alias) {
+				if shards[key] == nil {
+					shards[key] = map[string]explainCompletionResource{}
+				}
+				shards[key][name] = mergeCompletionResource(shards[key][name], resource)
+			}
+		}
+	}
+	out := make(map[string][]explainCompletionResource, len(shards))
+	for key, resources := range shards {
+		for _, name := range sortedKeys(resources) {
+			resource := resources[name]
+			sort.Strings(resource.Aliases)
+			out[key] = append(out[key], resource)
+		}
+	}
+	return out
+}
+
+func hasDiscoveryResource(resource extractor.ResourceNames) bool {
+	return resource.Singular != "" || resource.Plural != "" || len(resource.ShortNames) > 0
+}
+
+func explainAliases(schemaDoc extractor.Schema) []string {
+	seen := map[string]bool{}
+	var out []string
+	add := func(alias string) {
+		alias = strings.ToLower(strings.TrimSpace(alias))
+		if alias == "" || seen[alias] {
+			return
+		}
+		seen[alias] = true
+		out = append(out, alias)
+	}
+	bases := make([]string, 0, 3+len(schemaDoc.Resource.ShortNames))
+	bases = append(bases, schemaDoc.Kind, schemaDoc.Resource.Singular, schemaDoc.Resource.Plural)
+	bases = append(bases, schemaDoc.Resource.ShortNames...)
+	for _, alias := range bases {
+		alias = strings.ToLower(strings.TrimSpace(alias))
+		if alias == "" {
+			continue
+		}
+		add(alias)
+		if schemaDoc.Group != "" {
+			add(alias + "." + strings.ToLower(schemaDoc.Group))
+		}
+	}
+	return out
+}
+
+func canonicalExplainName(schemaDoc extractor.Schema) string {
+	name := strings.ToLower(strings.TrimSpace(schemaDoc.Resource.Plural))
+	if name == "" {
+		name = strings.ToLower(strings.TrimSpace(schemaDoc.Resource.Singular))
+	}
+	if name == "" {
+		name = strings.ToLower(strings.TrimSpace(schemaDoc.Kind))
+	}
+	if name == "" || strings.HasSuffix(name, "list") {
+		return ""
+	}
+	if schemaDoc.Group == "" {
+		return name
+	}
+	return name + "." + strings.ToLower(schemaDoc.Group)
+}
+
+func explainShardKeys(alias string) []string {
+	alias = strings.ToLower(strings.TrimSpace(alias))
+	if alias == "" || !validShardPrefix(alias[:1]) {
+		return nil
+	}
+	keys := []string{alias[:1]}
+	if len(alias) >= 2 && validShardPrefix(alias[:2]) {
+		keys = append(keys, alias[:2])
+	}
+	return keys
+}
+
+func validShardPrefix(prefix string) bool {
+	for _, r := range prefix {
+		if (r < 'a' || r > 'z') && (r < '0' || r > '9') {
+			return false
+		}
+	}
+	return true
+}
+
+func mergeCompletionResource(a, b explainCompletionResource) explainCompletionResource {
+	if a.Name == "" {
+		return b
+	}
+	seen := map[string]bool{}
+	for _, alias := range a.Aliases {
+		seen[alias] = true
+	}
+	for _, alias := range b.Aliases {
+		if !seen[alias] {
+			a.Aliases = append(a.Aliases, alias)
+		}
+	}
+	return a
+}
+
+func targetKey(target explainReferenceTarget) string {
+	return target.Group + "/" + target.Version + "/" + target.Kind
+}
+
+func sortedKeys[V any](items map[string]V) []string {
+	keys := make([]string, 0, len(items))
+	for key := range items {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func writeJSONDocument(path string, doc any) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return fmt.Errorf("create %s: %w", filepath.Dir(path), err)
 	}
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)
 	enc.SetEscapeHTML(false)
 	enc.SetIndent("", "  ")
 	if err := enc.Encode(doc); err != nil {
-		return "", err
+		return err
 	}
-	outPath := filepath.Join(destDir, explainer.IndexFileName)
-	if err := os.WriteFile(outPath, buf.Bytes(), 0o644); err != nil {
-		return "", fmt.Errorf("write %s: %w", outPath, err)
+	if err := os.WriteFile(path, buf.Bytes(), 0o644); err != nil {
+		return fmt.Errorf("write %s: %w", path, err)
 	}
-	return explainer.IndexFileName, nil
-}
-
-func explainIndexResources(schemas []extractor.Schema) []explainIndexResource {
-	seen := map[string]bool{}
-	resources := make([]explainIndexResource, 0, len(schemas))
-	for _, schemaDoc := range schemas {
-		if !hasDiscoveryResource(schemaDoc.Resource) {
-			continue
-		}
-		key := schemaDoc.Group + "/" + schemaDoc.Version + "/" + schemaDoc.Kind
-		if seen[key] {
-			continue
-		}
-		seen[key] = true
-		resources = append(resources, explainIndexResource{
-			Group:      schemaDoc.Group,
-			Version:    schemaDoc.Version,
-			Kind:       schemaDoc.Kind,
-			Singular:   schemaDoc.Resource.Singular,
-			Plural:     schemaDoc.Resource.Plural,
-			ShortNames: append([]string(nil), schemaDoc.Resource.ShortNames...),
-			Scope:      schemaDoc.Scope,
-		})
-	}
-	sort.Slice(resources, func(i, j int) bool {
-		if resources[i].Group != resources[j].Group {
-			return resources[i].Group < resources[j].Group
-		}
-		if resources[i].Version != resources[j].Version {
-			return resources[i].Version < resources[j].Version
-		}
-		return resources[i].Kind < resources[j].Kind
-	})
-	return resources
-}
-
-func hasDiscoveryResource(resource extractor.ResourceNames) bool {
-	return resource.Singular != "" || resource.Plural != "" || len(resource.ShortNames) > 0
+	return nil
 }
 
 func writeExplainAliases(schema extractor.Schema, destDir, format, canonicalRelPath string) ([]string, error) {

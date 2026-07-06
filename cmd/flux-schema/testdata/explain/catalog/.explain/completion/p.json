@@ -1,0 +1,14 @@
+{
+  "apiVersion": "schema.plugin.fluxcd.io/v1beta1",
+  "kind": "ExplainCompletionShard",
+  "resources": [
+    {
+      "name": "pods",
+      "aliases": [
+        "pod",
+        "pods",
+        "po"
+      ]
+    }
+  ]
+}

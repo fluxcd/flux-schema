@@ -1,0 +1,17 @@
+{
+  "apiVersion": "schema.plugin.fluxcd.io/v1beta1",
+  "kind": "ExplainCompletionShard",
+  "resources": [
+    {
+      "name": "ocirepositories.source.toolkit.fluxcd.io",
+      "aliases": [
+        "ocirepository",
+        "ocirepository.source.toolkit.fluxcd.io",
+        "ocirepositories",
+        "ocirepositories.source.toolkit.fluxcd.io",
+        "ocirepo",
+        "ocirepo.source.toolkit.fluxcd.io"
+      ]
+    }
+  ]
+}

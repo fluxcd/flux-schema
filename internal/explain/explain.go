@@ -33,8 +33,14 @@ const (
 	OutputPlaintext          = "plaintext"
 	OutputPlaintextOpenAPIV2 = "plaintext-openapiv2"
 
-	// IndexFileName is the root-level resource discovery index used by explain.
-	IndexFileName = "explain-index.json"
+	// MetadataDir is the catalog root subdirectory for explain lookup metadata.
+	MetadataDir = ".explain"
+
+	// ReferencesDir contains exact resource-reference lookup files.
+	ReferencesDir = "refs"
+
+	// CompletionDir contains resource-reference completion shard files.
+	CompletionDir = "completion"
 
 	keyProperties = "properties"
 	keyType       = "type"
@@ -92,7 +98,7 @@ var versionCandidates = []string{
 
 type Options struct {
 	SchemaLocations       []string
-	IndexLocations        []string
+	MetadataLocations     []string
 	APIVersion            string
 	OutputFormat          string
 	Recursive             bool
@@ -102,12 +108,9 @@ type Options struct {
 }
 
 type Explainer struct {
-	opts         Options
-	templates    []*template.Template
-	client       *retryablehttp.Client
-	indexLoaded  bool
-	indexEntries []resourceIndexEntry
-	indexErr     error
+	opts      Options
+	templates []*template.Template
+	client    *retryablehttp.Client
 }
 
 type resolvedSchema struct {
@@ -130,20 +133,27 @@ type fieldIndexMetadata struct {
 	Kind       string
 }
 
-type resourceIndex struct {
-	APIVersion string               `json:"apiVersion,omitempty"`
-	Kind       string               `json:"kind,omitempty"`
-	Resources  []resourceIndexEntry `json:"resources,omitempty"`
+type resourceReference struct {
+	APIVersion string           `json:"apiVersion,omitempty"`
+	Kind       string           `json:"kind,omitempty"`
+	Targets    []resourceTarget `json:"targets,omitempty"`
 }
 
-type resourceIndexEntry struct {
-	Group      string   `json:"group,omitempty"`
-	Version    string   `json:"version,omitempty"`
-	Kind       string   `json:"kind"`
-	Singular   string   `json:"singular,omitempty"`
-	Plural     string   `json:"plural,omitempty"`
-	ShortNames []string `json:"shortNames,omitempty"`
-	Scope      string   `json:"scope,omitempty"`
+type resourceTarget struct {
+	Group   string `json:"group,omitempty"`
+	Version string `json:"version"`
+	Kind    string `json:"kind"`
+}
+
+type completionShard struct {
+	APIVersion string               `json:"apiVersion,omitempty"`
+	Kind       string               `json:"kind,omitempty"`
+	Resources  []completionResource `json:"resources,omitempty"`
+}
+
+type completionResource struct {
+	Name    string   `json:"name"`
+	Aliases []string `json:"aliases,omitempty"`
 }
 
 func New(opts Options) (*Explainer, error) {
@@ -198,23 +208,21 @@ func (e *Explainer) Explain(ctx context.Context, resourceExpr string, w io.Write
 // CompleteResourceNames returns canonical resource references matching prefix.
 // Grouped resources are returned as plural.group; core resources as plural.
 func (e *Explainer) CompleteResourceNames(ctx context.Context, prefix string) ([]string, error) {
-	entries, err := e.loadResourceIndex(ctx)
-	if err != nil {
-		return nil, err
-	}
 	prefix = strings.ToLower(strings.TrimSpace(prefix))
 	seen := map[string]bool{}
 	var out []string
-	for _, entry := range entries {
-		if !entry.matchesCompletionPrefix(prefix) {
-			continue
+	for _, key := range completionShardKeys(prefix) {
+		resources, err := e.loadCompletionShard(ctx, key)
+		if err != nil {
+			return nil, err
 		}
-		name := entry.canonicalName()
-		if name == "" || seen[name] {
-			continue
+		for _, resource := range resources {
+			if !resource.matchesCompletionPrefix(prefix) || seen[resource.Name] {
+				continue
+			}
+			seen[resource.Name] = true
+			out = append(out, resource.Name)
 		}
-		seen[name] = true
-		out = append(out, name)
 	}
 	sort.Strings(out)
 	return out, nil
@@ -264,7 +272,7 @@ func looksLikeAPIGroup(group string) bool {
 func (e *Explainer) resolve(ctx context.Context, requests []requestCandidate, gv schema.GroupVersion, hasGV bool) (*resolvedSchema, []string, error) {
 	var attempted []string
 	for _, req := range requests {
-		resolved, found, err := e.resolveFromIndex(ctx, req, gv, hasGV)
+		resolved, found, err := e.resolveFromReferences(ctx, req, gv, hasGV)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -306,16 +314,16 @@ func (e *Explainer) resolve(ctx context.Context, requests []requestCandidate, gv
 	return nil, nil, errors.New("couldn't find resource")
 }
 
-func (e *Explainer) resolveFromIndex(ctx context.Context, req requestCandidate, gv schema.GroupVersion, hasGV bool) (*resolvedSchema, bool, error) {
-	entries, err := e.loadResourceIndex(ctx)
-	if err != nil || len(entries) == 0 {
+func (e *Explainer) resolveFromReferences(ctx context.Context, req requestCandidate, gv schema.GroupVersion, hasGV bool) (*resolvedSchema, bool, error) {
+	refs, err := e.loadResourceReference(ctx, referenceKey(req.resource, req.group, hasGV))
+	if err != nil || len(refs) == 0 {
 		return nil, false, err
 	}
-	for _, entry := range entries {
-		if !entry.matchesGroupVersion(req.group, gv, hasGV) || !entry.matchesResource(req.resource) {
+	for _, target := range refs {
+		if !target.matchesGroupVersion(req.group, gv, hasGV) {
 			continue
 		}
-		resolved, found, err := e.loadGVK(ctx, entry.Group, entry.Version, entry.Kind)
+		resolved, found, err := e.loadGVK(ctx, target.Group, target.Version, target.Kind)
 		if err != nil {
 			return nil, false, err
 		}
@@ -328,110 +336,120 @@ func (e *Explainer) resolveFromIndex(ctx context.Context, req requestCandidate, 
 	return nil, false, nil
 }
 
-func (e *Explainer) loadResourceIndex(ctx context.Context) ([]resourceIndexEntry, error) {
-	if e.indexLoaded {
-		return e.indexEntries, e.indexErr
+func referenceKey(resource, group string, apiVersionSet bool) string {
+	resource = strings.ToLower(strings.TrimSpace(resource))
+	group = strings.ToLower(strings.TrimSpace(group))
+	if resource == "" || group == "" || apiVersionSet {
+		return resource
 	}
-	e.indexLoaded = true
-	for _, location := range e.opts.IndexLocations {
+	return resource + "." + group
+}
+
+func (e *Explainer) loadResourceReference(ctx context.Context, key string) ([]resourceTarget, error) {
+	key = strings.ToLower(strings.TrimSpace(key))
+	if key == "" {
+		return nil, nil
+	}
+	var out []resourceTarget
+	for _, root := range e.opts.MetadataLocations {
+		location := metadataLocation(root, ReferencesDir, key+".json")
 		body, found, err := e.loadBytes(ctx, location)
 		if err != nil {
-			e.indexErr = err
 			return nil, err
 		}
 		if !found {
 			continue
 		}
-		var index resourceIndex
-		dec := json.NewDecoder(bytes.NewReader(body))
-		dec.UseNumber()
-		if err := dec.Decode(&index); err != nil {
-			e.indexErr = fmt.Errorf("%s: parse explain index: %w", location, err)
-			return nil, e.indexErr
+		var ref resourceReference
+		if err := decodeJSON(body, &ref); err != nil {
+			return nil, fmt.Errorf("%s: parse explain reference: %w", location, err)
 		}
-		e.indexEntries = append(e.indexEntries, index.Resources...)
+		out = append(out, ref.Targets...)
 	}
-	return e.indexEntries, nil
+	return out, nil
 }
 
-func (e resourceIndexEntry) matchesGroupVersion(group string, gv schema.GroupVersion, hasGV bool) bool {
-	if hasGV {
-		return e.Group == gv.Group && e.Version == gv.Version
-	}
-	return group == "" || e.Group == group
-}
-
-func (e resourceIndexEntry) matchesResource(resource string) bool {
-	resource = strings.ToLower(strings.TrimSpace(resource))
-	if resource == "" {
-		return false
-	}
-	if resource == strings.ToLower(e.Kind) || resource == strings.ToLower(e.Singular) || resource == strings.ToLower(e.Plural) {
-		return true
-	}
-	for _, name := range e.ShortNames {
-		if resource == strings.ToLower(name) {
-			return true
+func (e *Explainer) loadCompletionShard(ctx context.Context, key string) ([]completionResource, error) {
+	var out []completionResource
+	for _, root := range e.opts.MetadataLocations {
+		location := metadataLocation(root, CompletionDir, key+".json")
+		body, found, err := e.loadBytes(ctx, location)
+		if err != nil {
+			return nil, err
 		}
-	}
-	return false
-}
-
-func (e resourceIndexEntry) matchesCompletionPrefix(prefix string) bool {
-	if prefix == "" || strings.HasPrefix(e.canonicalName(), prefix) {
-		return true
-	}
-	for _, name := range e.completionAliases() {
-		if strings.HasPrefix(name, prefix) {
-			return true
-		}
-	}
-	return false
-}
-
-func (e resourceIndexEntry) completionAliases() []string {
-	aliases := make([]string, 0, 3+len(e.ShortNames))
-	aliases = append(aliases, e.Kind, e.Singular, e.Plural)
-	aliases = append(aliases, e.ShortNames...)
-	out := make([]string, 0, len(aliases)*2)
-	seen := map[string]bool{}
-	group := strings.ToLower(strings.TrimSpace(e.Group))
-	for _, alias := range aliases {
-		alias = strings.ToLower(strings.TrimSpace(alias))
-		if alias == "" {
+		if !found {
 			continue
 		}
-		addCompletionAlias(&out, seen, alias)
-		if group != "" {
-			addCompletionAlias(&out, seen, alias+"."+group)
+		var shard completionShard
+		if err := decodeJSON(body, &shard); err != nil {
+			return nil, fmt.Errorf("%s: parse explain completion shard: %w", location, err)
+		}
+		out = append(out, shard.Resources...)
+	}
+	return out, nil
+}
+
+func metadataLocation(root string, elems ...string) string {
+	base, tail := splitLocationTail(root)
+	return strings.TrimRight(base, `/\`) + "/" + strings.Join(elems, "/") + tail
+}
+
+func splitLocationTail(location string) (string, string) {
+	if idx := strings.IndexAny(location, "?#"); idx >= 0 {
+		return location[:idx], location[idx:]
+	}
+	return location, ""
+}
+
+var completionFirstShardKeys = []string{
+	"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m",
+	"n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
+	"0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+}
+
+func completionShardKeys(prefix string) []string {
+	prefix = strings.ToLower(strings.TrimSpace(prefix))
+	if prefix == "" {
+		return completionFirstShardKeys
+	}
+	if len(prefix) > 2 {
+		prefix = prefix[:2]
+	}
+	if !validShardKey(prefix) {
+		return nil
+	}
+	return []string{prefix}
+}
+
+func validShardKey(key string) bool {
+	if key == "" {
+		return false
+	}
+	for _, r := range key {
+		if (r < 'a' || r > 'z') && (r < '0' || r > '9') {
+			return false
 		}
 	}
-	return out
+	return true
 }
 
-func addCompletionAlias(out *[]string, seen map[string]bool, alias string) {
-	if seen[alias] {
-		return
+func (t resourceTarget) matchesGroupVersion(group string, gv schema.GroupVersion, hasGV bool) bool {
+	if hasGV {
+		return t.Group == gv.Group && t.Version == gv.Version
 	}
-	seen[alias] = true
-	*out = append(*out, alias)
+	return group == "" || t.Group == group
 }
 
-func (e resourceIndexEntry) canonicalName() string {
-	name := strings.ToLower(strings.TrimSpace(e.Plural))
-	if name == "" {
-		name = strings.ToLower(strings.TrimSpace(e.Singular))
+func (r completionResource) matchesCompletionPrefix(prefix string) bool {
+	if prefix == "" || strings.HasPrefix(r.Name, prefix) {
+		return true
 	}
-	if name == "" {
-		name = strings.ToLower(strings.TrimSpace(e.Kind))
+	for _, alias := range r.Aliases {
+		if strings.HasPrefix(alias, prefix) {
+			return true
+		}
 	}
-	if name == "" {
-		return ""
-	}
-	if e.Group == "" {
-		return name
-	}
-	return name + "." + strings.ToLower(e.Group)
+	return false
 }
 
 func (e *Explainer) loadGVK(ctx context.Context, group, version, kind string) (*resolvedSchema, bool, error) {
@@ -597,10 +615,8 @@ func (e *Explainer) loadHTTP(ctx context.Context, location string) ([]byte, bool
 }
 
 func decodeJSONMap(body []byte) (map[string]any, error) {
-	dec := json.NewDecoder(bytes.NewReader(body))
-	dec.UseNumber()
 	var doc any
-	if err := dec.Decode(&doc); err != nil {
+	if err := decodeJSON(body, &doc); err != nil {
 		return nil, err
 	}
 	m, ok := doc.(map[string]any)
@@ -608,6 +624,12 @@ func decodeJSONMap(body []byte) (map[string]any, error) {
 		return nil, errors.New("schema root must be an object")
 	}
 	return m, nil
+}
+
+func decodeJSON(body []byte, out any) error {
+	dec := json.NewDecoder(bytes.NewReader(body))
+	dec.UseNumber()
+	return dec.Decode(out)
 }
 
 func isHTTPURL(s string) bool {

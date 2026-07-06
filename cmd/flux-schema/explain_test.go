@@ -191,7 +191,13 @@ func TestExplainCmd_CompleteResourceReferences(t *testing.T) {
 	g := NewWithT(t)
 	catalog := filepath.Join("testdata", "explain", "catalog")
 
-	out, err := executeCommand([]string{"__complete", "explain", "--schema-location", catalog, "oci"})
+	out, err := executeCommand([]string{"__complete", "explain", "--schema-location", catalog, "o"})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("ocirepositories.source.toolkit.fluxcd.io\n"))
+	g.Expect(out).ToNot(ContainSubstring("OCIRepository\n"))
+	g.Expect(out).To(ContainSubstring(":4"))
+
+	out, err = executeCommand([]string{"__complete", "explain", "--schema-location", catalog, "oci"})
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(out).To(ContainSubstring("ocirepositories.source.toolkit.fluxcd.io\n"))
 	g.Expect(out).ToNot(ContainSubstring("OCIRepository\n"))
@@ -207,6 +213,11 @@ func TestExplainCmd_CompleteResourceReferences(t *testing.T) {
 	g.Expect(out).To(ContainSubstring("ocirepositories.source.toolkit.fluxcd.io\n"))
 	g.Expect(out).To(ContainSubstring(":4"))
 
+	out, err = executeCommand([]string{"__complete", "explain", "--schema-location", catalog, "h"})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("helmreleases.helm.toolkit.fluxcd.io\n"))
+	g.Expect(out).To(ContainSubstring(":4"))
+
 	out, err = executeCommand([]string{"__complete", "explain", "--schema-location", catalog, "hr"})
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(out).To(ContainSubstring("helmreleases.helm.toolkit.fluxcd.io\n"))
@@ -215,6 +226,11 @@ func TestExplainCmd_CompleteResourceReferences(t *testing.T) {
 	out, err = executeCommand([]string{"__complete", "explain", "--schema-location", catalog, "hr.helm"})
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(out).To(ContainSubstring("helmreleases.helm.toolkit.fluxcd.io\n"))
+	g.Expect(out).To(ContainSubstring(":4"))
+
+	out, err = executeCommand([]string{"__complete", "explain", "--schema-location", catalog, "p"})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("pods\n"))
 	g.Expect(out).To(ContainSubstring(":4"))
 
 	out, err = executeCommand([]string{"__complete", "explain", "--schema-location", catalog, "po"})
@@ -289,8 +305,8 @@ func TestExplainSchemaLocationDefaultExpansion(t *testing.T) {
 		"https://raw.githubusercontent.com/fluxcd/flux-schema/main/catalog/latest/{{.Group}}/{{.Kind}}_{{.Version}}.json",
 		"./catalog/{{.Group}}/{{.Kind}}_{{.Version}}.json",
 	}))
-	g.Expect(buildExplainIndexLocations(locations)).To(Equal([]string{
-		"https://raw.githubusercontent.com/fluxcd/flux-schema/main/catalog/latest/explain-index.json",
-		"./catalog/explain-index.json",
+	g.Expect(buildExplainMetadataLocations(locations)).To(Equal([]string{
+		"https://raw.githubusercontent.com/fluxcd/flux-schema/main/catalog/latest/.explain",
+		"./catalog/.explain",
 	}))
 }

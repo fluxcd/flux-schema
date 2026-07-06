@@ -55,10 +55,11 @@ kind names (`OCIRepository.spec.verify`), plural resource names
 (`ocirepositories.source.toolkit.fluxcd.io.spec.verify`), and short names
 (`po.spec`, `hr.spec`, `ag.spec`). Built-in Kubernetes short names are
 recognized by the command. CRD kinds, plural names, singular names, full
-resource names, and short names are resolved from `explain-index.json` when the
-catalog provides it. Shell completion uses the same index and suggests the
-canonical resource name (`plural.group`, or `plural` for core resources) for
-all indexed resources matching the typed prefix.
+resource names, and short names are resolved from sharded metadata under
+`.explain/refs/` when the catalog provides it. Shell completion uses
+`.explain/completion/` shards and suggests the canonical resource name
+(`plural.group`, or `plural` for core resources) for all indexed resources
+matching the typed prefix.
 
 When `--api-version` is set, dotted group suffixes are treated like kubectl:
 the first path segment is the resource name and the remaining segments are
@@ -77,10 +78,11 @@ flux schema extract crd --with-explain-metadata --with-field-index -d ./catalog
 
 `--with-explain-metadata` is opt-in. It keeps validation-only catalogs small
 by default, and when enabled it adds `x-flux-schema-*` annotations, small alias
-redirect files, and a root-level `explain-index.json` used to resolve
-kubectl-style resource references and provide type-reference shell completion.
-Those annotations let `explain` recover exact kind names, discovery aliases,
-and named field types such as `ObjectMeta`, `PodSpec`, and `HelmReleaseSpec`.
+redirect files, `.explain/refs/` exact lookup files, and `.explain/completion/`
+prefix shards used to resolve kubectl-style resource references and provide
+type-reference shell completion. Those annotations let `explain` recover exact
+kind names, discovery aliases, and named field types such as `ObjectMeta`,
+`PodSpec`, and `HelmReleaseSpec`.
 
 Catalogs generated with `--strip-description` still resolve fields, but
 descriptions are empty and nested object type names may fall back to `Object`

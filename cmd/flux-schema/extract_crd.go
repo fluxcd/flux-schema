@@ -81,9 +81,9 @@ func extractCRDCmdRun(cmd *cobra.Command, args []string) error {
 	}
 
 	var (
-		failures            []error
-		written             int
-		explainIndexSchemas []extractor.Schema
+		failures               []error
+		written                int
+		explainMetadataSchemas []extractor.Schema
 	)
 	for _, path := range inputs {
 		data, err := readSource(path)
@@ -124,7 +124,7 @@ func extractCRDCmdRun(cmd *cobra.Command, args []string) error {
 			cmd.Printf("OK   %s -> %s\n", path, displayPath)
 			written++
 			if extractCRDArgs.WithExplainMetadata {
-				explainIndexSchemas = append(explainIndexSchemas, crd)
+				explainMetadataSchemas = append(explainMetadataSchemas, crd)
 			}
 
 			if extractCRDArgs.WithExplainMetadata {
@@ -158,15 +158,17 @@ func extractCRDCmdRun(cmd *cobra.Command, args []string) error {
 	}
 
 	if extractCRDArgs.WithExplainMetadata {
-		indexRelPath, err := writeExplainIndex(explainIndexSchemas, destDir)
+		metadataPaths, err := writeExplainMetadata(explainMetadataSchemas, destDir)
 		if err != nil {
 			failures = append(failures, err)
-		} else if indexRelPath != "" {
-			displayPath := filepath.Join(destDir, indexRelPath)
-			if archive != "" {
-				displayPath = indexRelPath
+		} else {
+			for _, metadataPath := range metadataPaths {
+				displayPath := filepath.Join(destDir, metadataPath)
+				if archive != "" {
+					displayPath = metadataPath
+				}
+				cmd.Printf("OK   %s\n", displayPath)
 			}
-			cmd.Printf("OK   %s\n", displayPath)
 		}
 	}
 

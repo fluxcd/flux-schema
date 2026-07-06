@@ -26,7 +26,7 @@ func TestExtractCRDCmd_DefaultFormat(t *testing.T) {
 	got, err := os.ReadFile(filepath.Join(outDir, "example.com", "widget_v1.json"))
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(string(got)).To(Equal(minimalCRDGolden))
-	_, err = os.Stat(filepath.Join(outDir, "explain-index.json"))
+	_, err = os.Stat(filepath.Join(outDir, ".explain"))
 	g.Expect(os.IsNotExist(err)).To(BeTrue())
 }
 
@@ -56,11 +56,19 @@ func TestExtractCRDCmd_WithExplainMetadata(t *testing.T) {
 		g.Expect(string(got)).To(ContainSubstring(`"kind": "Widget"`))
 	}
 
-	got, err = os.ReadFile(filepath.Join(outDir, "explain-index.json"))
+	got, err = os.ReadFile(filepath.Join(outDir, ".explain", "refs", "widgets.json"))
 	g.Expect(err).ToNot(HaveOccurred())
-	g.Expect(string(got)).To(ContainSubstring(`"kind": "ExplainIndex"`))
-	g.Expect(string(got)).To(ContainSubstring(`"plural": "widgets"`))
-	g.Expect(string(got)).To(ContainSubstring(`"shortNames": [`))
+	g.Expect(string(got)).To(ContainSubstring(`"kind": "ExplainResourceReference"`))
+	g.Expect(string(got)).To(ContainSubstring(`"kind": "Widget"`))
+
+	got, err = os.ReadFile(filepath.Join(outDir, ".explain", "refs", "wdg.json"))
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(string(got)).To(ContainSubstring(`"kind": "Widget"`))
+
+	got, err = os.ReadFile(filepath.Join(outDir, ".explain", "completion", "wi.json"))
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(string(got)).To(ContainSubstring(`"kind": "ExplainCompletionShard"`))
+	g.Expect(string(got)).To(ContainSubstring(`"name": "widgets.example.com"`))
 	g.Expect(string(got)).To(ContainSubstring(`"wdg"`))
 }
 

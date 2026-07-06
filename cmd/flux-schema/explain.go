@@ -125,7 +125,7 @@ func buildExplainerOptions() (explainer.Options, error) {
 	}
 	return explainer.Options{
 		SchemaLocations:       locations,
-		IndexLocations:        buildExplainIndexLocations(locations),
+		MetadataLocations:     buildExplainMetadataLocations(locations),
 		APIVersion:            explainArgs.apiVersion,
 		OutputFormat:          explainArgs.output.String(),
 		Recursive:             explainArgs.recursive,
@@ -141,19 +141,19 @@ func buildExplainSchemaLocations() ([]string, error) {
 	return expandSchemaLocations(explainArgs.schemaLocations)
 }
 
-func buildExplainIndexLocations(schemaLocations []string) []string {
+func buildExplainMetadataLocations(schemaLocations []string) []string {
 	var out []string
 	for _, location := range schemaLocations {
-		indexLocation, ok := explainIndexLocation(location)
-		if !ok || containsString(out, indexLocation) {
+		metadataLocation, ok := explainMetadataLocation(location)
+		if !ok || containsString(out, metadataLocation) {
 			continue
 		}
-		out = append(out, indexLocation)
+		out = append(out, metadataLocation)
 	}
 	return out
 }
 
-func explainIndexLocation(location string) (string, bool) {
+func explainMetadataLocation(location string) (string, bool) {
 	base, tail := splitLocationTail(location)
 	idx := strings.Index(base, "{{")
 	if idx < 0 {
@@ -163,7 +163,7 @@ func explainIndexLocation(location string) (string, bool) {
 	if root == "" {
 		return "", false
 	}
-	return root + "/" + explainer.IndexFileName + tail, true
+	return root + "/" + explainer.MetadataDir + tail, true
 }
 
 func splitLocationTail(location string) (string, string) {

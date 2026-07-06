@@ -75,7 +75,7 @@ emits one schema file per CRD version.
 | `--index-source`          | Source name and version recorded in field index headers, overriding auto-detection.      |
 | `--strip-description`     | Drop `description` fields from the generated schemas to reduce their size.               |
 | `--with-field-index`      | Also write a `.fields.txt` field index next to each schema.                              |
-| `--with-explain-metadata` | Include `x-flux-schema-*` annotations, alias redirects, and `explain-index.json` used by `flux schema explain`. |
+| `--with-explain-metadata` | Include `x-flux-schema-*` annotations, alias redirects, and `.explain/` lookup shards used by `flux schema explain`. |
 
 Generate schemas for every CRD installed in a cluster:
 
@@ -113,7 +113,7 @@ standalone files.
 | `--index-source`          | Source name and version recorded in field index headers, overriding auto-detection.                                   |
 | `--strip-description`     | Drop `description` fields from the generated schemas to reduce their size.                                            |
 | `--with-field-index`      | Also write a `.fields.txt` field index next to each schema.                                                           |
-| `--with-explain-metadata` | Include `x-flux-schema-*` annotations, alias redirects, and `explain-index.json` used by `flux schema explain`.                                          |
+| `--with-explain-metadata` | Include `x-flux-schema-*` annotations, alias redirects, and `.explain/` lookup shards used by `flux schema explain`.                                          |
 
 Pin the catalog to a specific Kubernetes release:
 
@@ -147,7 +147,7 @@ emitted; embedded upstream Kubernetes types (e.g. `Pod`) are inlined.
 | `--index-source`          | Source name and version recorded in field index headers, overriding auto-detection.                                           |
 | `--strip-description`     | Drop `description` fields from the generated schemas to reduce their size.                                                    |
 | `--with-field-index`      | Also write a `.fields.txt` field index next to each schema.                                                                   |
-| `--with-explain-metadata` | Include `x-flux-schema-*` annotations, alias redirects, and `explain-index.json` used by `flux schema explain`.                                                  |
+| `--with-explain-metadata` | Include `x-flux-schema-*` annotations, alias redirects, and `.explain/` lookup shards used by `flux schema explain`.                                                  |
 
 Pin to an OpenShift release branch:
 
@@ -211,7 +211,7 @@ constraints the Kubernetes API server enforces:
 - `apiVersion` and `kind` are injected into every kind's properties and
   required list.
 - `x-flux-schema-*` explain annotations, resource alias redirects, and the
-  root-level `explain-index.json` discovery file are omitted by default. Pass
+  sharded `.explain/` metadata tree are omitted by default. Pass
   `--with-explain-metadata` only for catalogs that need exact
   `flux schema explain` kind names, short names, plural names, full resource
   names, type-reference shell completion, and field type names.

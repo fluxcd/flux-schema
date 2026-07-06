@@ -1,0 +1,17 @@
+{
+  "apiVersion": "schema.plugin.fluxcd.io/v1beta1",
+  "kind": "ExplainCompletionShard",
+  "resources": [
+    {
+      "name": "helmreleases.helm.toolkit.fluxcd.io",
+      "aliases": [
+        "helmrelease",
+        "helmrelease.helm.toolkit.fluxcd.io",
+        "helmreleases",
+        "helmreleases.helm.toolkit.fluxcd.io",
+        "hr",
+        "hr.helm.toolkit.fluxcd.io"
+      ]
+    }
+  ]
+}
