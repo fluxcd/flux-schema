@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"unicode"
@@ -29,6 +30,8 @@ func main() {
 	kind := flag.String("kind", "", "Kubernetes kind")
 	apiType := flag.String("type", "", "Go API type to wrap, in import/path.Type form")
 	field := flag.String("field", "", "JSON field name for the wrapped API type")
+	direct := flag.Bool("direct", false,
+		"generate the schema from the API type directly instead of wrapping it in a field")
 	scope := flag.String("scope", "Cluster", "CRD resource scope")
 	schemaField := flag.Bool("schema-field", false, "include optional root $schema field")
 	schemaID := flag.String("id", "", "JSON Schema $id")
@@ -47,6 +50,7 @@ func main() {
 		kind:             *kind,
 		apiType:          *apiType,
 		field:            *field,
+		direct:           *direct,
 		scope:            *scope,
 		schemaField:      *schemaField,
 		id:               *schemaID,
@@ -96,6 +100,7 @@ type schemaOptions struct {
 	kind             string
 	apiType          string
 	field            string
+	direct           bool
 	scope            string
 	schemaField      bool
 	id               string
@@ -108,8 +113,8 @@ type crdIdentity struct {
 }
 
 func (o schemaOptions) validate() error {
-	if o.field == "" {
-		return errors.New("-field is required")
+	if !o.direct && o.field == "" {
+		return errors.New("-field is required unless -direct is set")
 	}
 	if o.controllerGenYML != "" {
 		return nil
@@ -181,7 +186,37 @@ func (o schemaOptions) writeWrapperPackage(dir string) error {
 // +kubebuilder:object:generate=false
 package schemagen
 `, o.group, o.version)
-	types := fmt.Sprintf(`// Copyright 2026 The Flux Authors
+
+	var types string
+	if o.direct {
+		if typeName != "Config" {
+			return fmt.Errorf("-direct currently supports only Config, got %s", typeName)
+		}
+		types = fmt.Sprintf(`// Copyright 2026 The Flux Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package schemagen
+
+import (
+	api "%s"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+// +kubebuilder:object:root=true
+// +kubebuilder:resource:path=%s,scope=%s
+type %s struct {
+	metav1.TypeMeta   `+"`json:\",inline\"`"+`
+	metav1.ObjectMeta `+"`json:\"metadata,omitempty\"`"+`
+
+	// +optional
+	Validate api.ValidateConfig `+"`json:\"validate,omitempty\"`"+`
+
+	// +optional
+	Explain api.ExplainConfig `+"`json:\"explain,omitempty\"`"+`
+}
+`, importPath, plural, o.scope, o.kind)
+	} else {
+		types = fmt.Sprintf(`// Copyright 2026 The Flux Authors
 // SPDX-License-Identifier: Apache-2.0
 
 package schemagen
@@ -200,6 +235,7 @@ type %s struct {
 	%s api.%s `+"`json:\"%s\"`"+`
 }
 `, importPath, plural, o.scope, o.kind, schemaField, fieldName, typeName, o.field)
+	}
 	if err := os.WriteFile(filepath.Join(dir, "doc.go"), []byte(doc), 0o644); err != nil {
 		return fmt.Errorf("write wrapper doc.go: %w", err)
 	}
@@ -361,6 +397,17 @@ func rewriteRootSchema(schema map[string]any, identity crdIdentity, opts schemaO
 
 	schema["$schema"] = "https://json-schema.org/draft/2020-12/schema"
 	schema["$id"] = opts.id
+	schema["additionalProperties"] = false
+	if opts.direct {
+		required := stringSlice(schema["required"])
+		for _, field := range []string{"apiVersion", "kind"} {
+			if !slices.Contains(required, field) {
+				required = append(required, field)
+			}
+		}
+		schema["required"] = anyStringSlice(required)
+		return nil
+	}
 	wrappedField, err := requiredMap(props, opts.field)
 	if err != nil {
 		return fmt.Errorf("properties: %w", err)
@@ -368,9 +415,27 @@ func rewriteRootSchema(schema map[string]any, identity crdIdentity, opts schemaO
 	if title, ok := wrappedField["description"].(string); ok && title != "" {
 		schema["title"] = title
 	}
-	schema["additionalProperties"] = false
 	schema["required"] = []any{"apiVersion", "kind", opts.field}
 	return nil
+}
+
+func stringSlice(v any) []string {
+	arr, _ := v.([]any)
+	var out []string
+	for _, item := range arr {
+		if s, ok := item.(string); ok {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
+func anyStringSlice(values []string) []any {
+	out := make([]any, len(values))
+	for i, v := range values {
+		out[i] = v
+	}
+	return out
 }
 
 func transformNode(v any) any {

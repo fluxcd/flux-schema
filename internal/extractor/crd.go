@@ -98,6 +98,7 @@ func versionsFromCRD(crd map[string]any) ([]Schema, []error) {
 	}
 	names, _ := spec["names"].(map[string]any)
 	kind, _ := names["kind"].(string)
+	resource := resourceNamesFromCRD(names)
 	group, _ := spec["group"].(string)
 	scope, _ := spec["scope"].(string)
 	if kind == "" || group == "" {
@@ -129,6 +130,7 @@ func versionsFromCRD(crd map[string]any) ([]Schema, []error) {
 		deprecationWarning, _ := vm["deprecationWarning"].(string)
 		closeAdditionalPropertiesChildren(schema)
 		transformed, _ := replaceIntOrString(schema).(map[string]any)
+		injectExplainMetadata(transformed, kind, GVK{Group: group, Version: versionName, Kind: kind}, resource)
 
 		out = append(out, Schema{
 			Group:              group,
@@ -138,10 +140,25 @@ func versionsFromCRD(crd map[string]any) ([]Schema, []error) {
 			Source:             source,
 			Deprecated:         deprecated,
 			DeprecationWarning: deprecationWarning,
+			Resource:           resource,
 			JSON:               transformed,
 		})
 	}
 	return out, errs
+}
+
+func resourceNamesFromCRD(names map[string]any) ResourceNames {
+	plural, _ := names["plural"].(string)
+	singular, _ := names["singular"].(string)
+	var shortNames []string
+	if raw, ok := names["shortNames"].([]any); ok {
+		for _, item := range raw {
+			if name, ok := item.(string); ok {
+				shortNames = append(shortNames, name)
+			}
+		}
+	}
+	return ResourceNames{Singular: singular, Plural: plural, ShortNames: shortNames}
 }
 
 func crdSource(crd map[string]any) string {

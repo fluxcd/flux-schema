@@ -1,0 +1,99 @@
+{
+  "description": "Pod is a collection of containers that can run on a host. This resource is created by clients and scheduled onto hosts.",
+  "type": "object",
+  "x-flux-schema-type": "Pod",
+  "x-flux-schema-group-version-kind": {
+    "group": "",
+    "version": "v1",
+    "kind": "Pod"
+  },
+  "properties": {
+    "apiVersion": {
+      "type": "string",
+      "description": "APIVersion defines the versioned schema of this representation of an object."
+    },
+    "kind": {
+      "type": "string",
+      "description": "Kind is a string value representing the REST resource this object represents."
+    },
+    "metadata": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "x-flux-schema-type": "ObjectMeta",
+      "description": "Standard object's metadata.",
+      "properties": {
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Name must be unique within a namespace."
+        }
+      }
+    },
+    "spec": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "x-flux-schema-type": "PodSpec",
+      "description": "Specification of the desired behavior of the pod.",
+      "properties": {
+        "containers": {
+          "type": "array",
+          "description": "List of containers belonging to the pod.",
+          "items": {
+            "type": "object",
+            "x-flux-schema-type": "Container",
+            "description": "A single application container that you want to run within a pod.",
+            "properties": {
+              "image": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Container image name."
+              },
+              "imagePullPolicy": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "Always",
+                  "IfNotPresent",
+                  "Never"
+                ],
+                "description": "Image pull policy. One of Always, Never, IfNotPresent."
+              },
+              "name": {
+                "type": "string",
+                "description": "Name of the container."
+              }
+            },
+            "required": [
+              "name"
+            ]
+          }
+        }
+      },
+      "required": [
+        "containers"
+      ]
+    },
+    "status": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "x-flux-schema-type": "PodStatus",
+      "description": "Most recently observed status of the pod."
+    }
+  },
+  "required": [
+    "apiVersion",
+    "kind"
+  ]
+}

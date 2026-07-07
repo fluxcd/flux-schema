@@ -10,7 +10,7 @@ const (
 	ConfigKind = "Config"
 )
 
-// Config defines validation configuration.
+// Config defines command configuration.
 //
 // +kubebuilder:object:root=true
 type Config struct {
@@ -18,7 +18,12 @@ type Config struct {
 	metav1.TypeMeta `json:",inline"`
 
 	// Validate contains defaults for the validate command.
-	Validate ValidateConfig `json:"validate"`
+	// +optional
+	Validate ValidateConfig `json:"validate,omitempty"`
+
+	// Explain contains defaults for the explain command.
+	// +optional
+	Explain ExplainConfig `json:"explain,omitempty"`
 }
 
 // ValidateConfig defines defaults for validation options.
@@ -83,4 +88,40 @@ const (
 
 	// ConfigOutputYAML emits a YAML report.
 	ConfigOutputYAML ConfigOutput = "yaml"
+)
+
+// ExplainConfig defines defaults for explain options.
+type ExplainConfig struct {
+	// SchemaLocations contains schema URLs, file paths, or templates to try in order.
+	// +optional
+	SchemaLocations []string `json:"schemaLocation,omitempty"`
+
+	// APIVersion selects a particular API group/version.
+	// +optional
+	APIVersion string `json:"apiVersion,omitempty"`
+
+	// Recursive prints fields of fields.
+	// +optional
+	Recursive bool `json:"recursive,omitempty"`
+
+	// InsecureSkipTLSVerify disables TLS certificate verification for HTTPS schemas.
+	// +optional
+	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
+
+	// Output selects the command output format.
+	// +optional
+	Output ConfigExplainOutput `json:"output,omitempty"`
+}
+
+// ConfigExplainOutput is a supported explain command output format.
+//
+// +k8s:enum
+type ConfigExplainOutput string
+
+const (
+	// ConfigExplainOutputPlaintext emits kubectl OpenAPI v3 style text.
+	ConfigExplainOutputPlaintext ConfigExplainOutput = "plaintext"
+
+	// ConfigExplainOutputPlaintextOpenAPIV2 emits kubectl OpenAPI v2 style text.
+	ConfigExplainOutputPlaintextOpenAPIV2 ConfigExplainOutput = "plaintext-openapiv2"
 )

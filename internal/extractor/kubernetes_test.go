@@ -165,9 +165,17 @@ func TestExtractKubernetes_InlinesRef(t *testing.T) {
 	g.Expect(widget.Kind).To(Equal("Widget"))
 
 	props := widget.JSON["properties"].(map[string]any)
+	g.Expect(widget.JSON[keyFluxSchemaType]).To(Equal("Widget"))
+	g.Expect(widget.JSON[keyFluxSchemaGVK]).To(Equal(map[string]any{
+		"group":   "example.com",
+		"version": "v1",
+		"kind":    "Widget",
+	}))
+
 	helper := props["helper"].(map[string]any)
 	g.Expect(helper["type"]).To(Equal("object"))
 	g.Expect(helper).To(HaveKey("properties"))
+	g.Expect(helper[keyFluxSchemaType]).To(Equal("Helper"))
 }
 
 func TestExtractKubernetes_CoreGroupKept(t *testing.T) {

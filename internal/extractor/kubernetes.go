@@ -29,6 +29,7 @@ func ExtractKubernetes(data []byte) ([]Schema, []error) {
 		return nil, errs
 	}
 	scopes := scopeFromPaths(root)
+	resources := resourceNamesFromPaths(root)
 	source := kubernetesSource(root)
 
 	var out []Schema
@@ -50,13 +51,16 @@ func ExtractKubernetes(data []byte) ([]Schema, []error) {
 				errs = append(errs, fmt.Errorf("%s: %w", name, err))
 				continue
 			}
+			resource := resources[gvk]
+			injectExplainMetadata(schema, name, gvk, resource)
 			out = append(out, Schema{
-				Group:   gvk.Group,
-				Version: gvk.Version,
-				Kind:    gvk.Kind,
-				Scope:   scopes[gvk],
-				Source:  source,
-				JSON:    schema,
+				Group:    gvk.Group,
+				Version:  gvk.Version,
+				Kind:     gvk.Kind,
+				Scope:    scopes[gvk],
+				Source:   source,
+				Resource: resource,
+				JSON:     schema,
 			})
 		}
 	}
@@ -101,6 +105,144 @@ func parseSwaggerDocument(data []byte) (map[string]any, map[string]any, []string
 	}
 	sort.Strings(names)
 	return root, definitions, names, nil
+}
+
+func resourceNamesFromPaths(root map[string]any) map[GVK]ResourceNames {
+	resources := map[GVK]ResourceNames{}
+	paths, ok := root["paths"].(map[string]any)
+	if !ok {
+		return resources
+	}
+	for path, rawItem := range paths {
+		plural := resourceNameFromPath(path)
+		if plural == "" {
+			continue
+		}
+		item, ok := rawItem.(map[string]any)
+		if !ok {
+			continue
+		}
+		recordPathResource(resources, item, plural)
+		for _, operation := range swaggerOperations {
+			op, ok := item[operation].(map[string]any)
+			if !ok {
+				continue
+			}
+			recordPathResource(resources, op, plural)
+		}
+	}
+	return resources
+}
+
+func recordPathResource(resources map[GVK]ResourceNames, node map[string]any, plural string) {
+	gvk, ok := readOperationGVK(node)
+	if !ok {
+		return
+	}
+	current := resources[gvk]
+	if current.Plural == "" {
+		current.Plural = plural
+	}
+	if current.Singular == "" {
+		current.Singular = strings.ToLower(gvk.Kind)
+	}
+	if len(current.ShortNames) == 0 {
+		current.ShortNames = nativeShortNames(gvk)
+	}
+	resources[gvk] = current
+}
+
+func resourceNameFromPath(path string) string {
+	parts := strings.Split(strings.Trim(path, "/"), "/")
+	if len(parts) == 0 {
+		return ""
+	}
+	if parts[0] == "watch" {
+		parts = parts[1:]
+	}
+	var i int
+	switch {
+	case len(parts) >= 2 && parts[0] == "api":
+		i = 2
+	case len(parts) >= 3 && parts[0] == "apis":
+		i = 3
+	default:
+		return ""
+	}
+	if i >= len(parts) {
+		return ""
+	}
+	if parts[i] == "namespaces" {
+		i += 2
+	}
+	if i >= len(parts) || strings.HasPrefix(parts[i], "{") {
+		return ""
+	}
+	return parts[i]
+}
+
+func nativeShortNames(gvk GVK) []string {
+	switch gvk.Kind {
+	case "ComponentStatus":
+		return []string{"cs"}
+	case "ConfigMap":
+		return []string{"cm"}
+	case "Endpoints":
+		return []string{"ep"}
+	case "Event":
+		return []string{"ev"}
+	case "LimitRange":
+		return []string{"limits"}
+	case "Namespace":
+		return []string{"ns"}
+	case "Node":
+		return []string{"no"}
+	case "PersistentVolumeClaim":
+		return []string{"pvc"}
+	case "PersistentVolume":
+		return []string{"pv"}
+	case "Pod":
+		return []string{"po"}
+	case "ReplicationController":
+		return []string{"rc"}
+	case "ResourceQuota":
+		return []string{"quota"}
+	case "ServiceAccount":
+		return []string{"sa"}
+	case "Service":
+		return []string{"svc"}
+	case "CustomResourceDefinition":
+		return []string{"crd", "crds"}
+	case "DaemonSet":
+		return []string{"ds"}
+	case "Deployment":
+		return []string{"deploy"}
+	case "ReplicaSet":
+		return []string{"rs"}
+	case "StatefulSet":
+		return []string{"sts"}
+	case "HorizontalPodAutoscaler":
+		return []string{"hpa"}
+	case "CronJob":
+		return []string{"cj"}
+	case "Ingress":
+		return []string{"ing"}
+	case "NetworkPolicy":
+		return []string{"netpol"}
+	case "PodDisruptionBudget":
+		return []string{"pdb"}
+	case "PriorityClass":
+		return []string{"pc"}
+	case "StorageClass":
+		return []string{"sc"}
+	case "CertificateSigningRequest":
+		return []string{"csr"}
+	case "IPAddress":
+		return []string{"ip"}
+	case "VolumeAttributesClass":
+		return []string{"vac"}
+	}
+	return nil
 }
 
 func kubernetesSource(root map[string]any) string {

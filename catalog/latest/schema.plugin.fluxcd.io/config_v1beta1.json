@@ -7,6 +7,40 @@
       "const": "schema.plugin.fluxcd.io/v1beta1",
       "type": "string"
     },
+    "explain": {
+      "additionalProperties": false,
+      "description": "ExplainConfig defines defaults for explain options.",
+      "properties": {
+        "apiVersion": {
+          "description": "APIVersion selects a particular API group/version.",
+          "type": "string"
+        },
+        "insecureSkipTLSVerify": {
+          "description": "InsecureSkipTLSVerify disables TLS certificate verification for HTTPS schemas.",
+          "type": "boolean"
+        },
+        "output": {
+          "description": "Output selects the command output format.",
+          "enum": [
+            "plaintext",
+            "plaintext-openapiv2"
+          ],
+          "type": "string"
+        },
+        "recursive": {
+          "description": "Recursive prints fields of fields.",
+          "type": "boolean"
+        },
+        "schemaLocation": {
+          "description": "SchemaLocations contains schema URLs, file paths, or templates to try in order.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
     "kind": {
       "const": "Config",
       "type": "string"
@@ -83,9 +117,7 @@
   },
   "required": [
     "apiVersion",
-    "kind",
-    "validate"
+    "kind"
   ],
-  "title": "ValidateConfig defines defaults for validation options.",
   "type": "object"
 }

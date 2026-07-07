@@ -138,6 +138,12 @@ func TestExtractCRDs_BareCRD(t *testing.T) {
 	g.Expect(crds[0].Version).To(Equal("v1"))
 	g.Expect(crds[0].Source).To(BeEmpty())
 	g.Expect(crds[0].JSON).To(HaveKey("properties"))
+	g.Expect(crds[0].JSON[keyFluxSchemaType]).To(Equal("Widget"))
+	g.Expect(crds[0].JSON[keyFluxSchemaGVK]).To(Equal(map[string]any{
+		"group":   "example.com",
+		"version": "v1",
+		"kind":    "Widget",
+	}))
 }
 
 func TestExtractCRDs_Source(t *testing.T) {

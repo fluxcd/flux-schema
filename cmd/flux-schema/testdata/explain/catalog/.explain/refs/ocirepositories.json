@@ -1,0 +1,11 @@
+{
+  "apiVersion": "schema.plugin.fluxcd.io/v1beta1",
+  "kind": "ExplainResourceReference",
+  "targets": [
+    {
+      "version": "v1",
+      "kind": "OCIRepository",
+      "group": "source.toolkit.fluxcd.io"
+    }
+  ]
+}

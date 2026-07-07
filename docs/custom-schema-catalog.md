@@ -72,9 +72,10 @@ emits one schema file per CRD version.
 | `-d, --output-dir`     | Directory to write JSON Schema files to (mutually exclusive with `--output-archive`).        |
 | `-a, --output-archive` | Path to write a gzipped tar archive of JSON Schema files to.                                 |
 | `-f, --output-format`  | Go template for output file paths (default: `{{ .Group }}/{{ .Kind }}_{{ .Version }}.json`). |
-| `--index-source`       | Source name and version recorded in field index headers, overriding auto-detection.          |
-| `--strip-description`  | Drop `description` fields from the generated schemas to reduce their size.                   |
-| `--with-field-index`   | Also write a `.fields.txt` field index next to each schema.                                  |
+| `--index-source`          | Source name and version recorded in field index headers, overriding auto-detection.      |
+| `--strip-description`     | Drop `description` fields from the generated schemas to reduce their size.               |
+| `--with-field-index`      | Also write a `.fields.txt` field index next to each schema.                              |
+| `--with-explain-metadata` | Include `x-flux-schema-*` annotations, alias redirects, and `.explain/` lookup shards used by `flux schema explain`. |
 
 Generate schemas for every CRD installed in a cluster:
 
@@ -109,9 +110,10 @@ standalone files.
 | `--version X.Y.Z`     | Fetch the swagger from `github.com/kubernetes/kubernetes` for the given release tag (mutually exclusive with a swagger file). |
 | `-d, --output-dir`    | Directory to write JSON Schema files to.                                                                                      |
 | `-f, --output-format` | Go template for output file paths (default: `{{ .Group }}/{{ .Kind }}_{{ .Version }}.json`).                                  |
-| `--index-source`      | Source name and version recorded in field index headers, overriding auto-detection.                                           |
-| `--strip-description` | Drop `description` fields from the generated schemas to reduce their size.                                                    |
-| `--with-field-index`  | Also write a `.fields.txt` field index next to each schema.                                                                   |
+| `--index-source`          | Source name and version recorded in field index headers, overriding auto-detection.                                   |
+| `--strip-description`     | Drop `description` fields from the generated schemas to reduce their size.                                            |
+| `--with-field-index`      | Also write a `.fields.txt` field index next to each schema.                                                           |
+| `--with-explain-metadata` | Include `x-flux-schema-*` annotations, alias redirects, and `.explain/` lookup shards used by `flux schema explain`.                                          |
 
 Pin the catalog to a specific Kubernetes release:
 
@@ -142,9 +144,10 @@ emitted; embedded upstream Kubernetes types (e.g. `Pod`) are inlined.
 | `--ref REF`           | Fetch the swagger from `github.com/openshift/api` at the given git ref (e.g. `release-4.20`); mutually exclusive with a swagger file. |
 | `-d, --output-dir`    | Directory to write JSON Schema files to.                                                                                              |
 | `-f, --output-format` | Go template for output file paths (default: `{{ .Group }}/{{ .Kind }}_{{ .Version }}.json`).                                          |
-| `--index-source`      | Source name and version recorded in field index headers, overriding auto-detection.                                                   |
-| `--strip-description` | Drop `description` fields from the generated schemas to reduce their size.                                                            |
-| `--with-field-index`  | Also write a `.fields.txt` field index next to each schema.                                                                           |
+| `--index-source`          | Source name and version recorded in field index headers, overriding auto-detection.                                           |
+| `--strip-description`     | Drop `description` fields from the generated schemas to reduce their size.                                                    |
+| `--with-field-index`      | Also write a `.fields.txt` field index next to each schema.                                                                   |
+| `--with-explain-metadata` | Include `x-flux-schema-*` annotations, alias redirects, and `.explain/` lookup shards used by `flux schema explain`.                                                  |
 
 Pin to an OpenShift release branch:
 
@@ -207,6 +210,11 @@ constraints the Kubernetes API server enforces:
   API server's behavior of accepting `null` for unset optional values.
 - `apiVersion` and `kind` are injected into every kind's properties and
   required list.
+- `x-flux-schema-*` explain annotations, resource alias redirects, and the
+  sharded `.explain/` metadata tree are omitted by default. Pass
+  `--with-explain-metadata` only for catalogs that need exact
+  `flux schema explain` kind names, short names, plural names, full resource
+  names, type-reference shell completion, and field type names.
 
 ## Field indexes
 

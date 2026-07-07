@@ -11,11 +11,12 @@ const DefaultExtractFormat = "{{ .Group }}/{{ .Kind }}_{{ .Version }}.json"
 // ExtractOutput holds the output-shaping flags that
 // are identical across `extract k8s` and `extract crd`.
 type ExtractOutput struct {
-	Dir              string
-	Format           string
-	StripDescription bool
-	WithFieldIndex   bool
-	IndexSource      string
+	Dir                 string
+	Format              string
+	StripDescription    bool
+	WithFieldIndex      bool
+	WithExplainMetadata bool
+	IndexSource         string
 }
 
 // NewExtractOutput returns an ExtractOutput populated with the default values
@@ -42,6 +43,8 @@ func (e *ExtractOutput) Register(cmd *cobra.Command) {
 		"also write a .fields.txt field index next to each schema: one greppable line "+
 			"per field with its dotted path, type, constraints, and description; "+
 			"map values are addressed as path.<key>.field")
+	cmd.Flags().BoolVar(&e.WithExplainMetadata, "with-explain-metadata", e.WithExplainMetadata,
+		"include x-flux-schema annotations used by explain to print exact kind and type names")
 	cmd.Flags().StringVar(&e.IndexSource, "index-source", e.IndexSource,
 		"source name and version recorded in the field index header, overriding auto-detection "+
 			"(e.g. 'my-operator v1.2.3')")
