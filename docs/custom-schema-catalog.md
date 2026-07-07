@@ -229,17 +229,18 @@ field render hints that are otherwise lost when OpenAPI `$ref` definitions
 are inlined, such as named nested types (`Container`, `Quantity`,
 `IntOrString`) and referenced type descriptions. Pass
 `--with-explain-type-metadata` when another index provides resource lookup and
-completion. This is the ecosystem catalog mode used with
+resource-name completion. This is the ecosystem catalog mode used with
 `--schema-location ecosystem`, where `explain` resolves resources from
-`https://schemas.fluxoperator.dev/index.json` and only needs the loaded JSON
-schema to print kubectl-style field output.
+`https://schemas.fluxoperator.dev/index.json` and uses the loaded JSON schema for
+kubectl-style field output and field-path completion.
 
 Standalone explain metadata includes the schema-local type metadata plus the
 lookup files needed when there is no separate ecosystem index: alias redirect
 JSON files, `.explain/refs/`, and `.explain/completion/`. Pass
 `--with-explain-metadata` for custom catalogs that should support
-`flux schema explain` resource references and shell completion on their own.
-This flag is a superset of `--with-explain-type-metadata`.
+`flux schema explain` resource references and resource-name shell completion on
+their own. Field-path completion is derived from the resolved JSON Schema. This
+flag is a superset of `--with-explain-type-metadata`.
 
 `--with-field-index` is separate. It writes `.fields.txt` sidecars for
 search, agents, and other catalog consumers. `explain` does not use field

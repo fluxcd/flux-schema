@@ -58,9 +58,13 @@ resource names, and short names are resolved from sharded metadata under
 `.explain/refs/` when custom catalogs provide it. For the `ecosystem` catalog,
 `explain` uses the hosted `https://schemas.fluxoperator.dev/index.json` to
 resolve resource references and provide shell completion without fetching
-thousands of per-resource metadata files. Completion suggests the canonical
-resource name (`plural.group`, or `plural` for core resources) for all indexed
-resources matching the typed prefix.
+thousands of per-resource metadata files. Resource completion suggests the
+canonical resource name (`plural.group`, or `plural` for core resources) for all
+indexed resources matching the typed prefix. Field completion resolves the typed
+resource reference, fetches that schema, and suggests matching child field paths
+while preserving the resource reference the user typed. Loaded schemas and
+not-found lookups are cached in memory for the life of the process; no disk
+cache is written.
 
 When `--api-version` is set, dotted group suffixes are treated like kubectl:
 the first path segment is the resource name and the remaining segments are
@@ -75,10 +79,11 @@ segments after the resource as an API group, then falls back to field lookup.
 
 The hosted `ecosystem` catalog is special. `flux schema explain -s ecosystem`
 uses `https://schemas.fluxoperator.dev/index.json` for resource lookup and
-shell completion, then fetches only the schema JSON needed for the requested
-resource. Because the index already provides plural names, short names, full
-resource names, and completion candidates, the catalog does not need alias
-redirect files or a `.explain/` tree.
+resource-name completion. Field completion and command output fetch only the
+schema JSON needed for the resolved resource. Because the index already provides
+plural names, short names, full resource names, and resource completion
+candidates, the catalog does not need alias redirect files or a `.explain/`
+tree.
 
 Schemas used with this mode should be generated with JSON-only explain type
 metadata:
