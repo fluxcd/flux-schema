@@ -1066,6 +1066,9 @@ func (r renderer) render(resolved *resolvedSchema, fields []string) error {
 	if err := r.renderOutput(resolved.Root, fields); err != nil {
 		return err
 	}
+	if r.openAPIV2() {
+		return nil
+	}
 	_, err := fmt.Fprintln(r.w)
 	return err
 }
@@ -1126,6 +1129,9 @@ func (r renderer) renderOutputV2(node map[string]any, fields []string) error {
 		if len(fieldList) == 0 {
 			return nil
 		}
+		if _, err := fmt.Fprintln(r.w); err != nil {
+			return err
+		}
 		if _, err := fmt.Fprintln(r.w, "FIELDS:"); err != nil {
 			return err
 		}
@@ -1171,6 +1177,9 @@ func (r renderer) renderFieldV2(name string, node map[string]any) error {
 		if len(fieldList) == 0 {
 			return nil
 		}
+		if _, err := fmt.Fprintln(r.w); err != nil {
+			return err
+		}
 		if _, err := fmt.Fprintln(r.w, "FIELDS:"); err != nil {
 			return err
 		}
@@ -1187,17 +1196,23 @@ func (r renderer) writeDescriptionV2(node map[string]any) error {
 	if _, err := fmt.Fprintln(r.w, "DESCRIPTION:"); err != nil {
 		return err
 	}
-	desc := strings.TrimSuffix(descriptionText(node), "\n")
-	if desc == "" {
-		desc = "<empty>"
+	sections := descriptionSectionsV2(node)
+	if len(sections) == 0 {
+		sections = []string{"<empty>"}
 	}
-	for _, line := range wrapString(desc, 75) {
-		if _, err := fmt.Fprintf(r.w, "     %s\n", line); err != nil {
-			return err
+	for i, desc := range sections {
+		if i > 0 {
+			if _, err := fmt.Fprintln(r.w); err != nil {
+				return err
+			}
+		}
+		for _, line := range wrapString(desc, 75) {
+			if _, err := fmt.Fprintf(r.w, "     %s\n", line); err != nil {
+				return err
+			}
 		}
 	}
-	_, err := fmt.Fprintln(r.w)
-	return err
+	return nil
 }
 
 func (r renderer) writeFieldHeader(name string, node map[string]any) error {
@@ -1448,6 +1463,40 @@ func typeNameV2(node map[string]any) string {
 		return t
 	}
 	return typeObject
+}
+
+func descriptionSectionsV2(node map[string]any) []string {
+	var sections []string
+	appendDescriptionSectionsV2(&sections, node)
+	return sections
+}
+
+func appendDescriptionSectionsV2(sections *[]string, node map[string]any) {
+	if node == nil {
+		return
+	}
+	desc, _ := node[keyDesc].(string)
+	appendDescriptionSection(sections, desc)
+	if typeDesc, ok := node[keyFluxSchemaTypeDescription].(string); ok && !sameDescription(desc, typeDesc) {
+		appendDescriptionSection(sections, typeDesc)
+	}
+	for _, branch := range schemaList(node[keyAllOf]) {
+		appendDescriptionSectionsV2(sections, branch)
+	}
+	if items := schemaMap(node[keyItems]); items != nil {
+		appendDescriptionSectionsV2(sections, items)
+	}
+	if addl := schemaMap(node[keyAddlProps]); addl != nil {
+		appendDescriptionSectionsV2(sections, addl)
+	}
+}
+
+func appendDescriptionSection(sections *[]string, desc string) {
+	desc = strings.TrimSuffix(desc, "\n")
+	if desc == "" {
+		return
+	}
+	*sections = append(*sections, desc)
 }
 
 func descriptionText(node map[string]any) string {

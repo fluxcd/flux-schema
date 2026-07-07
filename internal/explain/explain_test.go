@@ -50,6 +50,64 @@ func TestRendererUsesExplainTypeMetadata(t *testing.T) {
 	g.Expect(strings.Count(descriptionText(arrayNode), "Container describes a single container.")).To(Equal(1))
 }
 
+func TestRendererOpenAPIV2DescriptionSpacing(t *testing.T) {
+	g := NewWithT(t)
+
+	primitive := map[string]any{
+		"type":                       "object",
+		"description":                "Spec configures the pod.",
+		keyFluxSchemaType:            "PodSpec",
+		keyFluxSchemaTypeDescription: "PodSpec is a description of a pod.",
+	}
+	root := map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"spec": primitive,
+		},
+	}
+
+	var out bytes.Buffer
+	r := renderer{w: &out, format: OutputPlaintextOpenAPIV2}
+	g.Expect(r.render(&resolvedSchema{Root: root, Kind: "Pod", Version: "v1"}, []string{"spec"})).To(Succeed())
+	g.Expect(out.String()).To(Equal("KIND:     Pod\n" +
+		"VERSION:  v1\n" +
+		"\n" +
+		"FIELD:    spec <PodSpec>\n" +
+		"\n" +
+		"DESCRIPTION:\n" +
+		"     Spec configures the pod.\n" +
+		"\n" +
+		"     PodSpec is a description of a pod.\n"))
+
+	resource := map[string]any{
+		"type":                       "object",
+		"description":                "Spec configures the pod.",
+		keyFluxSchemaType:            "PodSpec",
+		keyFluxSchemaTypeDescription: "PodSpec is a description of a pod.",
+		"properties": map[string]any{
+			"name": map[string]any{"type": "string", "description": "Name of the pod."},
+		},
+	}
+	root["properties"].(map[string]any)["spec"] = resource
+
+	out.Reset()
+	g.Expect(r.render(&resolvedSchema{Root: root, Kind: "Pod", Version: "v1"}, []string{"spec"})).To(Succeed())
+	g.Expect(out.String()).To(Equal("KIND:     Pod\n" +
+		"VERSION:  v1\n" +
+		"\n" +
+		"RESOURCE: spec <PodSpec>\n" +
+		"\n" +
+		"DESCRIPTION:\n" +
+		"     Spec configures the pod.\n" +
+		"\n" +
+		"     PodSpec is a description of a pod.\n" +
+		"\n" +
+		"FIELDS:\n" +
+		"   name\t<string>\n" +
+		"     Name of the pod.\n" +
+		"\n"))
+}
+
 func TestEcosystemIndexResolveAndComplete(t *testing.T) {
 	g := NewWithT(t)
 
