@@ -59,7 +59,7 @@ kind: Config
 validate:
   schemaLocation:
     - default
-    - https://raw.githubusercontent.com/datreeio/CRDs-catalog/main
+    - ecosystem
   skipJSONPath:
     - Secret:/sops
   skipMissingSchemas: true

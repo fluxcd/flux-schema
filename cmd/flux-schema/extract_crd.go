@@ -20,7 +20,7 @@ import (
 var extractCRDCmd = &cobra.Command{
 	Use:   "crd [files...]",
 	Short: "Extract JSON Schemas from Kubernetes CRD YAML files",
-	Example: `  # Extract schemas using the datreeio CRDs-catalog layout (default)
+	Example: `  # Extract schemas using the '{{.Group}}/{{.Kind}}_{{.Version}}.json' layout (default)
   kubectl get crd ocirepositories.source.toolkit.fluxcd.io -o yaml > oci-crd.yaml
   flux-schema extract crd oci-crd.yaml -d ./schemas
 

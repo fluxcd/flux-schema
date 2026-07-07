@@ -17,7 +17,7 @@ kind: Config
 validate:
   schemaLocation:
     - default
-    - https://raw.githubusercontent.com/datreeio/CRDs-catalog/main
+    - ecosystem
   skipKind:
     - source.toolkit.fluxcd.io/v1/ExternalArtifact
   skipJSONPath:
@@ -68,7 +68,7 @@ The `validate` section configures defaults for the `flux schema validate` flags.
 
 | Field                      | Description                                                    |
 |----------------------------|----------------------------------------------------------------|
-| `schemaLocation[]`         | Schema URLs, file paths, or templates tried in order.          |
+| `schemaLocation[]`         | Schema URLs, file paths, or templates tried in order. Aliases: `default` (built-in catalog), `ecosystem` (schemas.fluxoperator.dev). |
 | `skipMissingSchemas`       | Skip documents for which no schema can be found.               |
 | `skipKind[]`               | Kind or apiVersion/kind patterns excluded from validation.     |
 | `skipJSONPath[]`           | JSON Pointers stripped before validation.                      |

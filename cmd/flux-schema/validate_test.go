@@ -183,7 +183,7 @@ func TestValidateCmd_MultiDoc_CountsAndPlurals(t *testing.T) {
 }
 
 // TestValidateCmd_FluxManifestsFixtures runs the CLI against the real Flux
-// manifest fixtures in testdata/validate/ using the datreeio-style schema
+// manifest fixtures in testdata/validate/ using the default catalog schema
 // layout (Group/Kind_Version.json). Exercises the happy path end-to-end with
 // real schemas across multiple files, including the --skip-missing-schemas
 // behavior for the core Secret.
@@ -891,6 +891,15 @@ func TestExpandSchemaLocations(t *testing.T) {
 
 	g.Expect(expand([]string{"DEFAULT", "Default"})).
 		To(Equal([]string{validator.DefaultSchemaLocation, validator.DefaultSchemaLocation}))
+
+	g.Expect(expand([]string{"ecosystem"})).
+		To(Equal([]string{validator.EcosystemSchemaLocation}))
+
+	g.Expect(expand([]string{"ECOSYSTEM", "Ecosystem"})).
+		To(Equal([]string{validator.EcosystemSchemaLocation, validator.EcosystemSchemaLocation}))
+
+	g.Expect(expand([]string{"default", "ecosystem"})).
+		To(Equal([]string{validator.DefaultSchemaLocation, validator.EcosystemSchemaLocation}))
 
 	g.Expect(expand([]string{"./local/{{.Kind}}.json"})).
 		To(Equal([]string{"./local/{{.Kind}}.json"}))

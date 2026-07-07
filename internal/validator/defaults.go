@@ -9,6 +9,14 @@ package validator
 // to in the validate CLI's --schema-location flag.
 const DefaultSchemaLocation = "https://raw.githubusercontent.com/fluxcd/flux-schema/main/catalog/latest/" + DefaultSchemaLayout
 
+// EcosystemSchemaLocation points at the CNCF ecosystem catalog hosted at
+// https://schemas.fluxoperator.dev, covering Kubernetes core and the CRDs of
+// CNCF ecosystem projects, extracted from upstream releases and rebuilt daily.
+// Unlike the built-in catalog, its schemas preserve field descriptions. It is
+// the target that the literal value "ecosystem" resolves to in the
+// --schema-location flag.
+const EcosystemSchemaLocation = "https://schemas.fluxoperator.dev/catalog/" + DefaultSchemaLayout
+
 // DefaultSchemaLayout is the Go-template tail appended to any schema location
 // value that doesn't already end in ".json", so a bare path/URL like
 // "./my-schemas" expands to "./my-schemas/{{.Group}}/{{.Kind}}_{{.Version}}.json".

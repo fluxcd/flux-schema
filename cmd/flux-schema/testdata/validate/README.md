@@ -30,12 +30,12 @@ Test the schemas:
 --verbose
 ```
 
-Compare with datreeio catalog:
+Compare with the ecosystem catalog:
 
 ```sh
 ./bin/flux-schema validate \
 ./cmd/flux-schema/testdata/validate/manifests/valid-*.yaml \
---schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.Kind}}_{{.Version}}.json' \
+--schema-location ecosystem \
 --skip-missing-schemas \
 --verbose
 ```

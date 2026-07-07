@@ -10,6 +10,9 @@ and `kind`. The built-in [Flux Schema catalog](../catalog/README.md) ships
 schemas for Kubernetes, OpenShift, Gateway API, and the Flux ecosystem;
 custom catalogs let you cover internal CRDs, pin specific upstream versions,
 or assemble a layout that fits your tooling.
+For third-party CRDs you don't want to extract yourself, the hosted
+[ecosystem catalog](https://schemas.fluxoperator.dev) is available via
+`--schema-location ecosystem`.
 
 ## Layout
 
