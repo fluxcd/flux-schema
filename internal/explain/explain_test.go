@@ -9,10 +9,46 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	. "github.com/onsi/gomega"
 )
+
+func TestRendererUsesExplainTypeMetadata(t *testing.T) {
+	g := NewWithT(t)
+
+	spec := map[string]any{
+		"type":                       "object",
+		"description":                "Spec configures the pod.",
+		keyFluxSchemaType:            "PodSpec",
+		keyFluxSchemaTypeDescription: "PodSpec is a description of a pod.",
+		"properties":                 map[string]any{},
+	}
+	root := map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"spec": spec,
+		},
+	}
+
+	var out bytes.Buffer
+	r := renderer{w: &out, format: OutputPlaintext}
+	g.Expect(r.render(&resolvedSchema{Root: root, Kind: "Pod", Version: "v1"}, []string{"spec"})).To(Succeed())
+	g.Expect(out.String()).To(ContainSubstring("FIELD: spec <PodSpec>\n"))
+	g.Expect(out.String()).To(ContainSubstring("Spec configures the pod."))
+	g.Expect(out.String()).To(ContainSubstring("PodSpec is a description of a pod."))
+	g.Expect(typeNameV2(spec)).To(Equal("PodSpec"))
+
+	arrayNode := map[string]any{
+		"description": "List of containers.",
+		"items": map[string]any{
+			"description":                "Container describes a single container.",
+			keyFluxSchemaTypeDescription: "Container describes a single container.",
+		},
+	}
+	g.Expect(strings.Count(descriptionText(arrayNode), "Container describes a single container.")).To(Equal(1))
+}
 
 func TestEcosystemIndexResolveAndComplete(t *testing.T) {
 	g := NewWithT(t)

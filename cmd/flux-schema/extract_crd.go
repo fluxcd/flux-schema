@@ -105,9 +105,7 @@ func extractCRDCmdRun(cmd *cobra.Command, args []string) error {
 				}
 			}
 
-			if !extractCRDArgs.WithExplainMetadata {
-				extractor.StripExplainMetadata(crd.JSON)
-			}
+			stripExplainMetadataForOutput(crd.JSON, extractCRDArgs.ExtractOutput)
 			if extractCRDArgs.StripDescription {
 				extractor.StripDescriptions(crd.JSON)
 			}

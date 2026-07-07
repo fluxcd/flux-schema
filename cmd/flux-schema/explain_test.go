@@ -86,13 +86,13 @@ func TestExplainCmd_OpenAPIV2Output(t *testing.T) {
 	g.Expect(out).To(HavePrefix("KIND:     Pod\n" +
 		"VERSION:  v1\n" +
 		"\n" +
-		"RESOURCE: spec <Object>\n" +
+		"RESOURCE: spec <PodSpec>\n" +
 		"\n" +
 		"DESCRIPTION:\n" +
 		"     Specification of the desired behavior of the pod.\n" +
 		"\n" +
 		"FIELDS:\n" +
-		"   containers\t<[]Object> -required-\n"))
+		"   containers\t<[]Container> -required-\n"))
 }
 
 func TestExplainCmd_Recursive(t *testing.T) {

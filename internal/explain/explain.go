@@ -52,9 +52,10 @@ const (
 	keyAddlProps  = "additionalProperties"
 	keyAllOf      = "allOf"
 
-	keyFluxSchemaType  = "x-flux-schema-type"
-	keyFluxSchemaGVK   = "x-flux-schema-group-version-kind"
-	keyFluxSchemaAlias = "x-flux-schema-alias"
+	keyFluxSchemaType            = "x-flux-schema-type"
+	keyFluxSchemaTypeDescription = "x-flux-schema-type-description"
+	keyFluxSchemaGVK             = "x-flux-schema-group-version-kind"
+	keyFluxSchemaAlias           = "x-flux-schema-alias"
 
 	maxAliasDepth = 8
 	typeObject    = "Object"
@@ -1437,6 +1438,9 @@ func typeNameV2(node map[string]any) string {
 	if branches := schemaList(node[keyAllOf]); len(branches) == 1 && len(schemaMap(node[keyProperties])) == 0 {
 		return typeNameV2(branches[0])
 	}
+	if name, ok := node[keyFluxSchemaType].(string); ok && name != "" {
+		return name
+	}
 	if t, ok := singleType(node); ok {
 		if t == "object" {
 			return typeObject
@@ -1456,9 +1460,10 @@ func appendDescription(out *strings.Builder, node map[string]any) {
 	if node == nil {
 		return
 	}
-	if desc, ok := node[keyDesc].(string); ok && desc != "" {
-		out.WriteString(desc)
-		out.WriteByte('\n')
+	desc, _ := node[keyDesc].(string)
+	appendDescriptionString(out, desc)
+	if typeDesc, ok := node[keyFluxSchemaTypeDescription].(string); ok && !sameDescription(desc, typeDesc) {
+		appendDescriptionString(out, typeDesc)
 	}
 	for _, branch := range schemaList(node[keyAllOf]) {
 		appendDescription(out, branch)
@@ -1469,6 +1474,18 @@ func appendDescription(out *strings.Builder, node map[string]any) {
 	if addl := schemaMap(node[keyAddlProps]); addl != nil {
 		appendDescription(out, addl)
 	}
+}
+
+func appendDescriptionString(out *strings.Builder, desc string) {
+	if desc == "" {
+		return
+	}
+	out.WriteString(desc)
+	out.WriteByte('\n')
+}
+
+func sameDescription(a, b string) bool {
+	return strings.TrimSpace(a) == strings.TrimSpace(b)
 }
 
 func schemaMap(v any) map[string]any {

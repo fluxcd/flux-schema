@@ -35,6 +35,41 @@ const minimalSwagger = `{
   }
 }`
 
+const refSwagger = `{
+  "paths": {
+    "/apis/example.com/v1/widgets": {
+      "get": {
+        "x-kubernetes-group-version-kind": {
+          "group": "example.com",
+          "version": "v1",
+          "kind": "Widget"
+        }
+      }
+    }
+  },
+  "definitions": {
+    "example.v1.WidgetSpec": {
+      "type": "object",
+      "description": "WidgetSpec defines nested widget settings.",
+      "properties": {
+        "name": {"type": "string"}
+      }
+    },
+    "example.v1.Widget": {
+      "type": "object",
+      "properties": {
+        "spec": {
+          "$ref": "#/definitions/example.v1.WidgetSpec",
+          "description": "Spec configures the widget."
+        }
+      },
+      "x-kubernetes-group-version-kind": [
+        {"group": "example.com", "version": "v1", "kind": "Widget"}
+      ]
+    }
+  }
+}`
+
 const minimalNamespacedSwagger = `{
   "paths": {
     "/apis/example.com/v1/namespaces/{namespace}/widgets": {
@@ -131,6 +166,73 @@ func TestExtractK8sCmd_StripDescription(t *testing.T) {
 	data, err := os.ReadFile(filepath.Join(outDir, "example.com", "widget_v1.json"))
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(string(data)).ToNot(ContainSubstring(`"description"`))
+}
+
+func TestExtractK8sCmd_DefaultStripsExplainTypeMetadata(t *testing.T) {
+	g := NewWithT(t)
+
+	outDir := t.TempDir()
+	input := writeSwaggerDataFixture(t, refSwagger)
+
+	_, err := executeCommand([]string{"extract", "k8s", input, "--output-dir", outDir})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	data, err := os.ReadFile(filepath.Join(outDir, "example.com", "widget_v1.json"))
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(string(data)).ToNot(ContainSubstring("x-flux-schema-type"))
+	g.Expect(string(data)).ToNot(ContainSubstring("x-flux-schema-type-description"))
+}
+
+func TestExtractK8sCmd_WithExplainTypeMetadata(t *testing.T) {
+	g := NewWithT(t)
+
+	outDir := t.TempDir()
+	input := writeSwaggerDataFixture(t, refSwagger)
+
+	_, err := executeCommand([]string{
+		"extract", "k8s", input,
+		"--output-dir", outDir,
+		"--with-explain-type-metadata",
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	data, err := os.ReadFile(filepath.Join(outDir, "example.com", "widget_v1.json"))
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(string(data)).To(ContainSubstring(`"x-flux-schema-type": "WidgetSpec"`))
+	g.Expect(string(data)).To(ContainSubstring(`"x-flux-schema-type-description": "WidgetSpec defines nested widget settings."`))
+	g.Expect(string(data)).ToNot(ContainSubstring("x-flux-schema-group-version-kind"))
+	g.Expect(string(data)).ToNot(ContainSubstring("x-flux-schema-resource"))
+
+	_, err = os.Stat(filepath.Join(outDir, ".explain"))
+	g.Expect(os.IsNotExist(err)).To(BeTrue())
+	_, err = os.Stat(filepath.Join(outDir, "example.com", "widgets_v1.json"))
+	g.Expect(os.IsNotExist(err)).To(BeTrue())
+}
+
+func TestExtractK8sCmd_WithExplainMetadataIncludesTypeAndLookupMetadata(t *testing.T) {
+	g := NewWithT(t)
+
+	outDir := t.TempDir()
+	input := writeSwaggerDataFixture(t, refSwagger)
+
+	_, err := executeCommand([]string{
+		"extract", "k8s", input,
+		"--output-dir", outDir,
+		"--with-explain-metadata",
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	data, err := os.ReadFile(filepath.Join(outDir, "example.com", "widget_v1.json"))
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(string(data)).To(ContainSubstring(`"x-flux-schema-type": "WidgetSpec"`))
+	g.Expect(string(data)).To(ContainSubstring(`"x-flux-schema-type-description": "WidgetSpec defines nested widget settings."`))
+	g.Expect(string(data)).To(ContainSubstring("x-flux-schema-group-version-kind"))
+	g.Expect(string(data)).To(ContainSubstring("x-flux-schema-resource"))
+
+	_, err = os.Stat(filepath.Join(outDir, ".explain", "refs", "widgets.json"))
+	g.Expect(err).ToNot(HaveOccurred())
+	_, err = os.Stat(filepath.Join(outDir, "example.com", "widgets_v1.json"))
+	g.Expect(err).ToNot(HaveOccurred())
 }
 
 func TestExtractK8sCmd_WithFieldIndexNamespacedScope(t *testing.T) {

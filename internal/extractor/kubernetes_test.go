@@ -139,7 +139,8 @@ func TestExtractKubernetes_InlinesRef(t *testing.T) {
 	doc := map[string]any{
 		"definitions": map[string]any{
 			"example.v1.Helper": map[string]any{
-				"type": "object",
+				"type":        "object",
+				"description": "Helper defines nested widget settings.",
 				"properties": map[string]any{
 					"name": map[string]any{"type": "string"},
 				},
@@ -147,7 +148,10 @@ func TestExtractKubernetes_InlinesRef(t *testing.T) {
 			"example.v1.Widget": map[string]any{
 				"type": "object",
 				"properties": map[string]any{
-					"helper": map[string]any{"$ref": "#/definitions/example.v1.Helper"},
+					"helper": map[string]any{
+						"$ref":        "#/definitions/example.v1.Helper",
+						"description": "Helper configures the widget.",
+					},
 				},
 				"required": []any{"helper"},
 				"x-kubernetes-group-version-kind": []any{
@@ -174,8 +178,10 @@ func TestExtractKubernetes_InlinesRef(t *testing.T) {
 
 	helper := props["helper"].(map[string]any)
 	g.Expect(helper["type"]).To(Equal("object"))
+	g.Expect(helper["description"]).To(Equal("Helper configures the widget."))
 	g.Expect(helper).To(HaveKey("properties"))
 	g.Expect(helper[keyFluxSchemaType]).To(Equal("Helper"))
+	g.Expect(helper[keyFluxSchemaTypeDescription]).To(Equal("Helper defines nested widget settings."))
 }
 
 func TestExtractKubernetes_CoreGroupKept(t *testing.T) {

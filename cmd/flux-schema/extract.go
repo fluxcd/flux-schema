@@ -31,6 +31,19 @@ func init() {
 	rootCmd.AddCommand(extractCmd)
 }
 
+// stripExplainMetadataForOutput applies the requested explain metadata level
+// before the schema is written.
+func stripExplainMetadataForOutput(node any, out flags.ExtractOutput) {
+	switch {
+	case out.WithExplainMetadata:
+		return
+	case out.WithExplainTypeMetadata:
+		extractor.StripExplainLookupMetadata(node)
+	default:
+		extractor.StripExplainMetadata(node)
+	}
+}
+
 // runSwaggerExtract is the shared `extract k8s`/`extract openshift` pipeline:
 // it creates the output dir, runs extract on the swagger data, optionally
 // strips descriptions, writes each schema, and reports per-document failures.
@@ -63,9 +76,7 @@ func runSwaggerExtract(cmd *cobra.Command, source string, data []byte, out flags
 			}
 		}
 
-		if !out.WithExplainMetadata {
-			extractor.StripExplainMetadata(schemaDoc.JSON)
-		}
+		stripExplainMetadataForOutput(schemaDoc.JSON, out)
 		if out.StripDescription {
 			extractor.StripDescriptions(schemaDoc.JSON)
 		}
