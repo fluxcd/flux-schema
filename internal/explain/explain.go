@@ -25,6 +25,7 @@ import (
 
 	"github.com/hashicorp/go-retryablehttp"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	kubeversion "k8s.io/apimachinery/pkg/version"
 
 	"github.com/fluxcd/flux-schema/internal/tmpl"
 )
@@ -178,13 +179,24 @@ type catalogIndexKind struct {
 	Name     string
 	Versions []string
 	Kind     string
+	Resource catalogIndexResource
+}
+
+type catalogIndexResource struct {
+	Singular   string   `json:"s,omitempty"`
+	Plural     string   `json:"p,omitempty"`
+	ShortNames []string `json:"n,omitempty"`
 }
 
 type indexResource struct {
-	Group   string
-	Version string
-	Kind    string
-	Name    string
+	Group      string
+	Version    string
+	Kind       string
+	Name       string
+	Singular   string
+	Plural     string
+	ShortNames []string
+	order      int
 }
 
 func (k *catalogIndexKind) UnmarshalJSON(data []byte) error {
@@ -201,9 +213,14 @@ func (k *catalogIndexKind) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(tuple[1], &k.Versions); err != nil {
 		return fmt.Errorf("parse index kind versions: %w", err)
 	}
-	if len(tuple) >= 4 {
+	if len(tuple) >= 4 && string(tuple[3]) != "null" {
 		if err := json.Unmarshal(tuple[3], &k.Kind); err != nil {
 			return fmt.Errorf("parse index kind display name: %w", err)
+		}
+	}
+	if len(tuple) >= 5 {
+		if err := json.Unmarshal(tuple[4], &k.Resource); err != nil {
+			return fmt.Errorf("parse index kind resource names: %w", err)
 		}
 	}
 	if k.Kind == "" {
@@ -488,8 +505,13 @@ func (e *Explainer) loadResourceIndex(ctx context.Context) ([]indexResource, err
 			e.indexErr = fmt.Errorf("%s: parse catalog index: %w", location, err)
 			return nil, e.indexErr
 		}
-		e.indexResources = append(e.indexResources, index.resources()...)
+		resources := index.resources()
+		for i := range resources {
+			resources[i].order = len(e.indexResources) + i
+		}
+		e.indexResources = append(e.indexResources, resources...)
 	}
+	sortIndexResources(e.indexResources)
 	return e.indexResources, nil
 }
 
@@ -508,10 +530,13 @@ func (i catalogIndex) resources() []indexResource {
 						continue
 					}
 					out = append(out, indexResource{
-						Group:   strings.ToLower(strings.TrimSpace(group.Group)),
-						Version: version,
-						Kind:    kind.Kind,
-						Name:    name,
+						Group:      normalizeIndexGroup(group.Group),
+						Version:    version,
+						Kind:       kind.Kind,
+						Name:       name,
+						Singular:   strings.ToLower(strings.TrimSpace(kind.Resource.Singular)),
+						Plural:     strings.ToLower(strings.TrimSpace(kind.Resource.Plural)),
+						ShortNames: normalizedNames(kind.Resource.ShortNames),
 					})
 				}
 			}
@@ -525,7 +550,7 @@ func (r indexResource) target() resourceTarget {
 }
 
 func (r indexResource) canonicalName() string {
-	name := pluralResourceName(r.Name)
+	name := r.pluralName()
 	if r.Group == "" {
 		return name
 	}
@@ -564,15 +589,9 @@ func (r indexResource) aliases() []string {
 		seen[alias] = true
 		out = append(out, alias)
 	}
-	bases := []string{r.Name, strings.ToLower(r.Kind), pluralResourceName(r.Name)}
-	for short, candidates := range builtinResourceAliases {
-		for _, candidate := range candidates {
-			if candidate == r.Name {
-				bases = append(bases, short)
-				break
-			}
-		}
-	}
+	bases := make([]string, 0, 4+len(r.ShortNames))
+	bases = append(bases, r.Name, strings.ToLower(r.Kind), r.singularName(), r.pluralName())
+	bases = append(bases, r.ShortNames...)
 	for _, alias := range bases {
 		add(alias)
 		if r.Group != "" {
@@ -580,6 +599,93 @@ func (r indexResource) aliases() []string {
 		}
 	}
 	return out
+}
+
+func (r indexResource) singularName() string {
+	if r.Singular != "" {
+		return r.Singular
+	}
+	return r.Name
+}
+
+func (r indexResource) pluralName() string {
+	if r.Plural != "" {
+		return r.Plural
+	}
+	return pluralResourceName(r.Name)
+}
+
+func normalizeIndexGroup(group string) string {
+	group = strings.ToLower(strings.TrimSpace(group))
+	if group == "core" {
+		return ""
+	}
+	return group
+}
+
+func normalizedNames(names []string) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, name := range names {
+		name = strings.ToLower(strings.TrimSpace(name))
+		if name == "" || seen[name] {
+			continue
+		}
+		seen[name] = true
+		out = append(out, name)
+	}
+	return out
+}
+
+func sortIndexResources(resources []indexResource) {
+	sort.SliceStable(resources, func(i, j int) bool {
+		return compareIndexResources(resources[i], resources[j]) < 0
+	})
+}
+
+func compareIndexResources(a, b indexResource) int {
+	if c := compareGroupPriority(a.Group, b.Group); c != 0 {
+		return c
+	}
+	if c := kubeversion.CompareKubeAwareVersionStrings(a.Version, b.Version); c != 0 {
+		if c > 0 {
+			return -1
+		}
+		return 1
+	}
+	if c := strings.Compare(strings.ToLower(a.Kind), strings.ToLower(b.Kind)); c != 0 {
+		return c
+	}
+	if c := strings.Compare(a.pluralName(), b.pluralName()); c != 0 {
+		return c
+	}
+	switch {
+	case a.order < b.order:
+		return -1
+	case a.order > b.order:
+		return 1
+	default:
+		return 0
+	}
+}
+
+func compareGroupPriority(a, b string) int {
+	aRank, aGroup := groupPriority(a)
+	bRank, bGroup := groupPriority(b)
+	if aRank != bRank {
+		return aRank - bRank
+	}
+	return strings.Compare(aGroup, bGroup)
+}
+
+func groupPriority(group string) (int, string) {
+	group = normalizeIndexGroup(group)
+	for i, known := range kubernetesGroups {
+		if group == known {
+			return i, ""
+		}
+	}
+	return len(kubernetesGroups), group
 }
 
 func pluralResourceName(name string) string {
@@ -856,44 +962,36 @@ func isHTTPURL(s string) bool {
 }
 
 var builtinResourceAliases = map[string][]string{
-	"cm":        {"configmap"},
-	"cs":        {"componentstatus"},
-	"ep":        {"endpoints"},
-	"ev":        {"event"},
-	"limits":    {"limitrange"},
-	"ns":        {"namespace"},
-	"no":        {"node"},
-	"po":        {"pod"},
-	"pvc":       {"persistentvolumeclaim"},
-	"pv":        {"persistentvolume"},
-	"quota":     {"resourcequota"},
-	"rc":        {"replicationcontroller"},
-	"sa":        {"serviceaccount"},
-	"svc":       {"service"},
-	"crd":       {"customresourcedefinition"},
-	"crds":      {"customresourcedefinition"},
-	"deploy":    {"deployment"},
-	"ds":        {"daemonset"},
-	"rs":        {"replicaset"},
-	"sts":       {"statefulset"},
-	"hpa":       {"horizontalpodautoscaler"},
-	"cj":        {"cronjob"},
-	"ing":       {"ingress"},
-	"netpol":    {"networkpolicy"},
-	"pdb":       {"poddisruptionbudget"},
-	"pc":        {"priorityclass"},
-	"sc":        {"storageclass"},
-	"csr":       {"certificatesigningrequest"},
-	"ip":        {"ipaddress"},
-	"vac":       {"volumeattributesclass"},
-	"gitrepo":   {"gitrepository"},
-	"helmrepo":  {"helmrepository"},
-	"hr":        {"helmrelease"},
-	"imgpol":    {"imagepolicy"},
-	"imgrepo":   {"imagerepository"},
-	"imgupdate": {"imageupdateautomation"},
-	"ks":        {"kustomization"},
-	"ocirepo":   {"ocirepository"},
+	"cm":     {"configmap"},
+	"cs":     {"componentstatus"},
+	"ep":     {"endpoints"},
+	"ev":     {"event"},
+	"limits": {"limitrange"},
+	"ns":     {"namespace"},
+	"no":     {"node"},
+	"po":     {"pod"},
+	"pvc":    {"persistentvolumeclaim"},
+	"pv":     {"persistentvolume"},
+	"quota":  {"resourcequota"},
+	"rc":     {"replicationcontroller"},
+	"sa":     {"serviceaccount"},
+	"svc":    {"service"},
+	"crd":    {"customresourcedefinition"},
+	"crds":   {"customresourcedefinition"},
+	"deploy": {"deployment"},
+	"ds":     {"daemonset"},
+	"rs":     {"replicaset"},
+	"sts":    {"statefulset"},
+	"hpa":    {"horizontalpodautoscaler"},
+	"cj":     {"cronjob"},
+	"ing":    {"ingress"},
+	"netpol": {"networkpolicy"},
+	"pdb":    {"poddisruptionbudget"},
+	"pc":     {"priorityclass"},
+	"sc":     {"storageclass"},
+	"csr":    {"certificatesigningrequest"},
+	"ip":     {"ipaddress"},
+	"vac":    {"volumeattributesclass"},
 }
 
 func kindNameCandidates(resource string) []string {
