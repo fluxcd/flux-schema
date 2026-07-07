@@ -99,6 +99,7 @@ var versionCandidates = []string{
 type Options struct {
 	SchemaLocations       []string
 	MetadataLocations     []string
+	IndexLocations        []string
 	APIVersion            string
 	OutputFormat          string
 	Recursive             bool
@@ -111,6 +112,10 @@ type Explainer struct {
 	opts      Options
 	templates []*template.Template
 	client    *retryablehttp.Client
+
+	indexLoaded    bool
+	indexResources []indexResource
+	indexErr       error
 }
 
 type resolvedSchema struct {
@@ -154,6 +159,57 @@ type completionShard struct {
 type completionResource struct {
 	Name    string   `json:"name"`
 	Aliases []string `json:"aliases,omitempty"`
+}
+
+type catalogIndex struct {
+	Projects []catalogIndexProject `json:"projects,omitempty"`
+}
+
+type catalogIndexProject struct {
+	Groups []catalogIndexGroup `json:"groups,omitempty"`
+}
+
+type catalogIndexGroup struct {
+	Group string             `json:"g,omitempty"`
+	Kinds []catalogIndexKind `json:"kinds,omitempty"`
+}
+
+type catalogIndexKind struct {
+	Name     string
+	Versions []string
+	Kind     string
+}
+
+type indexResource struct {
+	Group   string
+	Version string
+	Kind    string
+	Name    string
+}
+
+func (k *catalogIndexKind) UnmarshalJSON(data []byte) error {
+	var tuple []json.RawMessage
+	if err := json.Unmarshal(data, &tuple); err != nil {
+		return err
+	}
+	if len(tuple) < 2 {
+		return fmt.Errorf("index kind tuple has %d entries, want at least 2", len(tuple))
+	}
+	if err := json.Unmarshal(tuple[0], &k.Name); err != nil {
+		return fmt.Errorf("parse index kind name: %w", err)
+	}
+	if err := json.Unmarshal(tuple[1], &k.Versions); err != nil {
+		return fmt.Errorf("parse index kind versions: %w", err)
+	}
+	if len(tuple) >= 4 {
+		if err := json.Unmarshal(tuple[3], &k.Kind); err != nil {
+			return fmt.Errorf("parse index kind display name: %w", err)
+		}
+	}
+	if k.Kind == "" {
+		k.Kind = fallbackKind(k.Name)
+	}
+	return nil
 }
 
 func New(opts Options) (*Explainer, error) {
@@ -223,6 +279,18 @@ func (e *Explainer) CompleteResourceNames(ctx context.Context, prefix string) ([
 			seen[resource.Name] = true
 			out = append(out, resource.Name)
 		}
+	}
+	indexResources, err := e.loadResourceIndex(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, resource := range indexResources {
+		name := resource.canonicalName()
+		if !resource.matchesCompletionPrefix(prefix) || seen[name] {
+			continue
+		}
+		seen[name] = true
+		out = append(out, name)
 	}
 	sort.Strings(out)
 	return out, nil
@@ -330,6 +398,9 @@ func (e *Explainer) resolveFromReferences(ctx context.Context, req requestCandid
 		if !found {
 			continue
 		}
+		if target.Kind != "" {
+			resolved.Kind = target.Kind
+		}
 		resolved.RequestedKind = req.resource
 		return resolved, true, nil
 	}
@@ -366,6 +437,15 @@ func (e *Explainer) loadResourceReference(ctx context.Context, key string) ([]re
 		}
 		out = append(out, ref.Targets...)
 	}
+	indexResources, err := e.loadResourceIndex(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, resource := range indexResources {
+		if resource.matchesReferenceKey(key) {
+			out = append(out, resource.target())
+		}
+	}
 	return out, nil
 }
 
@@ -387,6 +467,144 @@ func (e *Explainer) loadCompletionShard(ctx context.Context, key string) ([]comp
 		out = append(out, shard.Resources...)
 	}
 	return out, nil
+}
+
+func (e *Explainer) loadResourceIndex(ctx context.Context) ([]indexResource, error) {
+	if e.indexLoaded {
+		return e.indexResources, e.indexErr
+	}
+	e.indexLoaded = true
+	for _, location := range e.opts.IndexLocations {
+		body, found, err := e.loadBytes(ctx, location)
+		if err != nil {
+			e.indexErr = err
+			return nil, err
+		}
+		if !found {
+			continue
+		}
+		var index catalogIndex
+		if err := decodeJSON(body, &index); err != nil {
+			e.indexErr = fmt.Errorf("%s: parse catalog index: %w", location, err)
+			return nil, e.indexErr
+		}
+		e.indexResources = append(e.indexResources, index.resources()...)
+	}
+	return e.indexResources, nil
+}
+
+func (i catalogIndex) resources() []indexResource {
+	var out []indexResource
+	for _, project := range i.Projects {
+		for _, group := range project.Groups {
+			for _, kind := range group.Kinds {
+				name := strings.ToLower(strings.TrimSpace(kind.Name))
+				if name == "" {
+					continue
+				}
+				for _, version := range kind.Versions {
+					version = strings.TrimSpace(version)
+					if version == "" {
+						continue
+					}
+					out = append(out, indexResource{
+						Group:   strings.ToLower(strings.TrimSpace(group.Group)),
+						Version: version,
+						Kind:    kind.Kind,
+						Name:    name,
+					})
+				}
+			}
+		}
+	}
+	return out
+}
+
+func (r indexResource) target() resourceTarget {
+	return resourceTarget{Group: r.Group, Version: r.Version, Kind: r.Kind}
+}
+
+func (r indexResource) canonicalName() string {
+	name := pluralResourceName(r.Name)
+	if r.Group == "" {
+		return name
+	}
+	return name + "." + r.Group
+}
+
+func (r indexResource) matchesReferenceKey(key string) bool {
+	for _, alias := range r.aliases() {
+		if key == alias {
+			return true
+		}
+	}
+	return false
+}
+
+func (r indexResource) matchesCompletionPrefix(prefix string) bool {
+	if prefix == "" || strings.HasPrefix(r.canonicalName(), prefix) {
+		return true
+	}
+	for _, alias := range r.aliases() {
+		if strings.HasPrefix(alias, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+func (r indexResource) aliases() []string {
+	seen := map[string]bool{}
+	var out []string
+	add := func(alias string) {
+		alias = strings.ToLower(strings.TrimSpace(alias))
+		if alias == "" || seen[alias] {
+			return
+		}
+		seen[alias] = true
+		out = append(out, alias)
+	}
+	bases := []string{r.Name, strings.ToLower(r.Kind), pluralResourceName(r.Name)}
+	for short, candidates := range builtinResourceAliases {
+		for _, candidate := range candidates {
+			if candidate == r.Name {
+				bases = append(bases, short)
+				break
+			}
+		}
+	}
+	for _, alias := range bases {
+		add(alias)
+		if r.Group != "" {
+			add(alias + "." + r.Group)
+		}
+	}
+	return out
+}
+
+func pluralResourceName(name string) string {
+	name = strings.ToLower(strings.TrimSpace(name))
+	if name == "" {
+		return ""
+	}
+	if strings.HasSuffix(name, "y") && len(name) > 1 && !isVowel(name[len(name)-2]) {
+		return strings.TrimSuffix(name, "y") + "ies"
+	}
+	for _, suffix := range []string{"ch", "sh", "s", "x", "z"} {
+		if strings.HasSuffix(name, suffix) {
+			return name + "es"
+		}
+	}
+	return name + "s"
+}
+
+func isVowel(b byte) bool {
+	switch b {
+	case 'a', 'e', 'i', 'o', 'u':
+		return true
+	default:
+		return false
+	}
 }
 
 func metadataLocation(root string, elems ...string) string {
@@ -638,36 +856,44 @@ func isHTTPURL(s string) bool {
 }
 
 var builtinResourceAliases = map[string][]string{
-	"cm":     {"configmap"},
-	"cs":     {"componentstatus"},
-	"ep":     {"endpoints"},
-	"ev":     {"event"},
-	"limits": {"limitrange"},
-	"ns":     {"namespace"},
-	"no":     {"node"},
-	"po":     {"pod"},
-	"pvc":    {"persistentvolumeclaim"},
-	"pv":     {"persistentvolume"},
-	"quota":  {"resourcequota"},
-	"rc":     {"replicationcontroller"},
-	"sa":     {"serviceaccount"},
-	"svc":    {"service"},
-	"crd":    {"customresourcedefinition"},
-	"crds":   {"customresourcedefinition"},
-	"deploy": {"deployment"},
-	"ds":     {"daemonset"},
-	"rs":     {"replicaset"},
-	"sts":    {"statefulset"},
-	"hpa":    {"horizontalpodautoscaler"},
-	"cj":     {"cronjob"},
-	"ing":    {"ingress"},
-	"netpol": {"networkpolicy"},
-	"pdb":    {"poddisruptionbudget"},
-	"pc":     {"priorityclass"},
-	"sc":     {"storageclass"},
-	"csr":    {"certificatesigningrequest"},
-	"ip":     {"ipaddress"},
-	"vac":    {"volumeattributesclass"},
+	"cm":        {"configmap"},
+	"cs":        {"componentstatus"},
+	"ep":        {"endpoints"},
+	"ev":        {"event"},
+	"limits":    {"limitrange"},
+	"ns":        {"namespace"},
+	"no":        {"node"},
+	"po":        {"pod"},
+	"pvc":       {"persistentvolumeclaim"},
+	"pv":        {"persistentvolume"},
+	"quota":     {"resourcequota"},
+	"rc":        {"replicationcontroller"},
+	"sa":        {"serviceaccount"},
+	"svc":       {"service"},
+	"crd":       {"customresourcedefinition"},
+	"crds":      {"customresourcedefinition"},
+	"deploy":    {"deployment"},
+	"ds":        {"daemonset"},
+	"rs":        {"replicaset"},
+	"sts":       {"statefulset"},
+	"hpa":       {"horizontalpodautoscaler"},
+	"cj":        {"cronjob"},
+	"ing":       {"ingress"},
+	"netpol":    {"networkpolicy"},
+	"pdb":       {"poddisruptionbudget"},
+	"pc":        {"priorityclass"},
+	"sc":        {"storageclass"},
+	"csr":       {"certificatesigningrequest"},
+	"ip":        {"ipaddress"},
+	"vac":       {"volumeattributesclass"},
+	"gitrepo":   {"gitrepository"},
+	"helmrepo":  {"helmrepository"},
+	"hr":        {"helmrelease"},
+	"imgpol":    {"imagepolicy"},
+	"imgrepo":   {"imagerepository"},
+	"imgupdate": {"imageupdateautomation"},
+	"ks":        {"kustomization"},
+	"ocirepo":   {"ocirepository"},
 }
 
 func kindNameCandidates(resource string) []string {

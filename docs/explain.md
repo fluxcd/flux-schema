@@ -27,7 +27,7 @@ flux schema explain pods --api-version=v1 --recursive --schema-location ./catalo
 
 | Flag                         | Description                                                                                              |
 |------------------------------|----------------------------------------------------------------------------------------------------------|
-| `-s, --schema-location`      | URL or file path for schemas (repeatable); `default` points at the built-in validation catalog.          |
+| `-s, --schema-location`      | URL or file path for schemas (repeatable); `default` points at the built-in validation catalog, `ecosystem` at the CNCF ecosystem catalog. |
 | `-f, --config`               | YAML config file with `explain` defaults; defaults to `$FLUX_SCHEMA_CONFIG`, else `<executable>.config`. |
 | `--api-version`              | Get different explanations for a particular API version (`group/version`).                               |
 | `--recursive`                | Print fields of fields.                                                                                  |
@@ -55,10 +55,12 @@ kind names (`OCIRepository.spec.verify`), plural resource names
 (`po.spec`, `hr.spec`, `ag.spec`). Built-in Kubernetes short names are
 recognized by the command. CRD kinds, plural names, singular names, full
 resource names, and short names are resolved from sharded metadata under
-`.explain/refs/` when the catalog provides it. Shell completion uses
-`.explain/completion/` shards and suggests the canonical resource name
-(`plural.group`, or `plural` for core resources) for all indexed resources
-matching the typed prefix.
+`.explain/refs/` when custom catalogs provide it. For the `ecosystem` catalog,
+`explain` uses the hosted `https://schemas.fluxoperator.dev/index.json` to
+resolve resource references and provide shell completion without fetching
+thousands of per-resource metadata files. Completion suggests the canonical
+resource name (`plural.group`, or `plural` for core resources) for all indexed
+resources matching the typed prefix.
 
 When `--api-version` is set, dotted group suffixes are treated like kubectl:
 the first path segment is the resource name and the remaining segments are
@@ -67,8 +69,11 @@ segments after the resource as an API group, then falls back to field lookup.
 
 ## Catalogs
 
-For best parity with kubectl, use a description-preserving catalog generated
-with:
+The hosted `ecosystem` catalog preserves descriptions and ships an optimized
+index used by `flux schema explain -s ecosystem`.
+
+For custom catalogs, best parity with kubectl comes from a description-preserving
+catalog generated with:
 
 ```shell
 flux schema extract k8s --with-explain-metadata --with-field-index -d ./catalog

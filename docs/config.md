@@ -87,7 +87,7 @@ The `explain` section configures defaults for the `flux schema explain` flags.
 
 | Field                   | Description                                                    |
 |-------------------------|----------------------------------------------------------------|
-| `schemaLocation[]`      | Schema URLs, file paths, or templates tried in order.          |
+| `schemaLocation[]`      | Schema URLs, file paths, or templates tried in order. Aliases: `default` (built-in catalog), `ecosystem` ([schemas.fluxoperator.dev](https://schemas.fluxoperator.dev/)). |
 | `apiVersion`            | API group/version to explain by default.                       |
 | `recursive`             | Print fields of fields.                                        |
 | `insecureSkipTLSVerify` | Disable TLS certificate verification when downloading schemas. |
