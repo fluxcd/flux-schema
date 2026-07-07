@@ -27,6 +27,10 @@ refreshed automatically from upstream stable releases.
   checked against API server rules (DNS-1123, qualified names).
 - **Built-in catalog** — JSON Schemas with CEL rules for Kubernetes, OpenShift,
   Gateway API, Flux, Flagger, and Flux Operator CRDs, refreshed automatically against upstream.
+- **Ecosystem catalog** — the `ecosystem` schema location resolves to
+  [schemas.fluxoperator.dev](https://schemas.fluxoperator.dev), a CDN-hosted catalog with
+  description-preserving schemas for hundreds of CNCF ecosystem projects, extracted from upstream
+  releases and rebuilt daily.
 - **Custom catalogs** — extract JSON Schemas from Kubernetes CRDs and OpenAPI swagger files,
   then layer your catalog on top of the default schemas.
 - **Field indexes** — generate greppable field indexes from extracted schemas
@@ -51,18 +55,18 @@ For GitHub Actions runners, use the [`actions/setup`](actions/setup) action.
 
 ## Quickstart
 
-Validate a directory tree against the built-in catalog and 3rd-party schemas:
+Validate a directory tree against the built-in catalog and the CNCF ecosystem catalog:
 
 ```shell
 flux schema validate ./manifests \
 --schema-location default \
---schema-location https://raw.githubusercontent.com/datreeio/CRDs-catalog/main
+--schema-location ecosystem
 ```
 
 Build a kustomize overlay and validate the generated manifests:
 
 ```shell
-kustomize build ./clusters/production | flux schema validate --verbose
+kustomize build ./clusters/production | flux schema validate -s ecosystem -v
 ```
 
 Render a Helm chart and validate the generated manifests:
@@ -74,13 +78,13 @@ helm template ./charts/app | flux schema validate -v --skip-missing-schemas
 Build a [ResourceSet](https://fluxoperator.dev/docs/resourcesets/introduction/) and validate the generated manifests:
 
 ```shell
-flux operator build rset -f tenants.yaml | flux schema validate
+flux operator build rset -f tenants.yaml | flux schema validate -s ecosystem
 ```
 
 Emit a structured report for CI tooling:
 
 ```shell
-flux schema validate ./manifests -o json
+flux schema validate ./manifests -s ecosystem -o json
 ```
 
 Extract JSON Schemas and field indexes from your CRDs, then layer them on top of the built-in catalog:
@@ -184,6 +188,8 @@ Run `flux schema <command> --help` for the full flag list.
   JSON Schema for `--config`.
 - [Built-in catalog](catalog/README.md) — Kubernetes, OpenShift, Gateway
   API, and Flux ecosystem CRDs covered by the default `default` schema location.
+- [Ecosystem catalog](https://schemas.fluxoperator.dev) — browsable CNCF
+  ecosystem schemas behind the `ecosystem` schema location.
 
 ## License
 

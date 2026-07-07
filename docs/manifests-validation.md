@@ -24,7 +24,7 @@ A non-zero exit code is returned when any document is invalid or errored.
 
 | Flag                         | Description                                                                                              |
 |------------------------------|----------------------------------------------------------------------------------------------------------|
-| `--schema-location`          | URL or file path for schemas (repeatable, tried in order); `default` points at the built-in catalog.     |
+| `-s, --schema-location`      | URL or file path for schemas (repeatable, tried in order); `default` points at the built-in catalog, `ecosystem` at the CNCF ecosystem catalog. |
 | `--skip-missing-schemas`     | Skip documents for which no schema can be found.                                                         |
 | `--skip-kind`                | Skip documents matching `kind` or `apiVersion/kind` (repeatable).                                        |
 | `--skip-json-path`           | Strip a JSON Pointer field before validation, optionally scoped: `[apiVersion/kind:]/path` (repeatable). |
@@ -71,9 +71,14 @@ Flux Schema catalog alongside your own schemas:
 ```shell
 flux schema validate ./manifests \
   --schema-location default \
-  --schema-location https://raw.githubusercontent.com/datreeio/CRDs-catalog/main \
+  --schema-location ecosystem \
   --schema-location './schemas/{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json'
 ```
+
+The literal value `ecosystem` resolves to the
+[CNCF ecosystem catalog](https://schemas.fluxoperator.dev) served from
+`https://schemas.fluxoperator.dev/catalog/`, covering CRDs of hundreds of CNCF
+projects and rebuilt daily from upstream releases.
 
 See [custom catalogs](custom-schema-catalog.md) for guidance on building and hosting
 your own schema catalog.
@@ -252,7 +257,7 @@ kind: Config
 validate:
   schemaLocation:
     - default
-    - https://raw.githubusercontent.com/datreeio/CRDs-catalog/main
+    - ecosystem
   skipKind:
     - source.toolkit.fluxcd.io/v1/ExternalArtifact
   skipJSONPath:

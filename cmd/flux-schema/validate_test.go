@@ -145,6 +145,20 @@ func TestValidateCmd_Verbose_PrintsValidLines(t *testing.T) {
 	g.Expect(out).To(ContainSubstring(path + " - Widget/default/ok-widget is valid"))
 }
 
+func TestValidateCmd_SchemaLocationFlagShorthand(t *testing.T) {
+	g := NewWithT(t)
+	schemaDir := extractWidgetSchema(t)
+	manifestDir := t.TempDir()
+	path := writeManifest(t, manifestDir, "ok.yaml", validWidget)
+
+	out, err := executeCommand([]string{
+		"validate", manifestDir, "-v",
+		"-s", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(out).To(ContainSubstring(path + " - Widget/default/ok-widget is valid"))
+}
+
 func TestValidateCmd_MissingNameOrGenerateName(t *testing.T) {
 	g := NewWithT(t)
 	manifestDir := t.TempDir()
@@ -183,7 +197,7 @@ func TestValidateCmd_MultiDoc_CountsAndPlurals(t *testing.T) {
 }
 
 // TestValidateCmd_FluxManifestsFixtures runs the CLI against the real Flux
-// manifest fixtures in testdata/validate/ using the datreeio-style schema
+// manifest fixtures in testdata/validate/ using the default catalog schema
 // layout (Group/Kind_Version.json). Exercises the happy path end-to-end with
 // real schemas across multiple files, including the --skip-missing-schemas
 // behavior for the core Secret.
@@ -891,6 +905,15 @@ func TestExpandSchemaLocations(t *testing.T) {
 
 	g.Expect(expand([]string{"DEFAULT", "Default"})).
 		To(Equal([]string{validator.DefaultSchemaLocation, validator.DefaultSchemaLocation}))
+
+	g.Expect(expand([]string{"ecosystem"})).
+		To(Equal([]string{validator.EcosystemSchemaLocation}))
+
+	g.Expect(expand([]string{"ECOSYSTEM", "Ecosystem"})).
+		To(Equal([]string{validator.EcosystemSchemaLocation, validator.EcosystemSchemaLocation}))
+
+	g.Expect(expand([]string{"default", "ecosystem"})).
+		To(Equal([]string{validator.DefaultSchemaLocation, validator.EcosystemSchemaLocation}))
 
 	g.Expect(expand([]string{"./local/{{.Kind}}.json"})).
 		To(Equal([]string{"./local/{{.Kind}}.json"}))

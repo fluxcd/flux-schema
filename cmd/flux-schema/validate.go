@@ -36,11 +36,11 @@ var validateCmd = &cobra.Command{
     --schema-location default \
     --schema-location './schemas/{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json'
 
-  # Read manifests from a pipe and add remote schema fallback
+  # Read manifests from a pipe and add CNCF project CRDs from the ecosystem catalog
   kustomize build . | flux-schema validate \
     --schema-location default \
     --schema-location ./crd-schemas \
-    --schema-location https://raw.githubusercontent.com/datreeio/CRDs-catalog/main
+    --schema-location ecosystem
 
   # Skip specific kinds by Kind or apiVersion/Kind
   flux-schema validate ./manifests \
@@ -84,8 +84,8 @@ var validateArgs = validateFlags{
 }
 
 func init() {
-	validateCmd.Flags().StringArrayVar(&validateArgs.schemaLocations, "schema-location", nil,
-		"URL or file path for schemas (repeatable); 'default' points at the built-in catalog")
+	validateCmd.Flags().StringArrayVarP(&validateArgs.schemaLocations, "schema-location", "s", nil,
+		"URL or file path for schemas (repeatable); 'default' points at the built-in catalog, 'ecosystem' at schemas.fluxoperator.dev")
 	validateCmd.Flags().BoolVar(&validateArgs.skipMissingSchemas, "skip-missing-schemas", false,
 		"skip documents for which no schema can be found instead of failing")
 	validateCmd.Flags().StringArrayVar(&validateArgs.skipKinds, "skip-kind", nil,
@@ -311,6 +311,7 @@ func writeReport(cmd *cobra.Command, mode string, report apiv1.Report) error {
 // pass either a full Go template or a bare path/URL:
 //
 //   - A case-insensitive literal "default" expands to validator.DefaultSchemaLocation.
+//   - A case-insensitive literal "ecosystem" expands to validator.EcosystemSchemaLocation.
 //   - A value ending in ".json" is assumed to already be a complete template and
 //     is taken verbatim.
 //   - Anything else has validator.DefaultSchemaLayout appended under a single "/", so
@@ -331,6 +332,10 @@ func expandSchemaLocations(locations []string) ([]string, error) {
 		}
 		if strings.EqualFold(loc, "default") {
 			out[i] = validator.DefaultSchemaLocation
+			continue
+		}
+		if strings.EqualFold(loc, "ecosystem") {
+			out[i] = validator.EcosystemSchemaLocation
 			continue
 		}
 		if !strings.HasSuffix(loc, ".json") {

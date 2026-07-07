@@ -16,8 +16,7 @@ apiVersion: schema.plugin.fluxcd.io/v1beta1
 kind: Config
 validate:
   schemaLocation:
-    - default
-    - https://raw.githubusercontent.com/datreeio/CRDs-catalog/main
+    - ecosystem
   skipKind:
     - source.toolkit.fluxcd.io/v1/ExternalArtifact
   skipJSONPath:
@@ -34,7 +33,7 @@ validate:
   output: text
 explain:
   schemaLocation:
-    - https://raw.githubusercontent.com/controlplaneio-fluxcd/schema-catalog/main/catalog
+    - ecosystem
   apiVersion: v1
   recursive: false
   insecureSkipTLSVerify: false
@@ -66,19 +65,19 @@ passed, for example `~/.fluxcd/plugins/flux-schema.config`.
 
 The `validate` section configures defaults for the `flux schema validate` flags.
 
-| Field                      | Description                                                    |
-|----------------------------|----------------------------------------------------------------|
-| `schemaLocation[]`         | Schema URLs, file paths, or templates tried in order.          |
-| `skipMissingSchemas`       | Skip documents for which no schema can be found.               |
-| `skipKind[]`               | Kind or apiVersion/kind patterns excluded from validation.     |
-| `skipJSONPath[]`           | JSON Pointers stripped before validation.                      |
-| `skipFile[]`               | Basename glob patterns excluded from validation.               |
-| `skipCELRules`             | Disable evaluation of `x-kubernetes-validations` CEL rules.    |
-| `verbose`                  | Print a line for every document, including valid and skipped.  |
-| `failFast`                 | Exit after the first invalid document.                         |
-| `concurrent`               | Number of concurrent validation workers.                       |
-| `insecureSkipTLSVerify`    | Disable TLS certificate verification when downloading schemas. |
-| `output`                   | Output format: `text`, `json`, or `yaml`.                      |
+| Field                   | Description                                                                                                                                                               |
+|-------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `schemaLocation[]`      | Schema URLs, file paths, or templates tried in order. Aliases: `default` (built-in catalog), `ecosystem` ([schemas.fluxoperator.dev](https://schemas.fluxoperator.dev/)). |
+| `skipMissingSchemas`    | Skip documents for which no schema can be found.                                                                                                                          |
+| `skipKind[]`            | Kind or apiVersion/kind patterns excluded from validation.                                                                                                                |
+| `skipJSONPath[]`        | JSON Pointers stripped before validation.                                                                                                                                 |
+| `skipFile[]`            | Basename glob patterns excluded from validation.                                                                                                                          |
+| `skipCELRules`          | Disable evaluation of `x-kubernetes-validations` CEL rules.                                                                                                               |
+| `verbose`               | Print a line for every document, including valid and skipped.                                                                                                             |
+| `failFast`              | Exit after the first invalid document.                                                                                                                                    |
+| `concurrent`            | Number of concurrent validation workers.                                                                                                                                  |
+| `insecureSkipTLSVerify` | Disable TLS certificate verification when downloading schemas.                                                                                                            |
+| `output`                | Output format: `text`, `json`, or `yaml`.                                                                                                                                 |
 
 When the `output` field is set to `json` or `yaml`, the result has the [Report API](report.md) shape.
 
@@ -86,10 +85,10 @@ When the `output` field is set to `json` or `yaml`, the result has the [Report A
 
 The `explain` section configures defaults for the `flux schema explain` flags.
 
-| Field                   | Description                                                   |
-|-------------------------|---------------------------------------------------------------|
-| `schemaLocation[]`      | Schema URLs, file paths, or templates tried in order.         |
-| `apiVersion`            | API group/version to explain by default.                      |
-| `recursive`             | Print fields of fields.                                       |
+| Field                   | Description                                                    |
+|-------------------------|----------------------------------------------------------------|
+| `schemaLocation[]`      | Schema URLs, file paths, or templates tried in order.          |
+| `apiVersion`            | API group/version to explain by default.                       |
+| `recursive`             | Print fields of fields.                                        |
 | `insecureSkipTLSVerify` | Disable TLS certificate verification when downloading schemas. |
-| `output`                | Output format: `plaintext` or `plaintext-openapiv2`.          |
+| `output`                | Output format: `plaintext` or `plaintext-openapiv2`.           |

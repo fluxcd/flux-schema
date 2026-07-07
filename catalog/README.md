@@ -3,6 +3,9 @@
 This is the catalog of JSON Schemas used by the Flux Schema validation tool
 and the GitHub Action [fluxcd/flux-schema/actions/validate](../actions/validate).
 
+For CRDs not covered by the built-in catalog, the ecosystem catalog is available
+via `--schema-location ecosystem` and browsable at https://schemas.fluxoperator.dev.
+
 <!-- versions:start -->
 | Source | Version |
 | --- | --- |
