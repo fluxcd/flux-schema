@@ -11,6 +11,7 @@ import (
 
 	explainer "github.com/fluxcd/flux-schema/internal/explain"
 	"github.com/fluxcd/flux-schema/internal/flags"
+	"github.com/fluxcd/flux-schema/internal/validator"
 )
 
 var explainCmd = &cobra.Command{
@@ -63,7 +64,7 @@ func init() {
 		"Get different explanations for particular API version (API group/version)")
 	explainCmd.Flags().VarP(&explainArgs.output, "output", "o", explainArgs.output.Description())
 	explainCmd.Flags().StringArrayVarP(&explainArgs.schemaLocations, "schema-location", "s", nil,
-		"URL or file path for schemas (repeatable); 'default' points at the built-in catalog")
+		"URL or file path for schemas (repeatable); 'default' points at the built-in catalog, 'ecosystem' at schemas.fluxoperator.dev")
 	explainCmd.Flags().BoolVar(&explainArgs.insecureSkipTLSVerify, "insecure-skip-tls-verify", false,
 		"disable TLS certificate verification when fetching schemas over HTTPS")
 	explainCmd.Flags().StringVarP(&explainArgs.configFile, "config", "f", "", configFlagUsage())
@@ -126,6 +127,7 @@ func buildExplainerOptions() (explainer.Options, error) {
 	return explainer.Options{
 		SchemaLocations:       locations,
 		MetadataLocations:     buildExplainMetadataLocations(locations),
+		IndexLocations:        buildExplainIndexLocations(locations),
 		APIVersion:            explainArgs.apiVersion,
 		OutputFormat:          explainArgs.output.String(),
 		Recursive:             explainArgs.recursive,
@@ -144,6 +146,9 @@ func buildExplainSchemaLocations() ([]string, error) {
 func buildExplainMetadataLocations(schemaLocations []string) []string {
 	var out []string
 	for _, location := range schemaLocations {
+		if isEcosystemSchemaLocation(location) {
+			continue
+		}
 		metadataLocation, ok := explainMetadataLocation(location)
 		if !ok || containsString(out, metadataLocation) {
 			continue
@@ -151,6 +156,27 @@ func buildExplainMetadataLocations(schemaLocations []string) []string {
 		out = append(out, metadataLocation)
 	}
 	return out
+}
+
+func buildExplainIndexLocations(schemaLocations []string) []string {
+	var out []string
+	for _, location := range schemaLocations {
+		if !isEcosystemSchemaLocation(location) || containsString(out, validator.EcosystemIndexLocation) {
+			continue
+		}
+		out = append(out, validator.EcosystemIndexLocation)
+	}
+	return out
+}
+
+func isEcosystemSchemaLocation(location string) bool {
+	base, _ := splitLocationTail(location)
+	idx := strings.Index(base, "{{")
+	if idx >= 0 {
+		base = base[:idx]
+	}
+	base = strings.TrimRight(base, "/\\")
+	return strings.EqualFold(base, validator.EcosystemSchemaBase)
 }
 
 func explainMetadataLocation(location string) (string, bool) {

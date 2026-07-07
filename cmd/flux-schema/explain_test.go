@@ -9,6 +9,8 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
+
+	"github.com/fluxcd/flux-schema/internal/validator"
 )
 
 func TestExplainCmd_Resource(t *testing.T) {
@@ -84,13 +86,13 @@ func TestExplainCmd_OpenAPIV2Output(t *testing.T) {
 	g.Expect(out).To(HavePrefix("KIND:     Pod\n" +
 		"VERSION:  v1\n" +
 		"\n" +
-		"RESOURCE: spec <Object>\n" +
+		"RESOURCE: spec <PodSpec>\n" +
 		"\n" +
 		"DESCRIPTION:\n" +
 		"     Specification of the desired behavior of the pod.\n" +
 		"\n" +
 		"FIELDS:\n" +
-		"   containers\t<[]Object> -required-\n"))
+		"   containers\t<[]Container> -required-\n"))
 }
 
 func TestExplainCmd_Recursive(t *testing.T) {
@@ -298,15 +300,17 @@ func TestExplainSchemaLocationDefaultExpansion(t *testing.T) {
 	g := NewWithT(t)
 	defer resetCmdArgs()
 
-	explainArgs.schemaLocations = []string{"default", "./catalog"}
+	explainArgs.schemaLocations = []string{"default", "ecosystem", "./catalog"}
 	locations, err := buildExplainSchemaLocations()
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(locations).To(Equal([]string{
 		"https://raw.githubusercontent.com/fluxcd/flux-schema/main/catalog/latest/{{.Group}}/{{.Kind}}_{{.Version}}.json",
+		validator.EcosystemSchemaLocation,
 		"./catalog/{{.Group}}/{{.Kind}}_{{.Version}}.json",
 	}))
 	g.Expect(buildExplainMetadataLocations(locations)).To(Equal([]string{
 		"https://raw.githubusercontent.com/fluxcd/flux-schema/main/catalog/latest/.explain",
 		"./catalog/.explain",
 	}))
+	g.Expect(buildExplainIndexLocations(locations)).To(Equal([]string{validator.EcosystemIndexLocation}))
 }

@@ -18,6 +18,7 @@ import (
 
 const keyProperties = "properties"
 const keyFluxSchemaType = "x-flux-schema-type"
+const keyFluxSchemaTypeDescription = "x-flux-schema-type-description"
 const keyFluxSchemaGVK = "x-flux-schema-group-version-kind"
 const keyFluxSchemaResource = "x-flux-schema-resource"
 
@@ -100,6 +101,9 @@ func resolveRef(node map[string]any, refVal string, defs map[string]any, visitin
 	if _, ok := m[keyFluxSchemaType]; !ok {
 		m[keyFluxSchemaType] = shortDefinitionName(name)
 	}
+	if desc, ok := definitionDescription(target); ok {
+		m[keyFluxSchemaTypeDescription] = desc
+	}
 	return overlaySiblings(m, node)
 }
 
@@ -136,6 +140,15 @@ func shortDefinitionName(name string) string {
 		return name[i+1:]
 	}
 	return name
+}
+
+func definitionDescription(def any) (string, bool) {
+	m, ok := def.(map[string]any)
+	if !ok {
+		return "", false
+	}
+	desc, ok := m["description"].(string)
+	return desc, ok && desc != ""
 }
 
 // unresolvedPlaceholder returns a stand-in object used by resolveRef when a
@@ -497,13 +510,26 @@ func keepVendorExtension(k string) bool {
 
 // --- explain metadata stripping ---
 
-// StripExplainMetadata removes flux-schema explain annotations from the tree.
-// The annotations are useful for `flux schema explain`, but are opt-in for
-// catalogs because they are documentation-only and increase schema size.
+// StripExplainMetadata removes all flux-schema explain annotations from the
+// tree. The annotations are useful for `flux schema explain`, but are opt-in
+// for catalogs because they are documentation-only and increase schema size.
 func StripExplainMetadata(node any) {
+	stripExplainMetadata(node, true)
+}
+
+// StripExplainLookupMetadata removes resource lookup annotations while keeping
+// type annotations used to render kubectl-style field type names.
+func StripExplainLookupMetadata(node any) {
+	stripExplainMetadata(node, false)
+}
+
+func stripExplainMetadata(node any, stripTypes bool) {
 	switch n := node.(type) {
 	case map[string]any:
-		delete(n, keyFluxSchemaType)
+		if stripTypes {
+			delete(n, keyFluxSchemaType)
+			delete(n, keyFluxSchemaTypeDescription)
+		}
 		delete(n, keyFluxSchemaGVK)
 		delete(n, keyFluxSchemaResource)
 		delete(n, KeyFluxSchemaAlias)
@@ -511,16 +537,16 @@ func StripExplainMetadata(node any) {
 			if isSchemaNameMap(k) {
 				if m, ok := v.(map[string]any); ok {
 					for _, child := range m {
-						StripExplainMetadata(child)
+						stripExplainMetadata(child, stripTypes)
 					}
 					continue
 				}
 			}
-			StripExplainMetadata(v)
+			stripExplainMetadata(v, stripTypes)
 		}
 	case []any:
 		for _, v := range n {
-			StripExplainMetadata(v)
+			stripExplainMetadata(v, stripTypes)
 		}
 	}
 }
@@ -541,6 +567,7 @@ func StripDescriptions(node any) {
 	switch n := node.(type) {
 	case map[string]any:
 		delete(n, "description")
+		delete(n, keyFluxSchemaTypeDescription)
 		for k, v := range n {
 			if isSchemaNameMap(k) {
 				if m, ok := v.(map[string]any); ok {

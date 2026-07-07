@@ -25,6 +25,7 @@ import (
 
 	"github.com/hashicorp/go-retryablehttp"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	kubeversion "k8s.io/apimachinery/pkg/version"
 
 	"github.com/fluxcd/flux-schema/internal/tmpl"
 )
@@ -51,9 +52,10 @@ const (
 	keyAddlProps  = "additionalProperties"
 	keyAllOf      = "allOf"
 
-	keyFluxSchemaType  = "x-flux-schema-type"
-	keyFluxSchemaGVK   = "x-flux-schema-group-version-kind"
-	keyFluxSchemaAlias = "x-flux-schema-alias"
+	keyFluxSchemaType            = "x-flux-schema-type"
+	keyFluxSchemaTypeDescription = "x-flux-schema-type-description"
+	keyFluxSchemaGVK             = "x-flux-schema-group-version-kind"
+	keyFluxSchemaAlias           = "x-flux-schema-alias"
 
 	maxAliasDepth = 8
 	typeObject    = "Object"
@@ -99,6 +101,7 @@ var versionCandidates = []string{
 type Options struct {
 	SchemaLocations       []string
 	MetadataLocations     []string
+	IndexLocations        []string
 	APIVersion            string
 	OutputFormat          string
 	Recursive             bool
@@ -111,6 +114,10 @@ type Explainer struct {
 	opts      Options
 	templates []*template.Template
 	client    *retryablehttp.Client
+
+	indexLoaded    bool
+	indexResources []indexResource
+	indexErr       error
 }
 
 type resolvedSchema struct {
@@ -154,6 +161,73 @@ type completionShard struct {
 type completionResource struct {
 	Name    string   `json:"name"`
 	Aliases []string `json:"aliases,omitempty"`
+}
+
+type catalogIndex struct {
+	Projects []catalogIndexProject `json:"projects,omitempty"`
+}
+
+type catalogIndexProject struct {
+	Groups []catalogIndexGroup `json:"groups,omitempty"`
+}
+
+type catalogIndexGroup struct {
+	Group string             `json:"g,omitempty"`
+	Kinds []catalogIndexKind `json:"kinds,omitempty"`
+}
+
+type catalogIndexKind struct {
+	Name     string
+	Versions []string
+	Kind     string
+	Resource catalogIndexResource
+}
+
+type catalogIndexResource struct {
+	Singular   string   `json:"s,omitempty"`
+	Plural     string   `json:"p,omitempty"`
+	ShortNames []string `json:"n,omitempty"`
+}
+
+type indexResource struct {
+	Group      string
+	Version    string
+	Kind       string
+	Name       string
+	Singular   string
+	Plural     string
+	ShortNames []string
+	order      int
+}
+
+func (k *catalogIndexKind) UnmarshalJSON(data []byte) error {
+	var tuple []json.RawMessage
+	if err := json.Unmarshal(data, &tuple); err != nil {
+		return err
+	}
+	if len(tuple) < 2 {
+		return fmt.Errorf("index kind tuple has %d entries, want at least 2", len(tuple))
+	}
+	if err := json.Unmarshal(tuple[0], &k.Name); err != nil {
+		return fmt.Errorf("parse index kind name: %w", err)
+	}
+	if err := json.Unmarshal(tuple[1], &k.Versions); err != nil {
+		return fmt.Errorf("parse index kind versions: %w", err)
+	}
+	if len(tuple) >= 4 && string(tuple[3]) != "null" {
+		if err := json.Unmarshal(tuple[3], &k.Kind); err != nil {
+			return fmt.Errorf("parse index kind display name: %w", err)
+		}
+	}
+	if len(tuple) >= 5 {
+		if err := json.Unmarshal(tuple[4], &k.Resource); err != nil {
+			return fmt.Errorf("parse index kind resource names: %w", err)
+		}
+	}
+	if k.Kind == "" {
+		k.Kind = fallbackKind(k.Name)
+	}
+	return nil
 }
 
 func New(opts Options) (*Explainer, error) {
@@ -223,6 +297,18 @@ func (e *Explainer) CompleteResourceNames(ctx context.Context, prefix string) ([
 			seen[resource.Name] = true
 			out = append(out, resource.Name)
 		}
+	}
+	indexResources, err := e.loadResourceIndex(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, resource := range indexResources {
+		name := resource.canonicalName()
+		if !resource.matchesCompletionPrefix(prefix) || seen[name] {
+			continue
+		}
+		seen[name] = true
+		out = append(out, name)
 	}
 	sort.Strings(out)
 	return out, nil
@@ -330,6 +416,9 @@ func (e *Explainer) resolveFromReferences(ctx context.Context, req requestCandid
 		if !found {
 			continue
 		}
+		if target.Kind != "" {
+			resolved.Kind = target.Kind
+		}
 		resolved.RequestedKind = req.resource
 		return resolved, true, nil
 	}
@@ -366,6 +455,15 @@ func (e *Explainer) loadResourceReference(ctx context.Context, key string) ([]re
 		}
 		out = append(out, ref.Targets...)
 	}
+	indexResources, err := e.loadResourceIndex(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, resource := range indexResources {
+		if resource.matchesReferenceKey(key) {
+			out = append(out, resource.target())
+		}
+	}
 	return out, nil
 }
 
@@ -387,6 +485,233 @@ func (e *Explainer) loadCompletionShard(ctx context.Context, key string) ([]comp
 		out = append(out, shard.Resources...)
 	}
 	return out, nil
+}
+
+func (e *Explainer) loadResourceIndex(ctx context.Context) ([]indexResource, error) {
+	if e.indexLoaded {
+		return e.indexResources, e.indexErr
+	}
+	e.indexLoaded = true
+	for _, location := range e.opts.IndexLocations {
+		body, found, err := e.loadBytes(ctx, location)
+		if err != nil {
+			e.indexErr = err
+			return nil, err
+		}
+		if !found {
+			continue
+		}
+		var index catalogIndex
+		if err := decodeJSON(body, &index); err != nil {
+			e.indexErr = fmt.Errorf("%s: parse catalog index: %w", location, err)
+			return nil, e.indexErr
+		}
+		resources := index.resources()
+		for i := range resources {
+			resources[i].order = len(e.indexResources) + i
+		}
+		e.indexResources = append(e.indexResources, resources...)
+	}
+	sortIndexResources(e.indexResources)
+	return e.indexResources, nil
+}
+
+func (i catalogIndex) resources() []indexResource {
+	var out []indexResource
+	for _, project := range i.Projects {
+		for _, group := range project.Groups {
+			for _, kind := range group.Kinds {
+				name := strings.ToLower(strings.TrimSpace(kind.Name))
+				if name == "" {
+					continue
+				}
+				for _, version := range kind.Versions {
+					version = strings.TrimSpace(version)
+					if version == "" {
+						continue
+					}
+					out = append(out, indexResource{
+						Group:      normalizeIndexGroup(group.Group),
+						Version:    version,
+						Kind:       kind.Kind,
+						Name:       name,
+						Singular:   strings.ToLower(strings.TrimSpace(kind.Resource.Singular)),
+						Plural:     strings.ToLower(strings.TrimSpace(kind.Resource.Plural)),
+						ShortNames: normalizedNames(kind.Resource.ShortNames),
+					})
+				}
+			}
+		}
+	}
+	return out
+}
+
+func (r indexResource) target() resourceTarget {
+	return resourceTarget{Group: r.Group, Version: r.Version, Kind: r.Kind}
+}
+
+func (r indexResource) canonicalName() string {
+	name := r.pluralName()
+	if r.Group == "" {
+		return name
+	}
+	return name + "." + r.Group
+}
+
+func (r indexResource) matchesReferenceKey(key string) bool {
+	for _, alias := range r.aliases() {
+		if key == alias {
+			return true
+		}
+	}
+	return false
+}
+
+func (r indexResource) matchesCompletionPrefix(prefix string) bool {
+	if prefix == "" || strings.HasPrefix(r.canonicalName(), prefix) {
+		return true
+	}
+	for _, alias := range r.aliases() {
+		if strings.HasPrefix(alias, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+func (r indexResource) aliases() []string {
+	seen := map[string]bool{}
+	var out []string
+	add := func(alias string) {
+		alias = strings.ToLower(strings.TrimSpace(alias))
+		if alias == "" || seen[alias] {
+			return
+		}
+		seen[alias] = true
+		out = append(out, alias)
+	}
+	bases := make([]string, 0, 4+len(r.ShortNames))
+	bases = append(bases, r.Name, strings.ToLower(r.Kind), r.singularName(), r.pluralName())
+	bases = append(bases, r.ShortNames...)
+	for _, alias := range bases {
+		add(alias)
+		if r.Group != "" {
+			add(alias + "." + r.Group)
+		}
+	}
+	return out
+}
+
+func (r indexResource) singularName() string {
+	if r.Singular != "" {
+		return r.Singular
+	}
+	return r.Name
+}
+
+func (r indexResource) pluralName() string {
+	if r.Plural != "" {
+		return r.Plural
+	}
+	return pluralResourceName(r.Name)
+}
+
+func normalizeIndexGroup(group string) string {
+	group = strings.ToLower(strings.TrimSpace(group))
+	if group == "core" {
+		return ""
+	}
+	return group
+}
+
+func normalizedNames(names []string) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, name := range names {
+		name = strings.ToLower(strings.TrimSpace(name))
+		if name == "" || seen[name] {
+			continue
+		}
+		seen[name] = true
+		out = append(out, name)
+	}
+	return out
+}
+
+func sortIndexResources(resources []indexResource) {
+	sort.SliceStable(resources, func(i, j int) bool {
+		return compareIndexResources(resources[i], resources[j]) < 0
+	})
+}
+
+func compareIndexResources(a, b indexResource) int {
+	if c := compareGroupPriority(a.Group, b.Group); c != 0 {
+		return c
+	}
+	if c := kubeversion.CompareKubeAwareVersionStrings(a.Version, b.Version); c != 0 {
+		if c > 0 {
+			return -1
+		}
+		return 1
+	}
+	if c := strings.Compare(strings.ToLower(a.Kind), strings.ToLower(b.Kind)); c != 0 {
+		return c
+	}
+	if c := strings.Compare(a.pluralName(), b.pluralName()); c != 0 {
+		return c
+	}
+	switch {
+	case a.order < b.order:
+		return -1
+	case a.order > b.order:
+		return 1
+	default:
+		return 0
+	}
+}
+
+func compareGroupPriority(a, b string) int {
+	aRank, aGroup := groupPriority(a)
+	bRank, bGroup := groupPriority(b)
+	if aRank != bRank {
+		return aRank - bRank
+	}
+	return strings.Compare(aGroup, bGroup)
+}
+
+func groupPriority(group string) (int, string) {
+	group = normalizeIndexGroup(group)
+	for i, known := range kubernetesGroups {
+		if group == known {
+			return i, ""
+		}
+	}
+	return len(kubernetesGroups), group
+}
+
+func pluralResourceName(name string) string {
+	name = strings.ToLower(strings.TrimSpace(name))
+	if name == "" {
+		return ""
+	}
+	if strings.HasSuffix(name, "y") && len(name) > 1 && !isVowel(name[len(name)-2]) {
+		return strings.TrimSuffix(name, "y") + "ies"
+	}
+	for _, suffix := range []string{"ch", "sh", "s", "x", "z"} {
+		if strings.HasSuffix(name, suffix) {
+			return name + "es"
+		}
+	}
+	return name + "s"
+}
+
+func isVowel(b byte) bool {
+	switch b {
+	case 'a', 'e', 'i', 'o', 'u':
+		return true
+	default:
+		return false
+	}
 }
 
 func metadataLocation(root string, elems ...string) string {
@@ -1113,6 +1438,9 @@ func typeNameV2(node map[string]any) string {
 	if branches := schemaList(node[keyAllOf]); len(branches) == 1 && len(schemaMap(node[keyProperties])) == 0 {
 		return typeNameV2(branches[0])
 	}
+	if name, ok := node[keyFluxSchemaType].(string); ok && name != "" {
+		return name
+	}
 	if t, ok := singleType(node); ok {
 		if t == "object" {
 			return typeObject
@@ -1132,9 +1460,10 @@ func appendDescription(out *strings.Builder, node map[string]any) {
 	if node == nil {
 		return
 	}
-	if desc, ok := node[keyDesc].(string); ok && desc != "" {
-		out.WriteString(desc)
-		out.WriteByte('\n')
+	desc, _ := node[keyDesc].(string)
+	appendDescriptionString(out, desc)
+	if typeDesc, ok := node[keyFluxSchemaTypeDescription].(string); ok && !sameDescription(desc, typeDesc) {
+		appendDescriptionString(out, typeDesc)
 	}
 	for _, branch := range schemaList(node[keyAllOf]) {
 		appendDescription(out, branch)
@@ -1145,6 +1474,18 @@ func appendDescription(out *strings.Builder, node map[string]any) {
 	if addl := schemaMap(node[keyAddlProps]); addl != nil {
 		appendDescription(out, addl)
 	}
+}
+
+func appendDescriptionString(out *strings.Builder, desc string) {
+	if desc == "" {
+		return
+	}
+	out.WriteString(desc)
+	out.WriteByte('\n')
+}
+
+func sameDescription(a, b string) bool {
+	return strings.TrimSpace(a) == strings.TrimSpace(b)
 }
 
 func schemaMap(v any) map[string]any {
