@@ -24,7 +24,7 @@ A non-zero exit code is returned when any document is invalid or errored.
 
 | Flag                         | Description                                                                                              |
 |------------------------------|----------------------------------------------------------------------------------------------------------|
-| `--schema-location`          | URL or file path for schemas (repeatable, tried in order); `default` points at the built-in catalog, `ecosystem` at the CNCF ecosystem catalog. |
+| `-s, --schema-location`      | URL or file path for schemas (repeatable, tried in order); `default` points at the built-in catalog, `ecosystem` at the CNCF ecosystem catalog. |
 | `--skip-missing-schemas`     | Skip documents for which no schema can be found.                                                         |
 | `--skip-kind`                | Skip documents matching `kind` or `apiVersion/kind` (repeatable).                                        |
 | `--skip-json-path`           | Strip a JSON Pointer field before validation, optionally scoped: `[apiVersion/kind:]/path` (repeatable). |

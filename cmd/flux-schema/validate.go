@@ -84,7 +84,7 @@ var validateArgs = validateFlags{
 }
 
 func init() {
-	validateCmd.Flags().StringArrayVar(&validateArgs.schemaLocations, "schema-location", nil,
+	validateCmd.Flags().StringArrayVarP(&validateArgs.schemaLocations, "schema-location", "s", nil,
 		"URL or file path for schemas (repeatable); 'default' points at the built-in catalog, 'ecosystem' at schemas.fluxoperator.dev")
 	validateCmd.Flags().BoolVar(&validateArgs.skipMissingSchemas, "skip-missing-schemas", false,
 		"skip documents for which no schema can be found instead of failing")

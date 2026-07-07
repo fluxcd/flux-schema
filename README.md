@@ -66,7 +66,7 @@ flux schema validate ./manifests \
 Build a kustomize overlay and validate the generated manifests:
 
 ```shell
-kustomize build ./clusters/production | flux schema validate --verbose
+kustomize build ./clusters/production | flux schema validate -s ecosystem -v
 ```
 
 Render a Helm chart and validate the generated manifests:
@@ -78,13 +78,13 @@ helm template ./charts/app | flux schema validate -v --skip-missing-schemas
 Build a [ResourceSet](https://fluxoperator.dev/docs/resourcesets/introduction/) and validate the generated manifests:
 
 ```shell
-flux operator build rset -f tenants.yaml | flux schema validate
+flux operator build rset -f tenants.yaml | flux schema validate -s ecosystem
 ```
 
 Emit a structured report for CI tooling:
 
 ```shell
-flux schema validate ./manifests -o json
+flux schema validate ./manifests -s ecosystem -o json
 ```
 
 Extract JSON Schemas and field indexes from your CRDs, then layer them on top of the built-in catalog:

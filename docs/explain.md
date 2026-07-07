@@ -14,8 +14,7 @@ Examples:
 flux schema explain pods --api-version=v1 --schema-location ./catalog
 
 # Explain a Flux resource from a description-preserving remote catalog
-flux schema explain hr.spec \
-  --schema-location https://raw.githubusercontent.com/controlplaneio-fluxcd/schema-catalog/main/catalog
+flux schema explain hr.spec -s ecosystem
 
 # Explain a nested field
 flux schema explain pods.spec.containers --api-version=v1 --schema-location ./catalog
@@ -26,14 +25,14 @@ flux schema explain pods --api-version=v1 --recursive --schema-location ./catalo
 
 ## Flags
 
-| Flag | Description |
-|------|-------------|
-| `--schema-location` | URL or file path for schemas (repeatable); `default` points at the built-in validation catalog. |
-| `-f, --config` | YAML config file with `explain` defaults; defaults to `$FLUX_SCHEMA_CONFIG`, else `<executable>.config`. |
-| `--api-version` | Get different explanations for a particular API version (`group/version`). |
-| `--recursive` | Print fields of fields. |
-| `-o, --output` | Output format, one of `plaintext` or `plaintext-openapiv2` (default: `plaintext`). |
-| `--insecure-skip-tls-verify` | Disable TLS certificate verification when fetching schemas over HTTPS. |
+| Flag                         | Description                                                                                              |
+|------------------------------|----------------------------------------------------------------------------------------------------------|
+| `-s, --schema-location`      | URL or file path for schemas (repeatable); `default` points at the built-in validation catalog.          |
+| `-f, --config`               | YAML config file with `explain` defaults; defaults to `$FLUX_SCHEMA_CONFIG`, else `<executable>.config`. |
+| `--api-version`              | Get different explanations for a particular API version (`group/version`).                               |
+| `--recursive`                | Print fields of fields.                                                                                  |
+| `-o, --output`               | Output format, one of `plaintext` or `plaintext-openapiv2` (default: `plaintext`).                       |
+| `--insecure-skip-tls-verify` | Disable TLS certificate verification when fetching schemas over HTTPS.                                   |
 
 When `--schema-location` is not passed, `explain` reads config from
 `--config`, then `$FLUX_SCHEMA_CONFIG`, then a file next to the running binary
@@ -44,7 +43,7 @@ apiVersion: schema.plugin.fluxcd.io/v1beta1
 kind: Config
 explain:
   schemaLocation:
-    - https://raw.githubusercontent.com/controlplaneio-fluxcd/schema-catalog/main/catalog
+    - https://schemas.fluxoperator.dev/catalog
 ```
 
 ## Resource References

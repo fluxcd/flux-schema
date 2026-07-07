@@ -145,6 +145,20 @@ func TestValidateCmd_Verbose_PrintsValidLines(t *testing.T) {
 	g.Expect(out).To(ContainSubstring(path + " - Widget/default/ok-widget is valid"))
 }
 
+func TestValidateCmd_SchemaLocationFlagShorthand(t *testing.T) {
+	g := NewWithT(t)
+	schemaDir := extractWidgetSchema(t)
+	manifestDir := t.TempDir()
+	path := writeManifest(t, manifestDir, "ok.yaml", validWidget)
+
+	out, err := executeCommand([]string{
+		"validate", manifestDir, "-v",
+		"-s", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(out).To(ContainSubstring(path + " - Widget/default/ok-widget is valid"))
+}
+
 func TestValidateCmd_MissingNameOrGenerateName(t *testing.T) {
 	g := NewWithT(t)
 	manifestDir := t.TempDir()

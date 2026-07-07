@@ -62,7 +62,7 @@ func init() {
 	explainCmd.Flags().StringVar(&explainArgs.apiVersion, "api-version", "",
 		"Get different explanations for particular API version (API group/version)")
 	explainCmd.Flags().VarP(&explainArgs.output, "output", "o", explainArgs.output.Description())
-	explainCmd.Flags().StringArrayVar(&explainArgs.schemaLocations, "schema-location", nil,
+	explainCmd.Flags().StringArrayVarP(&explainArgs.schemaLocations, "schema-location", "s", nil,
 		"URL or file path for schemas (repeatable); 'default' points at the built-in catalog")
 	explainCmd.Flags().BoolVar(&explainArgs.insecureSkipTLSVerify, "insecure-skip-tls-verify", false,
 		"disable TLS certificate verification when fetching schemas over HTTPS")
