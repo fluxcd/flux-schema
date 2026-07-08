@@ -64,6 +64,76 @@ func TestCloseAdditionalProperties_ClosesRoot(t *testing.T) {
 	g.Expect(schema["additionalProperties"]).To(BeFalse(), "root must be closed")
 }
 
+func TestCloseAdditionalProperties_PreservesFieldNamedProperties(t *testing.T) {
+	tests := []struct {
+		name          string
+		transform     func(any)
+		wantRootClose bool
+	}{
+		{
+			name:          "close root",
+			transform:     closeAdditionalProperties,
+			wantRootClose: true,
+		},
+		{
+			name:      "close children only",
+			transform: closeAdditionalPropertiesChildren,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			schema := map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"status": map[string]any{
+						"type": "object",
+						"properties": map[string]any{
+							"conditions": map[string]any{"type": "array"},
+							"properties": map[string]any{
+								"type": "array",
+								"items": map[string]any{
+									"type": "object",
+									"properties": map[string]any{
+										"name":  map[string]any{"type": "string"},
+										"value": map[string]any{"type": "string"},
+									},
+								},
+							},
+							"version": map[string]any{"type": "string"},
+						},
+					},
+				},
+			}
+
+			tt.transform(schema)
+
+			_, rootHasAP := schema["additionalProperties"]
+			g.Expect(rootHasAP).To(Equal(tt.wantRootClose))
+
+			status := schema["properties"].(map[string]any)["status"].(map[string]any)
+			g.Expect(status["additionalProperties"]).To(BeFalse(), "real object schema must be closed")
+
+			statusProps := status["properties"].(map[string]any)
+			g.Expect(statusProps).To(HaveLen(3), "properties map must contain only real field names")
+			g.Expect(statusProps).To(HaveKey("conditions"))
+			g.Expect(statusProps).To(HaveKey("properties"))
+			g.Expect(statusProps).To(HaveKey("version"))
+			g.Expect(statusProps).ToNot(HaveKey("additionalProperties"))
+
+			propertiesField := statusProps["properties"].(map[string]any)
+			items := propertiesField["items"].(map[string]any)
+			g.Expect(items["additionalProperties"]).To(BeFalse(), "nested object schema must still be closed")
+			itemProps := items["properties"].(map[string]any)
+			g.Expect(itemProps).To(HaveLen(2), "nested properties map must contain only real field names")
+			g.Expect(itemProps).To(HaveKey("name"))
+			g.Expect(itemProps).To(HaveKey("value"))
+			g.Expect(itemProps).ToNot(HaveKey("additionalProperties"))
+		})
+	}
+}
+
 // A structural object that also carries oneOf/anyOf branches (Cilium's
 // CiliumNetworkPolicy spec pattern): the object itself is closed, but the
 // branch subschemas — which list only a subset of properties to anchor a
