@@ -134,6 +134,139 @@ func TestCloseAdditionalProperties_PreservesFieldNamedProperties(t *testing.T) {
 	}
 }
 
+func TestCloseAdditionalProperties_PreservesValueKeywords(t *testing.T) {
+	wantDefault := map[string]any{
+		"properties": float64(1),
+		"nested": map[string]any{
+			"properties": map[string]any{
+				"name": "default",
+			},
+		},
+	}
+	wantEnum := []any{
+		map[string]any{
+			"properties": float64(1),
+			"nested": map[string]any{
+				"properties": map[string]any{
+					"name": "enum-a",
+				},
+			},
+		},
+		map[string]any{
+			"properties": float64(2),
+			"nested": map[string]any{
+				"properties": map[string]any{
+					"name": "enum-b",
+				},
+			},
+		},
+	}
+	wantExample := map[string]any{
+		"properties": float64(3),
+		"nested": map[string]any{
+			"properties": map[string]any{
+				"name": "example",
+			},
+		},
+	}
+
+	tests := []struct {
+		name          string
+		transform     func(any)
+		wantRootClose bool
+	}{
+		{
+			name:          "close root",
+			transform:     closeAdditionalProperties,
+			wantRootClose: true,
+		},
+		{
+			name:      "close children only",
+			transform: closeAdditionalPropertiesChildren,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			schema := map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"spec": map[string]any{
+						"type": "object",
+						"properties": map[string]any{
+							"cfg": map[string]any{
+								"type": "object",
+								"properties": map[string]any{
+									"properties": map[string]any{"type": "integer"},
+									"nested": map[string]any{
+										"type": "object",
+										"properties": map[string]any{
+											"name": map[string]any{"type": "string"},
+										},
+									},
+								},
+								"default": map[string]any{
+									"properties": float64(1),
+									"nested": map[string]any{
+										"properties": map[string]any{
+											"name": "default",
+										},
+									},
+								},
+								"enum": []any{
+									map[string]any{
+										"properties": float64(1),
+										"nested": map[string]any{
+											"properties": map[string]any{
+												"name": "enum-a",
+											},
+										},
+									},
+									map[string]any{
+										"properties": float64(2),
+										"nested": map[string]any{
+											"properties": map[string]any{
+												"name": "enum-b",
+											},
+										},
+									},
+								},
+								"example": map[string]any{
+									"properties": float64(3),
+									"nested": map[string]any{
+										"properties": map[string]any{
+											"name": "example",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			tt.transform(schema)
+
+			_, rootHasAP := schema["additionalProperties"]
+			g.Expect(rootHasAP).To(Equal(tt.wantRootClose))
+
+			spec := schema["properties"].(map[string]any)["spec"].(map[string]any)
+			g.Expect(spec["additionalProperties"]).To(BeFalse(), "real object schema must be closed")
+
+			cfg := spec["properties"].(map[string]any)["cfg"].(map[string]any)
+			g.Expect(cfg["additionalProperties"]).To(BeFalse(), "real object schema with value keywords must be closed")
+
+			nestedSchema := cfg["properties"].(map[string]any)["nested"].(map[string]any)
+			g.Expect(nestedSchema["additionalProperties"]).To(BeFalse(), "nested real object schema must be closed")
+
+			g.Expect(cfg["default"]).To(Equal(wantDefault), "default value must stay untouched")
+			g.Expect(cfg["enum"]).To(Equal(wantEnum), "enum values must stay untouched")
+			g.Expect(cfg["example"]).To(Equal(wantExample), "example value must stay untouched")
+		})
+	}
+}
+
 // A structural object that also carries oneOf/anyOf branches (Cilium's
 // CiliumNetworkPolicy spec pattern): the object itself is closed, but the
 // branch subschemas — which list only a subset of properties to anchor a

@@ -428,7 +428,7 @@ func closeAdditionalProperties(node any) {
 			}
 		}
 		for k, v := range n {
-			if isCombinatorKey(k) {
+			if isCombinatorKey(k) || isValueKeyword(k) {
 				continue
 			}
 			if closeAdditionalPropertiesNameMap(k, v) {
@@ -454,6 +454,16 @@ func isCombinatorKey(k string) bool {
 	}
 }
 
+// isValueKeyword reports whether k carries arbitrary JSON values, not schemas.
+func isValueKeyword(k string) bool {
+	switch k {
+	case "default", "example", "enum", "const":
+		return true
+	default:
+		return false
+	}
+}
+
 // closeAdditionalPropertiesChildren is closeAdditionalProperties but leaves
 // the root object's own additionalProperties untouched. Used by the CRD
 // pipeline, where the openAPIV3Schema describes a custom resource whose root
@@ -470,7 +480,7 @@ func closeAdditionalPropertiesChildren(node any) {
 		return
 	}
 	for k, v := range m {
-		if isCombinatorKey(k) {
+		if isCombinatorKey(k) || isValueKeyword(k) {
 			continue
 		}
 		if closeAdditionalPropertiesNameMap(k, v) {
