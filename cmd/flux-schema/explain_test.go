@@ -83,7 +83,7 @@ func TestExplainCmd_OpenAPIV2Output(t *testing.T) {
 		"--schema-location", filepath.Join("testdata", "explain", "catalog"),
 	})
 	g.Expect(err).ToNot(HaveOccurred())
-	g.Expect(out).To(HavePrefix("KIND:     Pod\n" +
+	g.Expect(out).To(Equal("KIND:     Pod\n" +
 		"VERSION:  v1\n" +
 		"\n" +
 		"RESOURCE: spec <PodSpec>\n" +
@@ -92,7 +92,9 @@ func TestExplainCmd_OpenAPIV2Output(t *testing.T) {
 		"     Specification of the desired behavior of the pod.\n" +
 		"\n" +
 		"FIELDS:\n" +
-		"   containers\t<[]Container> -required-\n"))
+		"   containers\t<[]Container> -required-\n" +
+		"     List of containers belonging to the pod.\n" +
+		"\n"))
 }
 
 func TestExplainCmd_Recursive(t *testing.T) {
