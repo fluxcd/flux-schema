@@ -97,7 +97,7 @@ func completeExplainResourceRefs(cmd *cobra.Command, args []string, toComplete s
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
-	matches, err := ex.CompleteResourceNames(cmd.Context(), toComplete)
+	matches, err := ex.CompleteReferences(cmd.Context(), toComplete)
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}

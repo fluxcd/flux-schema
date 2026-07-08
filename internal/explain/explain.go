@@ -98,6 +98,8 @@ var versionCandidates = []string{
 	"v2alpha1",
 }
 
+var errResourceNotFound = errors.New("couldn't find resource")
+
 type Options struct {
 	SchemaLocations       []string
 	MetadataLocations     []string
@@ -115,9 +117,15 @@ type Explainer struct {
 	templates []*template.Template
 	client    *retryablehttp.Client
 
+	byteCache      map[string]byteCacheEntry
 	indexLoaded    bool
 	indexResources []indexResource
 	indexErr       error
+}
+
+type byteCacheEntry struct {
+	body  []byte
+	found bool
 }
 
 type resolvedSchema struct {
@@ -252,7 +260,7 @@ func New(opts Options) (*Explainer, error) {
 		}
 	}
 	opts.SchemaLocations = locations
-	return &Explainer{opts: opts, templates: compiled, client: client}, nil
+	return &Explainer{opts: opts, templates: compiled, client: client, byteCache: map[string]byteCacheEntry{}}, nil
 }
 
 func (e *Explainer) Explain(ctx context.Context, resourceExpr string, w io.Writer) error {
@@ -312,6 +320,220 @@ func (e *Explainer) CompleteResourceNames(ctx context.Context, prefix string) ([
 	}
 	sort.Strings(out)
 	return out, nil
+}
+
+// CompleteReferences returns completion candidates for resource references and
+// field paths. Resource candidates are canonical resource names; field
+// candidates preserve the resource reference typed by the user.
+func (e *Explainer) CompleteReferences(ctx context.Context, prefix string) ([]string, error) {
+	if !strings.Contains(prefix, ".") {
+		return e.CompleteResourceNames(ctx, prefix)
+	}
+	matches, err := e.completeFieldNames(ctx, prefix)
+	if err != nil {
+		return nil, err
+	}
+	if len(matches) > 0 {
+		return matches, nil
+	}
+	return e.CompleteResourceNames(ctx, prefix)
+}
+
+func (e *Explainer) completeFieldNames(ctx context.Context, prefix string) ([]string, error) {
+	prefix = strings.TrimSpace(prefix)
+	seen := map[string]bool{}
+	var out []string
+	for _, split := range fieldCompletionSplits(prefix) {
+		resolved, found, err := e.resolveResourceOnly(ctx, split.resource)
+		if err != nil {
+			return nil, err
+		}
+		if !found {
+			continue
+		}
+		names := completeFieldPath(resolved.Root, split.fields)
+		for _, name := range names {
+			match := split.resource + "." + name
+			if seen[match] {
+				continue
+			}
+			seen[match] = true
+			out = append(out, match)
+		}
+		if len(out) > 0 {
+			sort.Strings(out)
+			return out, nil
+		}
+	}
+	return nil, nil
+}
+
+type fieldCompletionSplit struct {
+	resource string
+	fields   string
+}
+
+func fieldCompletionSplits(expr string) []fieldCompletionSplit {
+	var out []fieldCompletionSplit
+	for i := len(expr) - 1; i >= 0; i-- {
+		if expr[i] != '.' {
+			continue
+		}
+		resource := strings.TrimSpace(expr[:i])
+		if resource == "" {
+			continue
+		}
+		out = append(out, fieldCompletionSplit{
+			resource: resource,
+			fields:   strings.TrimSpace(expr[i+1:]),
+		})
+	}
+	return out
+}
+
+func (e *Explainer) resolveResourceOnly(ctx context.Context, resourceExpr string) (*resolvedSchema, bool, error) {
+	gv, hasGV, err := parseAPIVersion(e.opts.APIVersion)
+	if err != nil {
+		return nil, false, err
+	}
+	candidates, err := parseResourceOnlyExpression(resourceExpr, hasGV)
+	if err != nil {
+		return nil, false, nil
+	}
+	if len(candidates) == 0 {
+		return nil, false, nil
+	}
+	if len(e.opts.IndexLocations) > 0 {
+		for _, candidate := range candidates {
+			resolved, found, err := e.resolveFromReferences(ctx, candidate, gv, hasGV)
+			if err != nil {
+				return nil, false, err
+			}
+			if found {
+				return resolved, true, nil
+			}
+		}
+		return nil, false, nil
+	}
+	resolved, fields, err := e.resolve(ctx, candidates, gv, hasGV)
+	if errors.Is(err, errResourceNotFound) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	if len(fields) > 0 {
+		return nil, false, nil
+	}
+	return resolved, true, nil
+}
+
+func parseResourceOnlyExpression(expr string, apiVersionSet bool) ([]requestCandidate, error) {
+	expr = strings.TrimSuffix(strings.TrimSpace(expr), ".")
+	if expr == "" {
+		return nil, nil
+	}
+	parts := strings.Split(expr, ".")
+	for _, part := range parts {
+		if part == "" {
+			return nil, fmt.Errorf("invalid jsonpath syntax, all nodes must be field nodes")
+		}
+	}
+	if apiVersionSet || len(parts) == 1 {
+		return []requestCandidate{{resource: parts[0]}}, nil
+	}
+	group := strings.Join(parts[1:], ".")
+	if !looksLikeAPIGroup(group) {
+		return nil, nil
+	}
+	return []requestCandidate{{resource: parts[0], group: group}}, nil
+}
+
+func completeFieldPath(root map[string]any, fieldExpr string) []string {
+	parts := strings.Split(fieldExpr, ".")
+	parent := parts[:len(parts)-1]
+	partial := parts[len(parts)-1]
+	if fieldExpr == "" {
+		parent = nil
+		partial = ""
+	}
+	for _, name := range parent {
+		if name == "" {
+			return nil
+		}
+		root = fieldChild(root, name)
+		if root == nil {
+			return nil
+		}
+	}
+	names := fieldPropertyNames(root)
+	var out []string
+	for _, name := range names {
+		if !strings.HasPrefix(name, partial) {
+			continue
+		}
+		if len(parent) > 0 {
+			name = strings.Join(append(slices.Clone(parent), name), ".")
+		}
+		out = append(out, name)
+	}
+	return out
+}
+
+func fieldChild(node map[string]any, name string) map[string]any {
+	if node == nil {
+		return nil
+	}
+	if props := schemaMap(node[keyProperties]); len(props) > 0 {
+		if child := schemaMap(props[name]); child != nil {
+			return child
+		}
+	}
+	if items := schemaMap(node[keyItems]); items != nil {
+		if child := fieldChild(items, name); child != nil {
+			return child
+		}
+	}
+	if addl := schemaMap(node[keyAddlProps]); addl != nil {
+		if child := fieldChild(addl, name); child != nil {
+			return child
+		}
+	}
+	for _, branch := range schemaList(node[keyAllOf]) {
+		if child := fieldChild(branch, name); child != nil {
+			return child
+		}
+	}
+	return nil
+}
+
+func fieldPropertyNames(node map[string]any) []string {
+	seen := map[string]bool{}
+	collectFieldPropertyNames(node, seen)
+	names := make([]string, 0, len(seen))
+	for name := range seen {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+func collectFieldPropertyNames(node map[string]any, seen map[string]bool) {
+	if node == nil {
+		return
+	}
+	for name := range schemaMap(node[keyProperties]) {
+		seen[name] = true
+	}
+	for _, branch := range schemaList(node[keyAllOf]) {
+		collectFieldPropertyNames(branch, seen)
+	}
+	if items := schemaMap(node[keyItems]); items != nil {
+		collectFieldPropertyNames(items, seen)
+	}
+	if addl := schemaMap(node[keyAddlProps]); addl != nil {
+		collectFieldPropertyNames(addl, seen)
+	}
 }
 
 func parseAPIVersion(apiVersion string) (schema.GroupVersion, bool, error) {
@@ -395,9 +617,9 @@ func (e *Explainer) resolve(ctx context.Context, requests []requestCandidate, gv
 		}
 	}
 	if len(attempted) > 0 {
-		return nil, nil, fmt.Errorf("couldn't find resource for %q", attempted[0])
+		return nil, nil, fmt.Errorf("%w for %q", errResourceNotFound, attempted[0])
 	}
-	return nil, nil, errors.New("couldn't find resource")
+	return nil, nil, errResourceNotFound
 }
 
 func (e *Explainer) resolveFromReferences(ctx context.Context, req requestCandidate, gv schema.GroupVersion, hasGV bool) (*resolvedSchema, bool, error) {
@@ -898,6 +1120,21 @@ func parseFieldIndexMetadata(data string) fieldIndexMetadata {
 }
 
 func (e *Explainer) loadBytes(ctx context.Context, location string) ([]byte, bool, error) {
+	if e.byteCache == nil {
+		e.byteCache = map[string]byteCacheEntry{}
+	}
+	if cached, ok := e.byteCache[location]; ok {
+		return slices.Clone(cached.body), cached.found, nil
+	}
+	body, found, err := e.loadBytesUncached(ctx, location)
+	if err != nil {
+		return nil, false, err
+	}
+	e.byteCache[location] = byteCacheEntry{body: slices.Clone(body), found: found}
+	return body, found, nil
+}
+
+func (e *Explainer) loadBytesUncached(ctx context.Context, location string) ([]byte, bool, error) {
 	if isHTTPURL(location) {
 		return e.loadHTTP(ctx, location)
 	}

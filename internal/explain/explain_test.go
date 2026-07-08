@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -111,17 +112,22 @@ func TestRendererOpenAPIV2DescriptionSpacing(t *testing.T) {
 func TestEcosystemIndexResolveAndComplete(t *testing.T) {
 	g := NewWithT(t)
 
+	var helmReleaseRequests int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/index.json":
 			_, _ = fmt.Fprint(w, `{"v":3,"projects":[{"groups":[{"g":"helm.toolkit.fluxcd.io","kinds":[["helmrelease",["v2"],1,"HelmRelease",{"n":["hr"]}]]},{"g":"source.extensions.fluxcd.io","kinds":[["artifactgenerator",["v1beta1"],1,"ArtifactGenerator",{"n":["ag"]}]]}]}]}`)
 		case "/catalog/helm.toolkit.fluxcd.io/helmrelease_v2.json":
+			atomic.AddInt32(&helmReleaseRequests, 1)
 			_, _ = fmt.Fprint(w, `{
 				"description":"HelmRelease is the Schema for the helmreleases API",
 				"properties":{
 					"apiVersion":{"type":"string"},
 					"kind":{"type":"string"},
-					"spec":{"type":"object","description":"HelmReleaseSpec defines the desired state of a Helm release."}
+					"spec":{"type":"object","description":"HelmReleaseSpec defines the desired state of a Helm release.","properties":{
+						"chart":{"type":"object","description":"Chart defines the chart template."},
+						"chartRef":{"type":"object","description":"ChartRef defines the chart source."}
+					}}
 				},
 				"type":"object"
 			}`)
@@ -155,6 +161,25 @@ func TestEcosystemIndexResolveAndComplete(t *testing.T) {
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(matches).To(Equal([]string{"artifactgenerators.source.extensions.fluxcd.io"}))
 
+	matches, err = ex.CompleteReferences(context.Background(), "hr.s")
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(matches).To(Equal([]string{"hr.spec"}))
+
+	matches, err = ex.CompleteReferences(context.Background(), "hr.spec.ch")
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(matches).To(Equal([]string{"hr.spec.chart", "hr.spec.chartRef"}))
+
+	matches, err = ex.CompleteReferences(context.Background(), "helmreleases.helm.toolkit.fluxcd.io.spec.ch")
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(matches).To(Equal([]string{
+		"helmreleases.helm.toolkit.fluxcd.io.spec.chart",
+		"helmreleases.helm.toolkit.fluxcd.io.spec.chartRef",
+	}))
+
+	matches, err = ex.CompleteReferences(context.Background(), "ag.spec.p")
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(matches).To(Equal([]string{"ag.spec.pathPattern"}))
+
 	var out bytes.Buffer
 	g.Expect(ex.Explain(context.Background(), "hr.spec", &out)).To(Succeed())
 	g.Expect(out.String()).To(ContainSubstring("GROUP:      helm.toolkit.fluxcd.io\n"))
@@ -166,6 +191,7 @@ func TestEcosystemIndexResolveAndComplete(t *testing.T) {
 	g.Expect(ex.Explain(context.Background(), "helmreleases.helm.toolkit.fluxcd.io.spec", &out)).To(Succeed())
 	g.Expect(out.String()).To(ContainSubstring("KIND:       HelmRelease\n"))
 	g.Expect(out.String()).To(ContainSubstring("FIELD: spec <Object>\n"))
+	g.Expect(atomic.LoadInt32(&helmReleaseRequests)).To(Equal(int32(1)))
 
 	out.Reset()
 	g.Expect(ex.Explain(context.Background(), "ag.spec.pathPattern", &out)).To(Succeed())

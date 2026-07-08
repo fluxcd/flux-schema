@@ -232,6 +232,11 @@ func TestExplainCmd_CompleteResourceReferences(t *testing.T) {
 	g.Expect(out).To(ContainSubstring("helmreleases.helm.toolkit.fluxcd.io\n"))
 	g.Expect(out).To(ContainSubstring(":4"))
 
+	out, err = executeCommand([]string{"__complete", "explain", "--schema-location", catalog, "helmreleases.helm.toolkit.fluxcd.io.s"})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("helmreleases.helm.toolkit.fluxcd.io.spec\n"))
+	g.Expect(out).To(ContainSubstring(":4"))
+
 	out, err = executeCommand([]string{"__complete", "explain", "--schema-location", catalog, "p"})
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(out).To(ContainSubstring("pods\n"))
@@ -240,6 +245,17 @@ func TestExplainCmd_CompleteResourceReferences(t *testing.T) {
 	out, err = executeCommand([]string{"__complete", "explain", "--schema-location", catalog, "po"})
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(out).To(ContainSubstring("pods\n"))
+	g.Expect(out).To(ContainSubstring(":4"))
+
+	out, err = executeCommand([]string{"__complete", "explain", "--schema-location", catalog, "po.s"})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("po.spec\n"))
+	g.Expect(out).To(ContainSubstring("po.status\n"))
+	g.Expect(out).To(ContainSubstring(":4"))
+
+	out, err = executeCommand([]string{"__complete", "explain", "--schema-location", catalog, "po.spec.co"})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("po.spec.containers\n"))
 	g.Expect(out).To(ContainSubstring(":4"))
 }
 
