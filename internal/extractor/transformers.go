@@ -397,12 +397,15 @@ func markNullable(prop map[string]any) {
 
 // --- additionalProperties closing ---
 
-// closeAdditionalProperties walks node and sets additionalProperties:false on
-// every object that declares "properties" but doesn't already set it. Subtrees
-// under x-kubernetes-preserve-unknown-fields:true are skipped because the API
-// server accepts arbitrary keys there (status subresources, free-form map
-// fields like HelmRelease.spec.values); forcing additionalProperties:false
-// would reject valid documents.
+// closeAdditionalProperties walks schema nodes and sets
+// additionalProperties:false on every object that declares "properties" but
+// doesn't already set it. Name-to-schema maps like "properties" and
+// "patternProperties" are traversed through their values so field names are not
+// confused with schema keywords. Subtrees under
+// x-kubernetes-preserve-unknown-fields:true are skipped because the API server
+// accepts arbitrary keys there (status subresources, free-form map fields like
+// HelmRelease.spec.values); forcing additionalProperties:false would reject
+// valid documents.
 //
 // The oneOf/anyOf/allOf/not branch subschemas are NOT closed: they are partial
 // value-validation constraints combined with the structural (parent) schema,
@@ -425,7 +428,10 @@ func closeAdditionalProperties(node any) {
 			}
 		}
 		for k, v := range n {
-			if isCombinatorKey(k) {
+			if isCombinatorKey(k) || isValueKeyword(k) {
+				continue
+			}
+			if closeAdditionalPropertiesNameMap(k, v) {
 				continue
 			}
 			closeAdditionalProperties(v)
@@ -448,6 +454,16 @@ func isCombinatorKey(k string) bool {
 	}
 }
 
+// isValueKeyword reports whether k carries arbitrary JSON values, not schemas.
+func isValueKeyword(k string) bool {
+	switch k {
+	case "default", "example", "enum", "const":
+		return true
+	default:
+		return false
+	}
+}
+
 // closeAdditionalPropertiesChildren is closeAdditionalProperties but leaves
 // the root object's own additionalProperties untouched. Used by the CRD
 // pipeline, where the openAPIV3Schema describes a custom resource whose root
@@ -464,11 +480,28 @@ func closeAdditionalPropertiesChildren(node any) {
 		return
 	}
 	for k, v := range m {
-		if isCombinatorKey(k) {
+		if isCombinatorKey(k) || isValueKeyword(k) {
+			continue
+		}
+		if closeAdditionalPropertiesNameMap(k, v) {
 			continue
 		}
 		closeAdditionalProperties(v)
 	}
+}
+
+func closeAdditionalPropertiesNameMap(k string, v any) bool {
+	if !isSchemaNameMap(k) {
+		return false
+	}
+	m, ok := v.(map[string]any)
+	if !ok {
+		return false
+	}
+	for _, child := range m {
+		closeAdditionalProperties(child)
+	}
+	return true
 }
 
 // --- vendor extension stripping ---
