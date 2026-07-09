@@ -44,15 +44,17 @@ type SchemaLoader struct {
 }
 
 // loadResult is the populated outcome of a single loadAndCompile call.
-// celBuildErr is recorded as data, not an error return: it means "this
-// schema's CEL evaluator could not be built" (e.g. apiextensions/v1 cannot
-// decode the shape) and is surfaced per-document by validateDoc, never as a
-// schema-load failure. The hard schema-load error stays on the cache entry.
+// Admission/CEL build errors are recorded as data, not error returns: they
+// mean Kubernetes evaluators could not be built (e.g. apiextensions/v1 cannot
+// decode the shape) and are surfaced per-document by validateDoc, never as
+// schema-load failures. Hard schema-load errors stay on the cache entry.
 type loadResult struct {
-	schema      *jsonschema.Schema
-	cel         *celValidator
-	celBuildErr error
-	found       bool
+	schema            *jsonschema.Schema
+	admission         *admissionValidator
+	admissionBuildErr error
+	cel               *celValidator
+	celBuildErr       error
+	found             bool
 }
 
 type schemaCacheEntry struct {
@@ -62,16 +64,17 @@ type schemaCacheEntry struct {
 }
 
 // ResolvedSchema is the bundle of artifacts the loader produces for one
-// schema location: the compiled JSON Schema, plus an optional compiled CEL
-// evaluator. Either of the CEL fields may be set independently — the schema
-// may have rules that compiled fine (CEL set, CELBuildErr nil), or rules
-// that failed to set up (CEL nil, CELBuildErr non-nil), or no rules at all
-// (both nil).
+// schema location: the compiled JSON Schema plus optional Kubernetes admission
+// and CEL evaluators. Build errors are recorded as data so they can be surfaced
+// per document without blocking plain JSON Schema validation for unrelated
+// schemas.
 type ResolvedSchema struct {
-	JSON        *jsonschema.Schema
-	CEL         *celValidator
-	CELBuildErr error
-	Location    string
+	JSON              *jsonschema.Schema
+	Admission         *admissionValidator
+	AdmissionBuildErr error
+	CEL               *celValidator
+	CELBuildErr       error
+	Location          string
 }
 
 // NewSchemaLoader returns a loader that will try templates in order and
@@ -109,10 +112,12 @@ func (l *SchemaLoader) Resolve(ctx context.Context, vars tmpl.SchemaVars) (resol
 		}
 		if entry.found {
 			return &ResolvedSchema{
-				JSON:        entry.schema,
-				CEL:         entry.cel,
-				CELBuildErr: entry.celBuildErr,
-				Location:    rendered,
+				JSON:              entry.schema,
+				Admission:         entry.admission,
+				AdmissionBuildErr: entry.admissionBuildErr,
+				CEL:               entry.cel,
+				CELBuildErr:       entry.celBuildErr,
+				Location:          rendered,
 			}, true, nil
 		}
 	}
@@ -127,16 +132,16 @@ func (l *SchemaLoader) cacheEntry(location string) *schemaCacheEntry {
 	return entry.(*schemaCacheEntry)
 }
 
-// loadAndCompile fetches location and compiles its contents as a JSON
-// Schema, then builds a CEL evaluator from the same document. The returned
-// loadResult has found=false when the location responded with "not found",
-// so the caller can fall through to the next template.
+// loadAndCompile fetches location and compiles its contents as a JSON Schema,
+// then builds Kubernetes admission and CEL evaluators from the same document.
+// The returned loadResult has found=false when the location responded with
+// "not found", so the caller can fall through to the next template.
 //
-// CEL build is intentionally performed AFTER compileMu is released:
+// Admission/CEL builds are intentionally performed AFTER compileMu is released:
 // compileMu only guards compiler.AddResource/Compile, and holding it across
-// CEL construction would serialize unrelated schemas' CEL builds. A CEL
-// build failure is recorded on the result (celBuildErr) rather than
-// returned, because it must not block JSON Schema validation.
+// Kubernetes evaluator construction would serialize unrelated schemas. Build
+// failures are recorded on the result rather than returned, because they must
+// not block JSON Schema validation.
 func (l *SchemaLoader) loadAndCompile(ctx context.Context, location string) (loadResult, error) {
 	var r loadResult
 	body, found, err := l.loadBytes(ctx, location)
@@ -161,7 +166,26 @@ func (l *SchemaLoader) loadAndCompile(ctx context.Context, location string) (loa
 	r.found = true
 
 	if rootMap, ok := doc.(map[string]any); ok {
-		r.cel, r.celBuildErr = newCELValidator(rootMap)
+		hasAdmission := hasAdmissionValidation(rootMap)
+		hasCEL := hasCELRules(rootMap)
+		if hasAdmission || hasCEL {
+			structural, buildErr := newStructuralSchema(rootMap)
+			if buildErr != nil {
+				if hasAdmission {
+					r.admissionBuildErr = buildErr
+				}
+				if hasCEL {
+					r.celBuildErr = buildErr
+				}
+			} else {
+				if hasAdmission {
+					r.admission = newAdmissionValidatorFromStructural(structural)
+				}
+				if hasCEL {
+					r.cel = newCELValidatorFromStructural(structural)
+				}
+			}
+		}
 	}
 	return r, nil
 }
@@ -169,7 +193,7 @@ func (l *SchemaLoader) loadAndCompile(ctx context.Context, location string) (loa
 // compileJSONSchema serializes access to the shared jsonschema.Compiler.
 // jsonschema.Compiler is not safe for concurrent use; the per-entry sync.Once
 // only dedupes work per location, so cross-location calls still need this
-// mutex. Kept narrow so it doesn't serialize unrelated work (e.g. CEL build).
+// mutex. Kept narrow so it does not serialize unrelated evaluator builds.
 func (l *SchemaLoader) compileJSONSchema(baseURI string, doc any) (*jsonschema.Schema, error) {
 	l.compileMu.Lock()
 	defer l.compileMu.Unlock()

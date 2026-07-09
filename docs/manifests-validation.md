@@ -220,6 +220,10 @@ report is versioned by a published [JSON Schema](report-v1beta1.json).
 - Schemas produced by `flux schema extract crd` close objects with
   `additionalProperties: false`, so undocumented fields under `spec` fail
   validation.
+- Kubernetes admission extensions are enforced for embedded resources and list
+  topology: `x-kubernetes-embedded-resource` validates nested `apiVersion`,
+  `kind`, and `metadata`, while `x-kubernetes-list-type: map|set` rejects
+  duplicate list entries using `x-kubernetes-list-map-keys` for map lists.
 - String formats `duration`, `date`, `datetime`/`date-time`, and `time` are
   validated matching Kubernetes OpenAPI conventions.
 

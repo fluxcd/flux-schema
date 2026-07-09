@@ -5,13 +5,9 @@ package validator
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"math"
 	"strings"
 
-	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextschema "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
 	apiextschemacel "k8s.io/apiextensions-apiserver/pkg/apiserver/schema/cel"
 	"k8s.io/apiextensions-apiserver/pkg/apiserver/schema/defaulting"
@@ -45,42 +41,23 @@ type celValidator struct {
 //     per-document surfaceable problem — not a schema-load failure — so that
 //     schemas unrelated to CEL still validate normally.
 //
-// The "has rules?" pre-check matters: the catalog's native Kubernetes
-// schemas use type: ["string","null"] (the extractor's nullableOptional
-// transform) which apiextensionsv1.JSONSchemaProps cannot decode. Those
-// schemas don't carry CEL rules, so we must return (nil, nil) without
-// attempting the unmarshal — otherwise every Secret/ConfigMap/etc. would
-// surface a spurious build error.
+// The "has rules?" pre-check matters: schemas without CEL rules should not
+// pay the structural-schema conversion cost or surface CEL setup errors.
 func newCELValidator(raw map[string]any) (*celValidator, error) {
 	if raw == nil || !hasCELRules(raw) {
 		return nil, nil
 	}
 
-	// The JSON Schema path still needs the extracted oneOf form. Build the
-	// structural/CEL schema from a private copy that restores int-or-string to
-	// the representation Kubernetes' CEL type-checker understands.
-	celRaw := rewriteIntOrStringOneOfForCEL(raw).(map[string]any)
-
-	// The internal apiextensions.JSONSchemaProps has no JSON tags, so the
-	// versioned type is the only viable unmarshal target on the way to
-	// NewStructural.
-	body, err := json.Marshal(celRaw)
+	structural, err := newStructuralSchema(raw)
 	if err != nil {
-		return nil, fmt.Errorf("marshal schema: %w", err)
+		return nil, err
 	}
-	var v1Props apiextensionsv1.JSONSchemaProps
-	if err := json.Unmarshal(body, &v1Props); err != nil {
-		return nil, fmt.Errorf("decode JSONSchemaProps: %w", err)
-	}
+	return newCELValidatorFromStructural(structural), nil
+}
 
-	var internalProps apiextensions.JSONSchemaProps
-	if err := apiextensionsv1.Convert_v1_JSONSchemaProps_To_apiextensions_JSONSchemaProps(&v1Props, &internalProps, nil); err != nil {
-		return nil, fmt.Errorf("convert JSONSchemaProps: %w", err)
-	}
-
-	structural, err := apiextschema.NewStructural(&internalProps)
-	if err != nil {
-		return nil, fmt.Errorf("structural schema: %w", err)
+func newCELValidatorFromStructural(structural *apiextschema.Structural) *celValidator {
+	if structural == nil {
+		return nil
 	}
 
 	// math.MaxUint64: flux-schema is a CI-time static validator running the
@@ -90,13 +67,13 @@ func newCELValidator(raw map[string]any) (*celValidator, error) {
 	// schemas, which describe a full custom resource.
 	v := apiextschemacel.NewValidator(structural, true, math.MaxUint64)
 	if v == nil {
-		return nil, nil
+		return nil
 	}
 	return &celValidator{
 		v:          v,
 		structural: structural,
 		hasDefault: structuralHasDefaults(structural),
-	}, nil
+	}
 }
 
 // Validate runs every compiled CEL rule over obj after applying the same
@@ -135,14 +112,7 @@ func (c *celValidator) Validate(ctx context.Context, obj map[string]any) []Valid
 	if len(errs) == 0 {
 		return nil
 	}
-	out := make([]ValidationError, 0, len(errs))
-	for _, e := range errs {
-		out = append(out, ValidationError{
-			Path: fieldPathToJSONPointer(e.Field),
-			Msg:  e.ErrorBody(),
-		})
-	}
-	return out
+	return fieldErrorsToValidationErrors(errs)
 }
 
 func structuralHasDefaults(s *apiextschema.Structural) bool {

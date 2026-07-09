@@ -208,6 +208,11 @@ constraints the Kubernetes API server enforces:
 - Objects with `properties` are closed with `additionalProperties: false`,
   except under nodes marked `x-kubernetes-preserve-unknown-fields: true`,
   which stay open so free-form maps validate correctly.
+- Kubernetes admission validation extensions are preserved when they affect
+  manifest validation: `x-kubernetes-embedded-resource`,
+  `x-kubernetes-list-type`, `x-kubernetes-list-map-keys`,
+  `x-kubernetes-map-type`, `x-kubernetes-preserve-unknown-fields`, and
+  `x-kubernetes-validations`. Merge/patch-only extensions are stripped.
 - Integer-or-string fields are rewritten to
   `oneOf: [{type: string}, {type: integer}]`. Both the legacy
   `format: int-or-string` and the structural

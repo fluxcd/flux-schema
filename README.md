@@ -20,6 +20,8 @@ refreshed automatically from upstream stable releases.
 - **Strict schema validation** — every field of every Kubernetes built-in
   kind and custom resource is checked. Unknown fields, wrong types, and
   missing required properties are all reported as schema violations.
+- **Kubernetes admission semantics** — embedded resources and list map/set
+  topology are validated from `x-kubernetes-*` schema extensions.
 - **CEL evaluation** — `x-kubernetes-validations` rules evaluated with the
   same engine as Kubernetes API server.
 - **Strict YAML decoding** — duplicate keys are rejected matching Flux

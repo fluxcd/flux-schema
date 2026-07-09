@@ -579,7 +579,8 @@ func (v *Validator) streamReader(ctx context.Context, source string, r io.Reader
 
 // validateDoc runs the full per-document pipeline: strict YAML decode,
 // apiVersion/kind extraction, name-or-generateName admission check, schema
-// resolution, and JSON Schema validation.
+// resolution, JSON Schema validation, Kubernetes extension-backed admission
+// checks, and CEL evaluation.
 //
 // Returns emit=false when the document contains only comments or whitespace
 // (YAML decodes to nil); such content-free documents are dropped entirely
@@ -711,10 +712,27 @@ func (v *Validator) validateDoc(ctx context.Context, source string, idx int, raw
 		return settle(StatusInvalid, ReasonSchemaViolation)
 	}
 
-	// CEL x-kubernetes-validations evaluation runs only after JSON Schema +
-	// metadata pass. Most CEL rules presume a well-shaped object, so adding
-	// CEL noise on top of a JSON Schema failure rarely helps; the user can
-	// fix the structural problems and re-run.
+	if resolved.AdmissionBuildErr != nil {
+		// Admission extensions define Kubernetes schema topology, not optional
+		// policy. Surface build errors unconditionally so a schema that claims
+		// list/map/resource semantics cannot validate differently from the API
+		// server.
+		r.Errors = []ValidationError{{
+			Msg: resolved.AdmissionBuildErr.Error(),
+		}}
+		return settle(StatusInvalid, ReasonSchemaViolation)
+	}
+	if resolved.Admission != nil {
+		if admissionErrs := resolved.Admission.Validate(doc); len(admissionErrs) > 0 {
+			r.Errors = admissionErrs
+			return settle(StatusInvalid, ReasonSchemaViolation)
+		}
+	}
+
+	// CEL x-kubernetes-validations evaluation runs only after JSON Schema,
+	// metadata, and Kubernetes admission-extension checks pass. Most CEL rules
+	// presume a well-shaped object, so adding CEL noise on top of structural
+	// failures rarely helps; the user can fix those problems and re-run.
 	if !v.opts.SkipCELRules {
 		if resolved.CELBuildErr != nil {
 			r.Errors = []ValidationError{{
