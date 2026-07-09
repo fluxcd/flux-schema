@@ -56,6 +56,161 @@ func writeWidgetSchema(t *testing.T, dir string) {
 	}
 }
 
+func writeAdmissionWidgetSchema(t *testing.T, dir string) {
+	t.Helper()
+	schema := map[string]any{
+		"type":     "object",
+		"required": []any{"apiVersion", "kind", "spec"},
+		"properties": map[string]any{
+			"apiVersion": map[string]any{"type": "string"},
+			"kind":       map[string]any{"type": "string"},
+			"metadata":   map[string]any{"type": "object"},
+			"spec": map[string]any{
+				"type":                 "object",
+				"additionalProperties": false,
+				"properties": map[string]any{
+					"embedded": map[string]any{
+						"type":                                 "object",
+						"x-kubernetes-embedded-resource":       true,
+						"x-kubernetes-preserve-unknown-fields": true,
+					},
+					"issuers": map[string]any{
+						"type":                       "array",
+						"x-kubernetes-list-type":     "map",
+						"x-kubernetes-list-map-keys": []any{"issuerURL"},
+						"items": map[string]any{
+							"type":                 "object",
+							"additionalProperties": false,
+							"required":             []any{"issuerURL"},
+							"properties": map[string]any{
+								"issuerURL": map[string]any{"type": "string"},
+								"name":      map[string]any{"type": "string"},
+							},
+						},
+					},
+					"tags": map[string]any{
+						"type":                   "array",
+						"x-kubernetes-list-type": "set",
+						"items":                  map[string]any{"type": "string"},
+					},
+				},
+			},
+		},
+	}
+	b, err := json.MarshalIndent(schema, "", "  ")
+	if err != nil {
+		t.Fatalf("marshal schema: %v", err)
+	}
+	path := filepath.Join(dir, "admissionwidget-example-v1.json")
+	if err := os.WriteFile(path, b, 0o644); err != nil {
+		t.Fatalf("write schema: %v", err)
+	}
+}
+
+func writeBrokenAdmissionSchema(t *testing.T, dir string) {
+	t.Helper()
+	schema := map[string]any{
+		"type":     "object",
+		"required": []any{"apiVersion", "kind", "spec"},
+		"properties": map[string]any{
+			"apiVersion": map[string]any{"type": "string"},
+			"kind":       map[string]any{"type": "string"},
+			"metadata":   map[string]any{"type": "object"},
+			"spec": map[string]any{
+				"type":                 "object",
+				"additionalProperties": false,
+				"properties": map[string]any{
+					"count": map[string]any{
+						"type":             "number",
+						"exclusiveMinimum": 0,
+					},
+					"tags": map[string]any{
+						"type":                   "array",
+						"x-kubernetes-list-type": "set",
+						"items":                  map[string]any{"type": "string"},
+					},
+				},
+			},
+		},
+	}
+	b, err := json.MarshalIndent(schema, "", "  ")
+	if err != nil {
+		t.Fatalf("marshal schema: %v", err)
+	}
+	path := filepath.Join(dir, "brokenadmissionwidget-example-v1.json")
+	if err := os.WriteFile(path, b, 0o644); err != nil {
+		t.Fatalf("write schema: %v", err)
+	}
+}
+
+func writeExtractedNativeServiceSchema(t *testing.T, dir string) {
+	t.Helper()
+	swagger := map[string]any{
+		"swagger": "2.0",
+		"definitions": map[string]any{
+			"io.k8s.api.core.v1.Service": map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"metadata": map[string]any{
+						"type":                                 "object",
+						"x-kubernetes-preserve-unknown-fields": true,
+					},
+					"spec": map[string]any{
+						"type": "object",
+						"properties": map[string]any{
+							"ports": map[string]any{
+								"type":                       "array",
+								"x-kubernetes-list-type":     "map",
+								"x-kubernetes-list-map-keys": []any{"port"},
+								"items": map[string]any{
+									"$ref": "#/definitions/io.k8s.api.core.v1.ServicePort",
+								},
+							},
+						},
+					},
+				},
+				"required": []any{"metadata", "spec"},
+				"x-kubernetes-group-version-kind": []any{
+					map[string]any{"group": "", "version": "v1", "kind": "Service"},
+				},
+			},
+			"io.k8s.api.core.v1.ServicePort": map[string]any{
+				"type":     "object",
+				"required": []any{"port"},
+				"properties": map[string]any{
+					"name": map[string]any{"type": "string"},
+					"port": map[string]any{"type": "integer", "format": "int32"},
+					"targetPort": map[string]any{
+						"$ref": "#/definitions/io.k8s.apimachinery.pkg.util.intstr.IntOrString",
+					},
+				},
+			},
+			"io.k8s.apimachinery.pkg.util.intstr.IntOrString": map[string]any{
+				"format": "int-or-string",
+			},
+		},
+	}
+	raw, err := json.Marshal(swagger)
+	if err != nil {
+		t.Fatalf("marshal swagger: %v", err)
+	}
+	schemas, errs := extractor.ExtractKubernetes(raw)
+	if len(errs) > 0 {
+		t.Fatalf("extract kubernetes: %v", errs)
+	}
+	if len(schemas) != 1 {
+		t.Fatalf("extract kubernetes: got %d schemas, want 1", len(schemas))
+	}
+	b, err := json.MarshalIndent(schemas[0].JSON, "", "  ")
+	if err != nil {
+		t.Fatalf("marshal schema: %v", err)
+	}
+	path := filepath.Join(dir, "service-core-v1.json")
+	if err := os.WriteFile(path, b, 0o644); err != nil {
+		t.Fatalf("write schema: %v", err)
+	}
+}
+
 func writePluginConfigSchema(t *testing.T, dir string) {
 	t.Helper()
 	schema := map[string]any{
@@ -308,9 +463,152 @@ spec:
 	results = v.ValidateBytes(context.Background(), "httproute.yaml", invalid)
 	g.Expect(results).To(HaveLen(1))
 	g.Expect(results[0].Status).To(Equal(StatusInvalid))
-	g.Expect(results[0].Reason).To(Equal(ReasonCELViolation))
+	g.Expect(results[0].Reason).To(Equal(ReasonSchemaViolation))
 	g.Expect(results[0].Errors).ToNot(BeEmpty())
-	g.Expect(results[0].Errors[0].Msg).To(ContainSubstring("sectionName must be specified"))
+	g.Expect(results[0].Errors[0].Path).To(Equal("/spec/parentRefs/1"))
+	g.Expect(results[0].Errors[0].Msg).To(ContainSubstring("Duplicate value"))
+}
+
+func TestValidateBytes_ListMapDuplicateKey(t *testing.T) {
+	g := NewWithT(t)
+	dir := t.TempDir()
+	writeAdmissionWidgetSchema(t, dir)
+	v := newLocalValidator(t, dir, false)
+
+	doc := []byte(`apiVersion: example.com/v1
+kind: AdmissionWidget
+metadata:
+  name: list-map
+spec:
+  issuers:
+    - issuerURL: https://issuer.example.com
+      name: first
+    - issuerURL: https://issuer.example.com
+      name: second
+`)
+	results := v.ValidateBytes(context.Background(), "admission.yaml", doc)
+	g.Expect(results).To(HaveLen(1))
+	g.Expect(results[0].Status).To(Equal(StatusInvalid))
+	g.Expect(results[0].Reason).To(Equal(ReasonSchemaViolation))
+	g.Expect(results[0].Errors).ToNot(BeEmpty())
+	g.Expect(results[0].Errors[0].Path).To(Equal("/spec/issuers/1"))
+	g.Expect(results[0].Errors[0].Msg).To(ContainSubstring("Duplicate value"))
+	g.Expect(results[0].Errors[0].Msg).To(ContainSubstring("issuerURL"))
+}
+
+func TestValidateBytes_ListSetDuplicateValue(t *testing.T) {
+	g := NewWithT(t)
+	dir := t.TempDir()
+	writeAdmissionWidgetSchema(t, dir)
+	v := newLocalValidator(t, dir, false)
+
+	doc := []byte(`apiVersion: example.com/v1
+kind: AdmissionWidget
+metadata:
+  name: list-set
+spec:
+  tags:
+    - stable
+    - stable
+`)
+	results := v.ValidateBytes(context.Background(), "admission.yaml", doc)
+	g.Expect(results).To(HaveLen(1))
+	g.Expect(results[0].Status).To(Equal(StatusInvalid))
+	g.Expect(results[0].Reason).To(Equal(ReasonSchemaViolation))
+	g.Expect(results[0].Errors).ToNot(BeEmpty())
+	g.Expect(results[0].Errors[0].Path).To(Equal("/spec/tags/1"))
+	g.Expect(results[0].Errors[0].Msg).To(ContainSubstring("Duplicate value"))
+	g.Expect(results[0].Errors[0].Msg).To(ContainSubstring("stable"))
+}
+
+func TestValidateBytes_ExtractedKubernetesAdmissionExtensions(t *testing.T) {
+	g := NewWithT(t)
+	dir := t.TempDir()
+	writeExtractedNativeServiceSchema(t, dir)
+	v := newLocalValidator(t, dir, false)
+
+	valid := []byte(`apiVersion: v1
+kind: Service
+metadata:
+  name: native-service
+spec:
+  ports:
+    - port: 80
+      targetPort: null
+`)
+	results := v.ValidateBytes(context.Background(), "service.yaml", valid)
+	g.Expect(results).To(HaveLen(1))
+	g.Expect(results[0].Status).To(Equal(StatusValid), "errors: %+v", results[0].Errors)
+
+	invalid := []byte(`apiVersion: v1
+kind: Service
+metadata:
+  name: native-service
+spec:
+  ports:
+    - port: 80
+      targetPort: null
+    - port: 80
+      targetPort: 8080
+`)
+	results = v.ValidateBytes(context.Background(), "service.yaml", invalid)
+	g.Expect(results).To(HaveLen(1))
+	g.Expect(results[0].Status).To(Equal(StatusInvalid))
+	g.Expect(results[0].Reason).To(Equal(ReasonSchemaViolation))
+	g.Expect(results[0].Errors).ToNot(BeEmpty())
+	g.Expect(results[0].Errors[0].Path).To(Equal("/spec/ports/1"))
+	g.Expect(results[0].Errors[0].Msg).To(ContainSubstring("Duplicate value"))
+	g.Expect(results[0].Errors[0].Msg).To(ContainSubstring("port"))
+}
+
+func TestValidateBytes_AdmissionBuildError(t *testing.T) {
+	g := NewWithT(t)
+	dir := t.TempDir()
+	writeBrokenAdmissionSchema(t, dir)
+	v := newLocalValidator(t, dir, false)
+
+	doc := []byte(`apiVersion: example.com/v1
+kind: BrokenAdmissionWidget
+metadata:
+  name: broken-admission
+spec:
+  count: 1
+  tags:
+    - stable
+`)
+	results := v.ValidateBytes(context.Background(), "admission.yaml", doc)
+	g.Expect(results).To(HaveLen(1))
+	g.Expect(results[0].Status).To(Equal(StatusInvalid))
+	g.Expect(results[0].Reason).To(Equal(ReasonSchemaViolation))
+	g.Expect(results[0].Errors).To(HaveLen(1))
+	g.Expect(results[0].Errors[0].Msg).To(ContainSubstring("decode JSONSchemaProps"))
+	g.Expect(results[0].Errors[0].Msg).To(ContainSubstring("exclusiveMinimum"))
+}
+
+func TestValidateBytes_EmbeddedResourceMetadata(t *testing.T) {
+	g := NewWithT(t)
+	dir := t.TempDir()
+	writeAdmissionWidgetSchema(t, dir)
+	v := newLocalValidator(t, dir, false)
+
+	doc := []byte(`apiVersion: example.com/v1
+kind: AdmissionWidget
+metadata:
+  name: embedded
+spec:
+  embedded:
+    apiVersion: 42
+    kind: ConfigMap
+    metadata:
+      name: embedded-config
+`)
+	results := v.ValidateBytes(context.Background(), "admission.yaml", doc)
+	g.Expect(results).To(HaveLen(1))
+	g.Expect(results[0].Status).To(Equal(StatusInvalid))
+	g.Expect(results[0].Reason).To(Equal(ReasonSchemaViolation))
+	g.Expect(results[0].Errors).ToNot(BeEmpty())
+	g.Expect(results[0].Errors[0].Path).To(Equal("/spec/embedded/apiVersion"))
+	g.Expect(results[0].Errors[0].Msg).To(ContainSubstring("must be a string"))
 }
 
 const clusterQueueIntOrStringCRD = `

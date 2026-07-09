@@ -588,12 +588,11 @@ func TestNewCELValidator_ArrayTypeWithoutRulesShortCircuits(t *testing.T) {
 	g.Expect(v).To(BeNil())
 }
 
-func TestNewCELValidator_ArrayTypeWithRulesIsSoftBuildError(t *testing.T) {
+func TestNewCELValidator_ArrayTypeWithRulesBuilds(t *testing.T) {
 	g := NewWithT(t)
-	// Forward-compat guard: if a future schema source mixes nullableOptional
-	// (type: ["string","null"]) with x-kubernetes-validations rules, the
-	// JSONSchemaProps decode must surface as a build error rather than a
-	// panic — and crucially must NOT bubble up as a schema-load failure.
+	// nullableOptional produces type: ["string","null"]. The Kubernetes
+	// structural-schema builder collapses that back to the non-null type for CEL
+	// setup, while JSON Schema validation still owns nullability enforcement.
 	schema := schemaFromJSON(t, `{
 		"type": "object",
 		"properties": {
@@ -606,8 +605,9 @@ func TestNewCELValidator_ArrayTypeWithRulesIsSoftBuildError(t *testing.T) {
 		]
 	}`)
 	v, err := newCELValidator(schema)
-	g.Expect(err).To(HaveOccurred())
-	g.Expect(v).To(BeNil())
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(v).ToNot(BeNil())
+	g.Expect(v.Validate(context.Background(), docFromJSON(t, `{}`))).To(BeEmpty())
 }
 
 func TestFieldPathToJSONPointer(t *testing.T) {

@@ -507,9 +507,8 @@ func closeAdditionalPropertiesNameMap(k string, v any) bool {
 // --- vendor extension stripping ---
 
 // stripVendorExtensions removes x-kubernetes-* keys from the tree except those
-// that carry validation semantics: x-kubernetes-preserve-unknown-fields (keeps
-// subtrees open for server-side unknown fields) and x-kubernetes-validations
-// (CEL rules enforced by the API server).
+// that carry API server validation semantics. Merge/patch-only hints are still
+// dropped because they do not affect admission validation.
 func stripVendorExtensions(node any) {
 	switch n := node.(type) {
 	case map[string]any:
@@ -534,7 +533,11 @@ func stripVendorExtensions(node any) {
 
 func keepVendorExtension(k string) bool {
 	switch k {
-	case "x-kubernetes-preserve-unknown-fields",
+	case "x-kubernetes-embedded-resource",
+		"x-kubernetes-list-map-keys",
+		"x-kubernetes-list-type",
+		"x-kubernetes-map-type",
+		"x-kubernetes-preserve-unknown-fields",
 		"x-kubernetes-validations":
 		return true
 	}

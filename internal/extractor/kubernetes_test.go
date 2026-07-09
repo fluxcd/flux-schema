@@ -768,7 +768,7 @@ func TestExtractKubernetes_MissingRefIsError(t *testing.T) {
 	g.Expect(broken["description"]).To(ContainSubstring("unresolved $ref"))
 }
 
-func TestExtractKubernetes_StripsVendorExtensions(t *testing.T) {
+func TestExtractKubernetes_PreservesValidationVendorExtensions(t *testing.T) {
 	g := NewWithT(t)
 	doc := map[string]any{
 		"definitions": map[string]any{
@@ -788,6 +788,14 @@ func TestExtractKubernetes_StripsVendorExtensions(t *testing.T) {
 							map[string]any{"rule": "self >= 0", "message": "must be non-negative"},
 						},
 					},
+					"embedded": map[string]any{
+						"type":                           "object",
+						"x-kubernetes-embedded-resource": true,
+					},
+					"settings": map[string]any{
+						"type":                  "object",
+						"x-kubernetes-map-type": "atomic",
+					},
 				},
 				"required": []any{"count"},
 				"x-kubernetes-group-version-kind": []any{
@@ -801,16 +809,19 @@ func TestExtractKubernetes_StripsVendorExtensions(t *testing.T) {
 
 	g.Expect(out[0].JSON).ToNot(HaveKey("x-kubernetes-group-version-kind"))
 
-	list := out[0].JSON["properties"].(map[string]any)["list"].(map[string]any)
-	g.Expect(list).ToNot(HaveKey("x-kubernetes-list-type"))
-	g.Expect(list).ToNot(HaveKey("x-kubernetes-list-map-keys"))
+	props := out[0].JSON["properties"].(map[string]any)
+	list := props["list"].(map[string]any)
+	g.Expect(list["x-kubernetes-list-type"]).To(Equal("map"))
+	g.Expect(list["x-kubernetes-list-map-keys"]).To(Equal([]any{"name"}))
 	g.Expect(list).ToNot(HaveKey("x-kubernetes-patch-strategy"))
 	g.Expect(list).ToNot(HaveKey("x-kubernetes-patch-merge-key"))
 
-	// CEL validations are retained so the API server's rules survive in the
-	// extracted schema.
-	count := out[0].JSON["properties"].(map[string]any)["count"].(map[string]any)
+	count := props["count"].(map[string]any)
 	g.Expect(count).To(HaveKey("x-kubernetes-validations"))
+	embedded := props["embedded"].(map[string]any)
+	g.Expect(embedded["x-kubernetes-embedded-resource"]).To(BeTrue())
+	settings := props["settings"].(map[string]any)
+	g.Expect(settings["x-kubernetes-map-type"]).To(Equal("atomic"))
 }
 
 func TestExtractKubernetes_PreservesDescriptions(t *testing.T) {
