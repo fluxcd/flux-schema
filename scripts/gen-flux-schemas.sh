@@ -12,7 +12,8 @@ usage() {
   echo "Usage: $(basename "$0") -d <directory> [-v <version>]"
   echo ""
   echo "Generates a FluxInstance manifest at the given Flux version, builds it"
-  echo "with flux-operator and extracts JSON schemas from the resulting CRDs."
+  echo "with flux-operator and extracts JSON schemas with .fields.txt field"
+  echo "indexes from the resulting CRDs."
   echo ""
   echo "Options:"
   echo "  -d  Directory to write the generated JSON schemas to"
@@ -75,6 +76,8 @@ cat <<EOF | flux-operator build instance -f - | \
   flux-schema extract crd /dev/stdin \
     -f '{{ .Group }}/{{ .Kind }}_{{ .Version }}.json' \
     --strip-description \
+    --with-field-index \
+    --index-source "Flux ${version} https://github.com/${FLUX_REPO}" \
     -d "$dir"
 apiVersion: fluxcd.controlplane.io/v1
 kind: FluxInstance
