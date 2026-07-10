@@ -7,20 +7,23 @@ set -o errexit
 set -o pipefail
 
 OPENSHIFT_REPO="openshift/api"
-ENDOFLIFE_URL="https://endoflife.date/api/v1/products/red-hat-openshift/"
+CINCINNATI_URL="https://api.openshift.com/api/upgrades_info/v1/graph"
+# The minor the GA probe starts from. Only a floor, not a pin: the probe walks
+# stable channels upward from here.
+PROBE_FLOOR=20
 
 usage() {
   echo "Usage: $(basename "$0") -d <directory> [-r <ref>]"
   echo ""
   echo "Extracts JSON schemas from the openshift/api OpenAPI v2 swagger at the"
-  echo "given git ref. Without -r, resolves the latest non-EOL OpenShift minor"
-  echo "release via the endoflife.date API and uses the matching release-X.Y"
-  echo "branch."
+  echo "given git ref. Without -r, resolves the latest GA OpenShift minor"
+  echo "release via the Cincinnati upgrade graph API and uses the matching"
+  echo "release-X.Y branch."
   echo ""
   echo "Options:"
   echo "  -d  Directory to write the generated JSON schemas to"
   echo "  -r  openshift/api git ref (e.g. release-4.20); defaults to the latest"
-  echo "      shipping release branch resolved via endoflife.date"
+  echo "      GA release branch resolved via the Cincinnati graph"
   echo "  -h  Show this help message"
   exit 1
 }
@@ -60,31 +63,28 @@ fi
 version=""
 
 if [[ -z "$ref" ]]; then
-  echo "Discovering latest OpenShift release from ${ENDOFLIFE_URL}..."
-  # Sort by parsed (major, minor) descending; do not rely on the API's
-  # implicit ordering. Strip any trailing patch component defensively
-  # — the openshift/api repo names branches release-X.Y, never
-  # release-X.Y.Z.
-  version=$(curl -fsSL "$ENDOFLIFE_URL" \
-    | jq -r '
-        [.result.releases[]
-          | select(.isEol == false)
-          | .name]
-        | map(. as $n | (split(".") | map(tonumber)) as $p | {n: $n, p: $p})
-        | sort_by(.p)
-        | reverse
-        | .[0].n // empty')
+  echo "Discovering latest GA OpenShift release from ${CINCINNATI_URL}..."
+  # Probe the stable channels of the Cincinnati upgrade graph (the data
+  # OpenShift clusters themselves upgrade from) upward from the floor. A
+  # minor is GA once its stable channel carries a release of that minor;
+  # stable channels also list previous-minor releases as upgrade sources,
+  # so the node versions are matched against the minor itself. Pre-GA and
+  # unknown channels answer 200 with an empty node list, ending the walk.
+  minor=$PROBE_FLOOR
+  while :; do
+    count=$(curl -fsSL -H 'Accept: application/json' \
+      "${CINCINNATI_URL}?channel=stable-4.${minor}" \
+      | jq --arg p "4.${minor}." '[.nodes[]? | select(.version | startswith($p))] | length')
+    if [[ "$count" -eq 0 ]]; then
+      break
+    fi
+    version="4.${minor}"
+    minor=$((minor + 1))
+  done
   if [[ -z "$version" ]]; then
-    echo "Error: could not resolve latest OpenShift release from endoflife.date"
+    echo "Error: could not resolve latest OpenShift release: stable-4.${PROBE_FLOOR} has no GA release"
     exit 1
   fi
-  if [[ ! "$version" =~ ^([0-9]+\.[0-9]+) ]]; then
-    echo "Error: endoflife.date returned malformed version ${version}"
-    exit 1
-  fi
-  # Capture only the X.Y prefix so we compose a valid release branch
-  # (openshift/api branches are release-X.Y, never release-X.Y.Z).
-  version="${BASH_REMATCH[1]}"
   ref="release-${version}"
 else
   # Manual -r: surface a clean version for the README. Strip the
