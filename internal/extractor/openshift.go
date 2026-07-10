@@ -24,6 +24,7 @@ const openShiftDefinitionPrefix = "com.github.openshift.api."
 // file format, not an API group) and every legacyconfig definition fails
 // the GitOps-scope filter regardless.
 var openShiftDirToGroup = map[string]string{
+	"apiextensions":         "apiextensions.openshift.io",
 	"apiserver":             "apiserver.openshift.io",
 	"apps":                  "apps.openshift.io",
 	"authorization":         "authorization.openshift.io",
@@ -31,6 +32,7 @@ var openShiftDirToGroup = map[string]string{
 	"cloudnetwork":          "cloud.network.openshift.io",
 	"config":                "config.openshift.io",
 	"console":               "console.openshift.io",
+	"etcd":                  "etcd.openshift.io",
 	"example":               "example.openshift.io",
 	"helm":                  "helm.openshift.io",
 	"image":                 "image.openshift.io",
@@ -47,6 +49,7 @@ var openShiftDirToGroup = map[string]string{
 	"operatorcontrolplane":  "controlplane.operator.openshift.io",
 	"operatoringress":       "ingress.operator.openshift.io",
 	"osin":                  "osin.config.openshift.io",
+	"platform":              "platform.openshift.io",
 	"project":               "project.openshift.io",
 	"quota":                 "quota.openshift.io",
 	"route":                 "route.openshift.io",
