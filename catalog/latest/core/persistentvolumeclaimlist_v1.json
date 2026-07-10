@@ -60,7 +60,8 @@
                 "type": [
                   "array",
                   "null"
-                ]
+                ],
+                "x-kubernetes-list-type": "set"
               },
               "generateName": {
                 "type": [
@@ -137,7 +138,8 @@
                 "type": [
                   "array",
                   "null"
-                ]
+                ],
+                "x-kubernetes-list-type": "atomic"
               },
               "name": {
                 "type": [
@@ -186,12 +188,17 @@
                     "name",
                     "uid"
                   ],
-                  "type": "object"
+                  "type": "object",
+                  "x-kubernetes-map-type": "atomic"
                 },
                 "type": [
                   "array",
                   "null"
-                ]
+                ],
+                "x-kubernetes-list-map-keys": [
+                  "uid"
+                ],
+                "x-kubernetes-list-type": "map"
               },
               "resourceVersion": {
                 "type": [
@@ -227,7 +234,8 @@
                 "type": [
                   "array",
                   "null"
-                ]
+                ],
+                "x-kubernetes-list-type": "atomic"
               },
               "dataSource": {
                 "additionalProperties": false,
@@ -252,7 +260,8 @@
                 "type": [
                   "object",
                   "null"
-                ]
+                ],
+                "x-kubernetes-map-type": "atomic"
               },
               "dataSourceRef": {
                 "additionalProperties": false,
@@ -332,7 +341,8 @@
                           "type": [
                             "array",
                             "null"
-                          ]
+                          ],
+                          "x-kubernetes-list-type": "atomic"
                         }
                       },
                       "required": [
@@ -344,7 +354,8 @@
                     "type": [
                       "array",
                       "null"
-                    ]
+                    ],
+                    "x-kubernetes-list-type": "atomic"
                   },
                   "matchLabels": {
                     "additionalProperties": {
@@ -359,7 +370,8 @@
                 "type": [
                   "object",
                   "null"
-                ]
+                ],
+                "x-kubernetes-map-type": "atomic"
               },
               "storageClassName": {
                 "type": [
@@ -401,7 +413,8 @@
                 "type": [
                   "array",
                   "null"
-                ]
+                ],
+                "x-kubernetes-list-type": "atomic"
               },
               "allocatedResourceStatuses": {
                 "additionalProperties": {
@@ -410,7 +423,8 @@
                 "type": [
                   "object",
                   "null"
-                ]
+                ],
+                "x-kubernetes-map-type": "granular"
               },
               "allocatedResources": {
                 "additionalProperties": {
@@ -476,7 +490,11 @@
                 "type": [
                   "array",
                   "null"
-                ]
+                ],
+                "x-kubernetes-list-map-keys": [
+                  "type"
+                ],
+                "x-kubernetes-list-type": "map"
               },
               "currentVolumeAttributesClassName": {
                 "type": [

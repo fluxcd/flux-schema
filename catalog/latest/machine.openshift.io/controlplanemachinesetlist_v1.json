@@ -64,7 +64,8 @@
                 "type": [
                   "array",
                   "null"
-                ]
+                ],
+                "x-kubernetes-list-type": "set"
               },
               "generateName": {
                 "type": [
@@ -143,7 +144,8 @@
                 "type": [
                   "array",
                   "null"
-                ]
+                ],
+                "x-kubernetes-list-type": "atomic"
               },
               "name": {
                 "type": [
@@ -197,12 +199,17 @@
                     "name",
                     "uid"
                   ],
-                  "type": "object"
+                  "type": "object",
+                  "x-kubernetes-map-type": "atomic"
                 },
                 "type": [
                   "array",
                   "null"
-                ]
+                ],
+                "x-kubernetes-list-map-keys": [
+                  "uid"
+                ],
+                "x-kubernetes-list-type": "map"
               },
               "resourceVersion": {
                 "type": [
@@ -267,7 +274,8 @@
                           "type": [
                             "array",
                             "null"
-                          ]
+                          ],
+                          "x-kubernetes-list-type": "atomic"
                         }
                       },
                       "required": [
@@ -279,7 +287,8 @@
                     "type": [
                       "array",
                       "null"
-                    ]
+                    ],
+                    "x-kubernetes-list-type": "atomic"
                   },
                   "matchLabels": {
                     "additionalProperties": {
@@ -292,7 +301,8 @@
                     ]
                   }
                 },
-                "type": "object"
+                "type": "object",
+                "x-kubernetes-map-type": "atomic"
               },
               "state": {
                 "default": "Inactive",
@@ -380,7 +390,8 @@
                                             "type": [
                                               "array",
                                               "null"
-                                            ]
+                                            ],
+                                            "x-kubernetes-list-type": "atomic"
                                           }
                                         },
                                         "required": [
@@ -391,7 +402,8 @@
                                       "type": [
                                         "array",
                                         "null"
-                                      ]
+                                      ],
+                                      "x-kubernetes-list-type": "atomic"
                                     },
                                     "id": {
                                       "type": [
@@ -418,7 +430,8 @@
                             "type": [
                               "array",
                               "null"
-                            ]
+                            ],
+                            "x-kubernetes-list-type": "atomic"
                           },
                           "azure": {
                             "items": {
@@ -444,7 +457,8 @@
                             "type": [
                               "array",
                               "null"
-                            ]
+                            ],
+                            "x-kubernetes-list-type": "atomic"
                           },
                           "gcp": {
                             "items": {
@@ -464,7 +478,8 @@
                             "type": [
                               "array",
                               "null"
-                            ]
+                            ],
+                            "x-kubernetes-list-type": "atomic"
                           },
                           "nutanix": {
                             "items": {
@@ -484,7 +499,11 @@
                             "type": [
                               "array",
                               "null"
-                            ]
+                            ],
+                            "x-kubernetes-list-map-keys": [
+                              "name"
+                            ],
+                            "x-kubernetes-list-type": "map"
                           },
                           "openstack": {
                             "items": {
@@ -525,7 +544,8 @@
                             "type": [
                               "array",
                               "null"
-                            ]
+                            ],
+                            "x-kubernetes-list-type": "atomic"
                           },
                           "platform": {
                             "default": "",
@@ -549,7 +569,11 @@
                             "type": [
                               "array",
                               "null"
-                            ]
+                            ],
+                            "x-kubernetes-list-map-keys": [
+                              "name"
+                            ],
+                            "x-kubernetes-list-type": "map"
                           }
                         },
                         "required": [
@@ -625,7 +649,11 @@
                                 "type": [
                                   "array",
                                   "null"
-                                ]
+                                ],
+                                "x-kubernetes-list-map-keys": [
+                                  "name"
+                                ],
+                                "x-kubernetes-list-type": "map"
                               },
                               "preTerminate": {
                                 "items": {
@@ -650,7 +678,11 @@
                                 "type": [
                                   "array",
                                   "null"
-                                ]
+                                ],
+                                "x-kubernetes-list-map-keys": [
+                                  "name"
+                                ],
+                                "x-kubernetes-list-type": "map"
                               }
                             },
                             "type": [
@@ -740,12 +772,17 @@
                                     "name",
                                     "uid"
                                   ],
-                                  "type": "object"
+                                  "type": "object",
+                                  "x-kubernetes-map-type": "atomic"
                                 },
                                 "type": [
                                   "array",
                                   "null"
-                                ]
+                                ],
+                                "x-kubernetes-list-map-keys": [
+                                  "uid"
+                                ],
+                                "x-kubernetes-list-type": "map"
                               }
                             },
                             "type": [
@@ -816,7 +853,8 @@
                             "type": [
                               "array",
                               "null"
-                            ]
+                            ],
+                            "x-kubernetes-list-type": "atomic"
                           }
                         },
                         "type": "object"
@@ -897,7 +935,11 @@
                 "type": [
                   "array",
                   "null"
-                ]
+                ],
+                "x-kubernetes-list-map-keys": [
+                  "type"
+                ],
+                "x-kubernetes-list-type": "map"
               },
               "observedGeneration": {
                 "format": "int64",

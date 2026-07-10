@@ -21,7 +21,8 @@
             "type": [
               "array",
               "null"
-            ]
+            ],
+            "x-kubernetes-list-type": "atomic"
           },
           "group": {
             "type": [
@@ -45,7 +46,8 @@
             "type": [
               "array",
               "null"
-            ]
+            ],
+            "x-kubernetes-list-type": "atomic"
           },
           "singularName": {
             "type": "string"
@@ -78,7 +80,8 @@
         ],
         "type": "object"
       },
-      "type": "array"
+      "type": "array",
+      "x-kubernetes-list-type": "atomic"
     }
   },
   "required": [

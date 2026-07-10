@@ -64,7 +64,8 @@
                 "type": [
                   "array",
                   "null"
-                ]
+                ],
+                "x-kubernetes-list-type": "set"
               },
               "generateName": {
                 "type": [
@@ -143,7 +144,8 @@
                 "type": [
                   "array",
                   "null"
-                ]
+                ],
+                "x-kubernetes-list-type": "atomic"
               },
               "name": {
                 "type": [
@@ -197,12 +199,17 @@
                     "name",
                     "uid"
                   ],
-                  "type": "object"
+                  "type": "object",
+                  "x-kubernetes-map-type": "atomic"
                 },
                 "type": [
                   "array",
                   "null"
-                ]
+                ],
+                "x-kubernetes-list-map-keys": [
+                  "uid"
+                ],
+                "x-kubernetes-list-type": "map"
               },
               "resourceVersion": {
                 "type": [
@@ -254,7 +261,8 @@
                   ],
                   "type": "object"
                 },
-                "type": "array"
+                "type": "array",
+                "x-kubernetes-list-type": "atomic"
               },
               "externalIP": {
                 "additionalProperties": false,
@@ -267,7 +275,8 @@
                     "type": [
                       "array",
                       "null"
-                    ]
+                    ],
+                    "x-kubernetes-list-type": "atomic"
                   },
                   "policy": {
                     "additionalProperties": false,
@@ -280,7 +289,8 @@
                         "type": [
                           "array",
                           "null"
-                        ]
+                        ],
+                        "x-kubernetes-list-type": "atomic"
                       },
                       "rejectedCIDRs": {
                         "items": {
@@ -290,7 +300,8 @@
                         "type": [
                           "array",
                           "null"
-                        ]
+                        ],
+                        "x-kubernetes-list-type": "atomic"
                       }
                     },
                     "type": [
@@ -354,7 +365,9 @@
                             "operator": {
                               "enum": [
                                 "Equal",
-                                "Exists"
+                                "Exists",
+                                "Gt",
+                                "Lt"
                               ],
                               "type": [
                                 "string",
@@ -380,7 +393,8 @@
                         "type": [
                           "array",
                           "null"
-                        ]
+                        ],
+                        "x-kubernetes-list-type": "atomic"
                       }
                     },
                     "type": [
@@ -427,7 +441,9 @@
                             "operator": {
                               "enum": [
                                 "Equal",
-                                "Exists"
+                                "Exists",
+                                "Gt",
+                                "Lt"
                               ],
                               "type": [
                                 "string",
@@ -453,7 +469,8 @@
                         "type": [
                           "array",
                           "null"
-                        ]
+                        ],
+                        "x-kubernetes-list-type": "atomic"
                       }
                     },
                     "type": [
@@ -476,7 +493,8 @@
                   "default": "",
                   "type": "string"
                 },
-                "type": "array"
+                "type": "array",
+                "x-kubernetes-list-type": "atomic"
               },
               "serviceNodePortRange": {
                 "type": [
@@ -521,7 +539,8 @@
                 "type": [
                   "array",
                   "null"
-                ]
+                ],
+                "x-kubernetes-list-type": "atomic"
               },
               "clusterNetworkMTU": {
                 "format": "int32",
@@ -575,7 +594,11 @@
                 "type": [
                   "array",
                   "null"
-                ]
+                ],
+                "x-kubernetes-list-map-keys": [
+                  "type"
+                ],
+                "x-kubernetes-list-type": "map"
               },
               "migration": {
                 "additionalProperties": false,
@@ -661,7 +684,8 @@
                 "type": [
                   "array",
                   "null"
-                ]
+                ],
+                "x-kubernetes-list-type": "atomic"
               }
             },
             "type": [

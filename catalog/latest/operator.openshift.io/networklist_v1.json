@@ -64,7 +64,8 @@
                 "type": [
                   "array",
                   "null"
-                ]
+                ],
+                "x-kubernetes-list-type": "set"
               },
               "generateName": {
                 "type": [
@@ -143,7 +144,8 @@
                 "type": [
                   "array",
                   "null"
-                ]
+                ],
+                "x-kubernetes-list-type": "atomic"
               },
               "name": {
                 "type": [
@@ -197,12 +199,17 @@
                     "name",
                     "uid"
                   ],
-                  "type": "object"
+                  "type": "object",
+                  "x-kubernetes-map-type": "atomic"
                 },
                 "type": [
                   "array",
                   "null"
-                ]
+                ],
+                "x-kubernetes-list-map-keys": [
+                  "uid"
+                ],
+                "x-kubernetes-list-type": "map"
               },
               "resourceVersion": {
                 "type": [
@@ -286,7 +293,8 @@
                                   "type": [
                                     "array",
                                     "null"
-                                  ]
+                                  ],
+                                  "x-kubernetes-list-type": "atomic"
                                 },
                                 "dns": {
                                   "additionalProperties": false,
@@ -305,7 +313,8 @@
                                       "type": [
                                         "array",
                                         "null"
-                                      ]
+                                      ],
+                                      "x-kubernetes-list-type": "atomic"
                                     },
                                     "search": {
                                       "items": {
@@ -315,7 +324,8 @@
                                       "type": [
                                         "array",
                                         "null"
-                                      ]
+                                      ],
+                                      "x-kubernetes-list-type": "atomic"
                                     }
                                   },
                                   "type": [
@@ -347,7 +357,8 @@
                                   "type": [
                                     "array",
                                     "null"
-                                  ]
+                                  ],
+                                  "x-kubernetes-list-type": "atomic"
                                 }
                               },
                               "type": [
@@ -407,7 +418,11 @@
                 "type": [
                   "array",
                   "null"
-                ]
+                ],
+                "x-kubernetes-list-map-keys": [
+                  "name"
+                ],
+                "x-kubernetes-list-type": "map"
               },
               "additionalRoutingCapabilities": {
                 "additionalProperties": false,
@@ -417,7 +432,8 @@
                       "default": "",
                       "type": "string"
                     },
-                    "type": "array"
+                    "type": "array",
+                    "x-kubernetes-list-type": "atomic"
                   }
                 },
                 "required": [
@@ -450,7 +466,8 @@
                   ],
                   "type": "object"
                 },
-                "type": "array"
+                "type": "array",
+                "x-kubernetes-list-type": "atomic"
               },
               "defaultNetwork": {
                 "additionalProperties": false,
@@ -501,6 +518,30 @@
                   "ovnKubernetesConfig": {
                     "additionalProperties": false,
                     "properties": {
+                      "bgpManagedConfig": {
+                        "additionalProperties": false,
+                        "default": {},
+                        "properties": {
+                          "asNumber": {
+                            "default": 64512,
+                            "format": "int64",
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "bgpTopology": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "bgpTopology"
+                        ],
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      },
                       "egressIPConfig": {
                         "additionalProperties": false,
                         "default": {},
@@ -603,7 +644,8 @@
                               ],
                               "type": "object"
                             },
-                            "type": "array"
+                            "type": "array",
+                            "x-kubernetes-list-type": "atomic"
                           },
                           "hybridOverlayVXLANPort": {
                             "format": "int64",
@@ -703,6 +745,26 @@
                           "null"
                         ]
                       },
+                      "noOverlayConfig": {
+                        "additionalProperties": false,
+                        "default": {},
+                        "properties": {
+                          "outboundSNAT": {
+                            "type": "string"
+                          },
+                          "routing": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "outboundSNAT",
+                          "routing"
+                        ],
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      },
                       "policyAuditConfig": {
                         "additionalProperties": false,
                         "properties": {
@@ -746,6 +808,12 @@
                         ]
                       },
                       "routeAdvertisements": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "transport": {
                         "type": [
                           "string",
                           "null"
@@ -812,7 +880,8 @@
                         "type": [
                           "array",
                           "null"
-                        ]
+                        ],
+                        "x-kubernetes-list-type": "atomic"
                       }
                     },
                     "type": [
@@ -831,7 +900,8 @@
                         "type": [
                           "array",
                           "null"
-                        ]
+                        ],
+                        "x-kubernetes-list-type": "atomic"
                       }
                     },
                     "type": [
@@ -850,7 +920,8 @@
                         "type": [
                           "array",
                           "null"
-                        ]
+                        ],
+                        "x-kubernetes-list-type": "atomic"
                       }
                     },
                     "type": [
@@ -1028,7 +1099,8 @@
                   "default": "",
                   "type": "string"
                 },
-                "type": "array"
+                "type": "array",
+                "x-kubernetes-list-type": "atomic"
               },
               "unsupportedConfigOverrides": {
                 "type": [
@@ -1098,7 +1170,11 @@
                 "type": [
                   "array",
                   "null"
-                ]
+                ],
+                "x-kubernetes-list-map-keys": [
+                  "type"
+                ],
+                "x-kubernetes-list-type": "map"
               },
               "generations": {
                 "items": {
@@ -1144,7 +1220,14 @@
                 "type": [
                   "array",
                   "null"
-                ]
+                ],
+                "x-kubernetes-list-map-keys": [
+                  "group",
+                  "resource",
+                  "namespace",
+                  "name"
+                ],
+                "x-kubernetes-list-type": "map"
               },
               "latestAvailableRevision": {
                 "format": "int32",

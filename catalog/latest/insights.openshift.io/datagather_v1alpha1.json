@@ -50,7 +50,8 @@
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-type": "set"
         },
         "generateName": {
           "type": [
@@ -129,7 +130,8 @@
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-type": "atomic"
         },
         "name": {
           "type": [
@@ -183,12 +185,17 @@
               "name",
               "uid"
             ],
-            "type": "object"
+            "type": "object",
+            "x-kubernetes-map-type": "atomic"
           },
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-map-keys": [
+            "uid"
+          ],
+          "x-kubernetes-list-type": "map"
         },
         "resourceVersion": {
           "type": [
@@ -250,7 +257,11 @@
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-map-keys": [
+            "name"
+          ],
+          "x-kubernetes-list-type": "map"
         },
         "storage": {
           "additionalProperties": false,
@@ -352,7 +363,11 @@
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-map-keys": [
+            "type"
+          ],
+          "x-kubernetes-list-type": "map"
         },
         "dataGatherState": {
           "type": [
@@ -414,7 +429,11 @@
                   ],
                   "type": "object"
                 },
-                "type": "array"
+                "type": "array",
+                "x-kubernetes-list-map-keys": [
+                  "type"
+                ],
+                "x-kubernetes-list-type": "map"
               },
               "lastGatherDuration": {
                 "type": "string"
@@ -434,7 +453,11 @@
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-map-keys": [
+            "name"
+          ],
+          "x-kubernetes-list-type": "map"
         },
         "insightsReport": {
           "additionalProperties": false,
@@ -481,7 +504,8 @@
               "type": [
                 "array",
                 "null"
-              ]
+              ],
+              "x-kubernetes-list-type": "atomic"
             },
             "uri": {
               "type": [
@@ -515,10 +539,8 @@
                 "type": "string"
               },
               "namespace": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "default": "",
+                "type": "string"
               },
               "resource": {
                 "default": "",
@@ -528,14 +550,20 @@
             "required": [
               "group",
               "resource",
-              "name"
+              "name",
+              "namespace"
             ],
             "type": "object"
           },
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-map-keys": [
+            "name",
+            "namespace"
+          ],
+          "x-kubernetes-list-type": "map"
         },
         "startTime": {
           "format": "date-time",

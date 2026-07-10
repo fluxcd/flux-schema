@@ -50,7 +50,8 @@
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-type": "set"
         },
         "generateName": {
           "type": [
@@ -129,7 +130,8 @@
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-type": "atomic"
         },
         "name": {
           "type": [
@@ -183,12 +185,17 @@
               "name",
               "uid"
             ],
-            "type": "object"
+            "type": "object",
+            "x-kubernetes-map-type": "atomic"
           },
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-map-keys": [
+            "uid"
+          ],
+          "x-kubernetes-list-type": "map"
         },
         "resourceVersion": {
           "type": [
@@ -226,7 +233,8 @@
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-type": "atomic"
         },
         "audit": {
           "additionalProperties": false,
@@ -255,7 +263,11 @@
               "type": [
                 "array",
                 "null"
-              ]
+              ],
+              "x-kubernetes-list-map-keys": [
+                "group"
+              ],
+              "x-kubernetes-list-type": "map"
             },
             "profile": {
               "type": [
@@ -356,7 +368,8 @@
                     "type": [
                       "array",
                       "null"
-                    ]
+                    ],
+                    "x-kubernetes-list-type": "atomic"
                   },
                   "servingCertificate": {
                     "additionalProperties": false,
@@ -381,11 +394,18 @@
               "type": [
                 "array",
                 "null"
-              ]
+              ],
+              "x-kubernetes-list-type": "atomic"
             }
           },
           "type": [
             "object",
+            "null"
+          ]
+        },
+        "tlsAdherence": {
+          "type": [
+            "string",
             "null"
           ]
         },
@@ -400,7 +420,8 @@
                     "default": "",
                     "type": "string"
                   },
-                  "type": "array"
+                  "type": "array",
+                  "x-kubernetes-list-type": "atomic"
                 },
                 "minTLSVersion": {
                   "default": "",

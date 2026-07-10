@@ -50,7 +50,8 @@
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-type": "set"
         },
         "generateName": {
           "type": [
@@ -129,7 +130,8 @@
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-type": "atomic"
         },
         "name": {
           "type": [
@@ -183,12 +185,17 @@
               "name",
               "uid"
             ],
-            "type": "object"
+            "type": "object",
+            "x-kubernetes-map-type": "atomic"
           },
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-map-keys": [
+            "uid"
+          ],
+          "x-kubernetes-list-type": "map"
         },
         "resourceVersion": {
           "type": [
@@ -218,120 +225,242 @@
       "additionalProperties": false,
       "default": {},
       "properties": {
-        "policy": {
+        "certificateManagement": {
           "additionalProperties": false,
           "default": {},
           "properties": {
-            "rootOfTrust": {
+            "custom": {
               "additionalProperties": false,
               "default": {},
               "properties": {
-                "fulcioCAWithRekor": {
+                "clientCertificates": {
                   "additionalProperties": false,
+                  "default": {},
                   "properties": {
-                    "fulcioCAData": {
-                      "format": "byte",
-                      "type": "string"
-                    },
-                    "fulcioSubject": {
+                    "key": {
                       "additionalProperties": false,
                       "default": {},
                       "properties": {
-                        "oidcIssuer": {
-                          "default": "",
+                        "algorithm": {
                           "type": "string"
                         },
-                        "signedEmail": {
-                          "default": "",
-                          "type": "string"
+                        "ecdsa": {
+                          "additionalProperties": false,
+                          "default": {},
+                          "properties": {
+                            "curve": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "curve"
+                          ],
+                          "type": [
+                            "object",
+                            "null"
+                          ]
+                        },
+                        "rsa": {
+                          "additionalProperties": false,
+                          "default": {},
+                          "properties": {
+                            "keySize": {
+                              "format": "int32",
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "keySize"
+                          ],
+                          "type": [
+                            "object",
+                            "null"
+                          ]
                         }
                       },
                       "required": [
-                        "oidcIssuer",
-                        "signedEmail"
+                        "algorithm"
                       ],
-                      "type": "object"
-                    },
-                    "rekorKeyData": {
-                      "format": "byte",
-                      "type": "string"
+                      "type": [
+                        "object",
+                        "null"
+                      ]
                     }
                   },
-                  "required": [
-                    "fulcioCAData",
-                    "rekorKeyData",
-                    "fulcioSubject"
-                  ],
                   "type": [
                     "object",
                     "null"
                   ]
                 },
-                "pki": {
+                "defaults": {
                   "additionalProperties": false,
+                  "default": {},
                   "properties": {
-                    "caIntermediatesData": {
-                      "format": "byte",
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    },
-                    "caRootsData": {
-                      "format": "byte",
-                      "type": "string"
-                    },
-                    "pkiCertificateSubject": {
+                    "key": {
                       "additionalProperties": false,
                       "default": {},
                       "properties": {
-                        "email": {
+                        "algorithm": {
+                          "type": "string"
+                        },
+                        "ecdsa": {
+                          "additionalProperties": false,
+                          "default": {},
+                          "properties": {
+                            "curve": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "curve"
+                          ],
                           "type": [
-                            "string",
+                            "object",
                             "null"
                           ]
                         },
-                        "hostname": {
+                        "rsa": {
+                          "additionalProperties": false,
+                          "default": {},
+                          "properties": {
+                            "keySize": {
+                              "format": "int32",
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "keySize"
+                          ],
                           "type": [
-                            "string",
+                            "object",
                             "null"
                           ]
                         }
                       },
+                      "required": [
+                        "algorithm"
+                      ],
                       "type": "object"
                     }
                   },
                   "required": [
-                    "caRootsData",
-                    "pkiCertificateSubject"
+                    "key"
                   ],
-                  "type": [
-                    "object",
-                    "null"
-                  ]
+                  "type": "object"
                 },
-                "policyType": {
-                  "default": "",
-                  "type": "string"
-                },
-                "publicKey": {
+                "servingCertificates": {
                   "additionalProperties": false,
+                  "default": {},
                   "properties": {
-                    "keyData": {
-                      "format": "byte",
-                      "type": "string"
-                    },
-                    "rekorKeyData": {
-                      "format": "byte",
+                    "key": {
+                      "additionalProperties": false,
+                      "default": {},
+                      "properties": {
+                        "algorithm": {
+                          "type": "string"
+                        },
+                        "ecdsa": {
+                          "additionalProperties": false,
+                          "default": {},
+                          "properties": {
+                            "curve": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "curve"
+                          ],
+                          "type": [
+                            "object",
+                            "null"
+                          ]
+                        },
+                        "rsa": {
+                          "additionalProperties": false,
+                          "default": {},
+                          "properties": {
+                            "keySize": {
+                              "format": "int32",
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "keySize"
+                          ],
+                          "type": [
+                            "object",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "algorithm"
+                      ],
                       "type": [
-                        "string",
+                        "object",
                         "null"
                       ]
                     }
                   },
-                  "required": [
-                    "keyData"
-                  ],
+                  "type": [
+                    "object",
+                    "null"
+                  ]
+                },
+                "signerCertificates": {
+                  "additionalProperties": false,
+                  "default": {},
+                  "properties": {
+                    "key": {
+                      "additionalProperties": false,
+                      "default": {},
+                      "properties": {
+                        "algorithm": {
+                          "type": "string"
+                        },
+                        "ecdsa": {
+                          "additionalProperties": false,
+                          "default": {},
+                          "properties": {
+                            "curve": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "curve"
+                          ],
+                          "type": [
+                            "object",
+                            "null"
+                          ]
+                        },
+                        "rsa": {
+                          "additionalProperties": false,
+                          "default": {},
+                          "properties": {
+                            "keySize": {
+                              "format": "int32",
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "keySize"
+                          ],
+                          "type": [
+                            "object",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "algorithm"
+                      ],
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    }
+                  },
                   "type": [
                     "object",
                     "null"
@@ -339,140 +468,27 @@
                 }
               },
               "required": [
-                "policyType"
-              ],
-              "type": "object"
-            },
-            "signedIdentity": {
-              "additionalProperties": false,
-              "default": {},
-              "properties": {
-                "exactRepository": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "repository": {
-                      "default": "",
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "repository"
-                  ],
-                  "type": [
-                    "object",
-                    "null"
-                  ]
-                },
-                "matchPolicy": {
-                  "default": "",
-                  "type": "string"
-                },
-                "remapIdentity": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "prefix": {
-                      "default": "",
-                      "type": "string"
-                    },
-                    "signedPrefix": {
-                      "default": "",
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "prefix",
-                    "signedPrefix"
-                  ],
-                  "type": [
-                    "object",
-                    "null"
-                  ]
-                }
-              },
-              "required": [
-                "matchPolicy"
+                "defaults"
               ],
               "type": [
                 "object",
                 "null"
               ]
+            },
+            "mode": {
+              "type": "string"
             }
           },
           "required": [
-            "rootOfTrust"
+            "mode"
           ],
           "type": "object"
-        },
-        "scopes": {
-          "items": {
-            "default": "",
-            "type": "string"
-          },
-          "type": "array"
         }
       },
       "required": [
-        "scopes",
-        "policy"
+        "certificateManagement"
       ],
       "type": "object"
-    },
-    "status": {
-      "additionalProperties": false,
-      "default": {},
-      "properties": {
-        "conditions": {
-          "items": {
-            "additionalProperties": false,
-            "default": {},
-            "properties": {
-              "lastTransitionTime": {
-                "format": "date-time",
-                "type": "string"
-              },
-              "message": {
-                "default": "",
-                "type": "string"
-              },
-              "observedGeneration": {
-                "format": "int64",
-                "type": [
-                  "integer",
-                  "null"
-                ]
-              },
-              "reason": {
-                "default": "",
-                "type": "string"
-              },
-              "status": {
-                "default": "",
-                "type": "string"
-              },
-              "type": {
-                "default": "",
-                "type": "string"
-              }
-            },
-            "required": [
-              "type",
-              "status",
-              "lastTransitionTime",
-              "reason",
-              "message"
-            ],
-            "type": "object"
-          },
-          "type": [
-            "array",
-            "null"
-          ]
-        }
-      },
-      "type": [
-        "object",
-        "null"
-      ]
     }
   },
   "required": [

@@ -50,7 +50,8 @@
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-type": "set"
         },
         "generateName": {
           "type": [
@@ -129,7 +130,8 @@
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-type": "atomic"
         },
         "name": {
           "type": [
@@ -183,12 +185,17 @@
               "name",
               "uid"
             ],
-            "type": "object"
+            "type": "object",
+            "x-kubernetes-map-type": "atomic"
           },
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-map-keys": [
+            "uid"
+          ],
+          "x-kubernetes-list-type": "map"
         },
         "resourceVersion": {
           "type": [
@@ -209,266 +216,164 @@
           ]
         }
       },
-      "type": [
-        "object",
-        "null"
-      ]
+      "type": "object"
     },
     "spec": {
       "additionalProperties": false,
-      "default": {},
       "properties": {
-        "policy": {
-          "additionalProperties": false,
-          "default": {},
-          "properties": {
-            "rootOfTrust": {
-              "additionalProperties": false,
-              "default": {},
-              "properties": {
-                "fulcioCAWithRekor": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "fulcioCAData": {
-                      "format": "byte",
-                      "type": "string"
-                    },
-                    "fulcioSubject": {
-                      "additionalProperties": false,
-                      "default": {},
-                      "properties": {
-                        "oidcIssuer": {
-                          "default": "",
-                          "type": "string"
-                        },
-                        "signedEmail": {
-                          "default": "",
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "oidcIssuer",
-                        "signedEmail"
-                      ],
-                      "type": "object"
-                    },
-                    "rekorKeyData": {
-                      "format": "byte",
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "fulcioCAData",
-                    "rekorKeyData",
-                    "fulcioSubject"
-                  ],
-                  "type": [
-                    "object",
-                    "null"
-                  ]
-                },
-                "pki": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "caIntermediatesData": {
-                      "format": "byte",
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    },
-                    "caRootsData": {
-                      "format": "byte",
-                      "type": "string"
-                    },
-                    "pkiCertificateSubject": {
-                      "additionalProperties": false,
-                      "default": {},
-                      "properties": {
-                        "email": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
-                        },
-                        "hostname": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
-                        }
-                      },
-                      "type": "object"
-                    }
-                  },
-                  "required": [
-                    "caRootsData",
-                    "pkiCertificateSubject"
-                  ],
-                  "type": [
-                    "object",
-                    "null"
-                  ]
-                },
-                "policyType": {
-                  "default": "",
-                  "type": "string"
-                },
-                "publicKey": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "keyData": {
-                      "format": "byte",
-                      "type": "string"
-                    },
-                    "rekorKeyData": {
-                      "format": "byte",
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "keyData"
-                  ],
-                  "type": [
-                    "object",
-                    "null"
-                  ]
-                }
-              },
-              "required": [
-                "policyType"
-              ],
-              "type": "object"
-            },
-            "signedIdentity": {
-              "additionalProperties": false,
-              "default": {},
-              "properties": {
-                "exactRepository": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "repository": {
-                      "default": "",
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "repository"
-                  ],
-                  "type": [
-                    "object",
-                    "null"
-                  ]
-                },
-                "matchPolicy": {
-                  "default": "",
-                  "type": "string"
-                },
-                "remapIdentity": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "prefix": {
-                      "default": "",
-                      "type": "string"
-                    },
-                    "signedPrefix": {
-                      "default": "",
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "prefix",
-                    "signedPrefix"
-                  ],
-                  "type": [
-                    "object",
-                    "null"
-                  ]
-                }
-              },
-              "required": [
-                "matchPolicy"
-              ],
-              "type": [
-                "object",
-                "null"
-              ]
-            }
-          },
-          "required": [
-            "rootOfTrust"
-          ],
-          "type": "object"
-        },
-        "scopes": {
+        "unmanagedCustomResourceDefinitions": {
           "items": {
             "default": "",
             "type": "string"
           },
-          "type": "array"
+          "type": [
+            "array",
+            "null"
+          ],
+          "x-kubernetes-list-type": "set"
         }
       },
-      "required": [
-        "scopes",
-        "policy"
-      ],
       "type": "object"
     },
     "status": {
       "additionalProperties": false,
       "default": {},
       "properties": {
-        "conditions": {
+        "currentRevision": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "desiredRevision": {
+          "type": "string"
+        },
+        "observedRevisionGeneration": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "revisions": {
           "items": {
             "additionalProperties": false,
             "default": {},
             "properties": {
-              "lastTransitionTime": {
-                "format": "date-time",
-                "type": "string"
-              },
-              "message": {
-                "default": "",
-                "type": "string"
-              },
-              "observedGeneration": {
-                "format": "int64",
+              "components": {
+                "items": {
+                  "additionalProperties": false,
+                  "default": {},
+                  "properties": {
+                    "image": {
+                      "additionalProperties": false,
+                      "default": {},
+                      "properties": {
+                        "profile": {
+                          "type": "string"
+                        },
+                        "ref": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "ref",
+                        "profile"
+                      ],
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "type": {
+                      "enum": [
+                        "Image"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type"
+                  ],
+                  "type": "object"
+                },
                 "type": [
-                  "integer",
+                  "array",
                   "null"
-                ]
+                ],
+                "x-kubernetes-list-type": "atomic"
               },
-              "reason": {
-                "default": "",
+              "contentID": {
                 "type": "string"
               },
-              "status": {
-                "default": "",
+              "manifestSubstitutions": {
+                "items": {
+                  "additionalProperties": false,
+                  "default": {},
+                  "properties": {
+                    "key": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "key",
+                    "value"
+                  ],
+                  "type": "object"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "x-kubernetes-list-map-keys": [
+                  "key"
+                ],
+                "x-kubernetes-list-type": "map"
+              },
+              "name": {
                 "type": "string"
               },
-              "type": {
-                "default": "",
-                "type": "string"
+              "revision": {
+                "format": "int64",
+                "type": "integer"
+              },
+              "unmanagedCustomResourceDefinitions": {
+                "items": {
+                  "default": "",
+                  "type": "string"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "x-kubernetes-list-type": "atomic"
               }
             },
             "required": [
-              "type",
-              "status",
-              "lastTransitionTime",
-              "reason",
-              "message"
+              "name",
+              "revision",
+              "contentID"
             ],
-            "type": "object"
+            "type": "object",
+            "x-kubernetes-map-type": "atomic"
           },
-          "type": [
-            "array",
-            "null"
-          ]
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
         }
       },
+      "required": [
+        "desiredRevision",
+        "revisions"
+      ],
       "type": [
         "object",
         "null"
@@ -476,6 +381,7 @@
     }
   },
   "required": [
+    "metadata",
     "spec",
     "apiVersion",
     "kind"
