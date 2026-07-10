@@ -7,7 +7,7 @@ set -o errexit
 set -o pipefail
 
 usage() {
-  echo "Usage: $(basename "$0") -r <owner/repo> -d <directory> [-v <version>] [-p <overlay-path>]"
+  echo "Usage: $(basename "$0") -r <owner/repo> -d <directory> [-v <version>] [-p <overlay-path>] [-i <source-name>]"
   echo ""
   echo "Extracts JSON schemas from CRDs under <repo>/<overlay-path> at the given version."
   echo ""
@@ -16,6 +16,8 @@ usage() {
   echo "  -d  Directory to write the generated JSON schemas to"
   echo "  -v  Repository release tag; defaults to the latest release"
   echo "  -p  Kustomize overlay path within the repository; defaults to 'config/crd'"
+  echo "  -i  Also write .fields.txt field indexes, recording the given source"
+  echo "      name with the version and repository URL in their headers"
   echo "  -h  Show this help message"
   exit 1
 }
@@ -24,13 +26,15 @@ repo=""
 dir=""
 version=""
 overlay_path="config/crd"
+index_name=""
 
-while getopts "r:d:v:p:h" opt; do
+while getopts "r:d:v:p:i:h" opt; do
   case $opt in
     r) repo="$OPTARG" ;;
     d) dir="$OPTARG" ;;
     v) version="$OPTARG" ;;
     p) overlay_path="$OPTARG" ;;
+    i) index_name="$OPTARG" ;;
     h) usage ;;
     *) usage ;;
   esac
@@ -82,11 +86,18 @@ fi
 
 echo "Extracting schemas for ${repo}@${version} (overlay: ${overlay_path}) into ${dir}"
 mkdir -p "$dir"
+
+extract_args=(
+  -f '{{ .Group }}/{{ .Kind }}_{{ .Version }}.json'
+  --strip-description
+  -d "$dir"
+)
+if [[ -n "$index_name" ]]; then
+  extract_args+=(--with-field-index --index-source "${index_name} ${version} https://github.com/${repo}")
+fi
+
 kubectl kustomize "https://github.com/${repo}/${overlay_path}?ref=${version}" | \
-  flux-schema extract crd /dev/stdin \
-    -f '{{ .Group }}/{{ .Kind }}_{{ .Version }}.json' \
-    --strip-description \
-    -d "$dir"
+  flux-schema extract crd /dev/stdin "${extract_args[@]}"
 
 if [[ "${GITHUB_ACTIONS:-}" == "true" && -n "${GITHUB_ENV:-}" ]]; then
   prefix=$(basename "$repo" | tr '[:lower:]' '[:upper:]' | tr '-' '_')

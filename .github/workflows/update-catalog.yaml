@@ -34,7 +34,7 @@ jobs:
       - name: Update Flagger schemas
         run: ./scripts/gen-crd-schemas.sh -r fluxcd/flagger -p kustomize/kubernetes -d ./catalog/latest
       - name: Update Flux Operator schemas
-        run: ./scripts/gen-crd-schemas.sh -r controlplaneio-fluxcd/flux-operator -d ./catalog/latest
+        run: ./scripts/gen-crd-schemas.sh -r controlplaneio-fluxcd/flux-operator -d ./catalog/latest -i "Flux Operator"
       - name: Update OpenShift schemas
         run: ./scripts/gen-openshift-schemas.sh -d ./catalog/latest
       - name: Update README versions
