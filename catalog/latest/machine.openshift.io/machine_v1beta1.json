@@ -50,7 +50,8 @@
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-type": "set"
         },
         "generateName": {
           "type": [
@@ -129,7 +130,8 @@
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-type": "atomic"
         },
         "name": {
           "type": [
@@ -183,12 +185,17 @@
               "name",
               "uid"
             ],
-            "type": "object"
+            "type": "object",
+            "x-kubernetes-map-type": "atomic"
           },
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-map-keys": [
+            "uid"
+          ],
+          "x-kubernetes-list-type": "map"
         },
         "resourceVersion": {
           "type": [
@@ -252,7 +259,11 @@
               "type": [
                 "array",
                 "null"
-              ]
+              ],
+              "x-kubernetes-list-map-keys": [
+                "name"
+              ],
+              "x-kubernetes-list-type": "map"
             },
             "preTerminate": {
               "items": {
@@ -277,7 +288,11 @@
               "type": [
                 "array",
                 "null"
-              ]
+              ],
+              "x-kubernetes-list-map-keys": [
+                "name"
+              ],
+              "x-kubernetes-list-type": "map"
             }
           },
           "type": [
@@ -367,12 +382,17 @@
                   "name",
                   "uid"
                 ],
-                "type": "object"
+                "type": "object",
+                "x-kubernetes-map-type": "atomic"
               },
               "type": [
                 "array",
                 "null"
-              ]
+              ],
+              "x-kubernetes-list-map-keys": [
+                "uid"
+              ],
+              "x-kubernetes-list-type": "map"
             }
           },
           "type": [
@@ -443,7 +463,8 @@
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-type": "atomic"
         }
       },
       "type": [
@@ -478,7 +499,8 @@
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-type": "atomic"
         },
         "authoritativeAPI": {
           "type": [
@@ -532,7 +554,11 @@
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-map-keys": [
+            "type"
+          ],
+          "x-kubernetes-list-type": "map"
         },
         "errorMessage": {
           "type": [
@@ -636,7 +662,8 @@
           "type": [
             "object",
             "null"
-          ]
+          ],
+          "x-kubernetes-map-type": "atomic"
         },
         "phase": {
           "type": [
@@ -647,6 +674,12 @@
         "providerStatus": {
           "type": [
             "object",
+            "null"
+          ]
+        },
+        "synchronizedAPI": {
+          "type": [
+            "string",
             "null"
           ]
         },

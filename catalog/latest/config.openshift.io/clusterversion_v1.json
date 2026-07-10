@@ -50,7 +50,8 @@
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-type": "set"
         },
         "generateName": {
           "type": [
@@ -129,7 +130,8 @@
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-type": "atomic"
         },
         "name": {
           "type": [
@@ -183,12 +185,17 @@
               "name",
               "uid"
             ],
-            "type": "object"
+            "type": "object",
+            "x-kubernetes-map-type": "atomic"
           },
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-map-keys": [
+            "uid"
+          ],
+          "x-kubernetes-list-type": "map"
         },
         "resourceVersion": {
           "type": [
@@ -229,7 +236,8 @@
               "type": [
                 "array",
                 "null"
-              ]
+              ],
+              "x-kubernetes-list-type": "atomic"
             },
             "baselineCapabilitySet": {
               "type": [
@@ -256,6 +264,29 @@
         "desiredUpdate": {
           "additionalProperties": false,
           "properties": {
+            "acceptRisks": {
+              "items": {
+                "additionalProperties": false,
+                "default": {},
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "type": "object"
+              },
+              "type": [
+                "array",
+                "null"
+              ],
+              "x-kubernetes-list-map-keys": [
+                "name"
+              ],
+              "x-kubernetes-list-type": "map"
+            },
             "architecture": {
               "default": "",
               "type": [
@@ -272,6 +303,15 @@
             },
             "image": {
               "default": "",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "mode": {
+              "enum": [
+                "Preflight"
+              ],
               "type": [
                 "string",
                 "null"
@@ -328,7 +368,14 @@
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-map-keys": [
+            "kind",
+            "group",
+            "namespace",
+            "name"
+          ],
+          "x-kubernetes-list-type": "map"
         },
         "signatureStores": {
           "items": {
@@ -365,7 +412,11 @@
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-map-keys": [
+            "url"
+          ],
+          "x-kubernetes-list-type": "map"
         },
         "upstream": {
           "type": [
@@ -402,7 +453,8 @@
                 "type": [
                   "array",
                   "null"
-                ]
+                ],
+                "x-kubernetes-list-type": "set"
               },
               "image": {
                 "default": "",
@@ -425,7 +477,8 @@
             ],
             "type": "object"
           },
-          "type": "array"
+          "type": "array",
+          "x-kubernetes-list-type": "atomic"
         },
         "capabilities": {
           "additionalProperties": false,
@@ -439,7 +492,8 @@
               "type": [
                 "array",
                 "null"
-              ]
+              ],
+              "x-kubernetes-list-type": "atomic"
             },
             "knownCapabilities": {
               "items": {
@@ -449,13 +503,134 @@
               "type": [
                 "array",
                 "null"
-              ]
+              ],
+              "x-kubernetes-list-type": "atomic"
             }
           },
           "type": [
             "object",
             "null"
           ]
+        },
+        "conditionalUpdateRisks": {
+          "items": {
+            "additionalProperties": false,
+            "default": {},
+            "properties": {
+              "conditions": {
+                "items": {
+                  "additionalProperties": false,
+                  "default": {},
+                  "properties": {
+                    "lastTransitionTime": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "message": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "observedGeneration": {
+                      "format": "int64",
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "reason": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "status": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "type": {
+                      "default": "",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "status",
+                    "lastTransitionTime",
+                    "reason",
+                    "message"
+                  ],
+                  "type": "object"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "x-kubernetes-list-map-keys": [
+                  "type"
+                ],
+                "x-kubernetes-list-type": "map"
+              },
+              "matchingRules": {
+                "items": {
+                  "additionalProperties": false,
+                  "default": {},
+                  "properties": {
+                    "promql": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "promql": {
+                          "default": "",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "promql"
+                      ],
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
+                    "type": {
+                      "default": "",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type"
+                  ],
+                  "type": "object"
+                },
+                "type": "array",
+                "x-kubernetes-list-type": "atomic"
+              },
+              "message": {
+                "default": "",
+                "type": "string"
+              },
+              "name": {
+                "default": "",
+                "type": "string"
+              },
+              "url": {
+                "default": "",
+                "type": "string"
+              }
+            },
+            "required": [
+              "url",
+              "name",
+              "message",
+              "matchingRules"
+            ],
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ],
+          "x-kubernetes-list-map-keys": [
+            "name"
+          ],
+          "x-kubernetes-list-type": "map"
         },
         "conditionalUpdates": {
           "items": {
@@ -507,7 +682,11 @@
                 "type": [
                   "array",
                   "null"
-                ]
+                ],
+                "x-kubernetes-list-map-keys": [
+                  "type"
+                ],
+                "x-kubernetes-list-type": "map"
               },
               "release": {
                 "additionalProperties": false,
@@ -527,7 +706,8 @@
                     "type": [
                       "array",
                       "null"
-                    ]
+                    ],
+                    "x-kubernetes-list-type": "set"
                   },
                   "image": {
                     "default": "",
@@ -550,11 +730,73 @@
                 ],
                 "type": "object"
               },
+              "riskNames": {
+                "items": {
+                  "default": "",
+                  "type": "string"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "x-kubernetes-list-type": "set"
+              },
               "risks": {
                 "items": {
                   "additionalProperties": false,
                   "default": {},
                   "properties": {
+                    "conditions": {
+                      "items": {
+                        "additionalProperties": false,
+                        "default": {},
+                        "properties": {
+                          "lastTransitionTime": {
+                            "format": "date-time",
+                            "type": "string"
+                          },
+                          "message": {
+                            "default": "",
+                            "type": "string"
+                          },
+                          "observedGeneration": {
+                            "format": "int64",
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "reason": {
+                            "default": "",
+                            "type": "string"
+                          },
+                          "status": {
+                            "default": "",
+                            "type": "string"
+                          },
+                          "type": {
+                            "default": "",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "status",
+                          "lastTransitionTime",
+                          "reason",
+                          "message"
+                        ],
+                        "type": "object"
+                      },
+                      "type": [
+                        "array",
+                        "null"
+                      ],
+                      "x-kubernetes-list-map-keys": [
+                        "type"
+                      ],
+                      "x-kubernetes-list-type": "map"
+                    },
                     "matchingRules": {
                       "items": {
                         "additionalProperties": false,
@@ -586,7 +828,8 @@
                         ],
                         "type": "object"
                       },
-                      "type": "array"
+                      "type": "array",
+                      "x-kubernetes-list-type": "atomic"
                     },
                     "message": {
                       "default": "",
@@ -609,7 +852,11 @@
                   ],
                   "type": "object"
                 },
-                "type": "array"
+                "type": "array",
+                "x-kubernetes-list-map-keys": [
+                  "name"
+                ],
+                "x-kubernetes-list-type": "map"
               }
             },
             "required": [
@@ -621,7 +868,8 @@
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-type": "atomic"
         },
         "conditions": {
           "items": {
@@ -663,7 +911,11 @@
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-map-keys": [
+            "type"
+          ],
+          "x-kubernetes-list-type": "map"
         },
         "desired": {
           "additionalProperties": false,
@@ -683,7 +935,8 @@
               "type": [
                 "array",
                 "null"
-              ]
+              ],
+              "x-kubernetes-list-type": "set"
             },
             "image": {
               "default": "",
@@ -757,7 +1010,8 @@
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-type": "atomic"
         },
         "observedGeneration": {
           "default": 0,

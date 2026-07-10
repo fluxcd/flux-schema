@@ -64,7 +64,8 @@
                 "type": [
                   "array",
                   "null"
-                ]
+                ],
+                "x-kubernetes-list-type": "set"
               },
               "generateName": {
                 "type": [
@@ -143,7 +144,8 @@
                 "type": [
                   "array",
                   "null"
-                ]
+                ],
+                "x-kubernetes-list-type": "atomic"
               },
               "name": {
                 "type": [
@@ -197,12 +199,17 @@
                     "name",
                     "uid"
                   ],
-                  "type": "object"
+                  "type": "object",
+                  "x-kubernetes-map-type": "atomic"
                 },
                 "type": [
                   "array",
                   "null"
-                ]
+                ],
+                "x-kubernetes-list-map-keys": [
+                  "uid"
+                ],
+                "x-kubernetes-list-type": "map"
               },
               "resourceVersion": {
                 "type": [
@@ -276,7 +283,8 @@
                 "type": [
                   "array",
                   "null"
-                ]
+                ],
+                "x-kubernetes-list-type": "atomic"
               },
               "evolvingUnion": {
                 "additionalProperties": false,
@@ -290,6 +298,111 @@
                 "required": [
                   "type"
                 ],
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "formatMarkerExamples": {
+                "additionalProperties": false,
+                "properties": {
+                  "base64Data": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "cidrNotation": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "dateField": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "dateTimeField": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "durationField": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "emailAddress": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "hostnameField": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "ipv4Address": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "ipv6Address": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "macAddress": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "passwordField": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "uriField": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "uuid3Field": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "uuid4Field": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "uuid5Field": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "uuidField": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
                 "type": [
                   "object",
                   "null"
@@ -349,14 +462,16 @@
                     "type": [
                       "array",
                       "null"
-                    ]
+                    ],
+                    "x-kubernetes-list-type": "atomic"
                   },
                   "subnets": {
                     "items": {
                       "default": "",
                       "type": "string"
                     },
-                    "type": "array"
+                    "type": "array",
+                    "x-kubernetes-list-type": "atomic"
                   }
                 },
                 "required": [
@@ -425,7 +540,11 @@
                 "type": [
                   "array",
                   "null"
-                ]
+                ],
+                "x-kubernetes-list-map-keys": [
+                  "type"
+                ],
+                "x-kubernetes-list-type": "map"
               },
               "immutableField": {
                 "type": [

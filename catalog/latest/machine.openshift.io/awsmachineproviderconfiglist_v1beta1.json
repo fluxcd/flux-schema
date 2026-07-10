@@ -149,6 +149,13 @@
                         "null"
                       ]
                     },
+                    "throughputMib": {
+                      "format": "int32",
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
                     "volumeSize": {
                       "format": "int64",
                       "type": [
@@ -195,6 +202,21 @@
               "null"
             ]
           },
+          "cpuOptions": {
+            "additionalProperties": false,
+            "properties": {
+              "confidentialCompute": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "type": [
+              "object",
+              "null"
+            ]
+          },
           "credentialsSecret": {
             "additionalProperties": false,
             "properties": {
@@ -209,7 +231,8 @@
             "type": [
               "object",
               "null"
-            ]
+            ],
+            "x-kubernetes-map-type": "atomic"
           },
           "deviceIndex": {
             "default": 0,
@@ -357,7 +380,8 @@
                 "type": [
                   "array",
                   "null"
-                ]
+                ],
+                "x-kubernetes-list-type": "set"
               },
               "generateName": {
                 "type": [
@@ -436,7 +460,8 @@
                 "type": [
                   "array",
                   "null"
-                ]
+                ],
+                "x-kubernetes-list-type": "atomic"
               },
               "name": {
                 "type": [
@@ -490,12 +515,17 @@
                     "name",
                     "uid"
                   ],
-                  "type": "object"
+                  "type": "object",
+                  "x-kubernetes-map-type": "atomic"
                 },
                 "type": [
                   "array",
                   "null"
-                ]
+                ],
+                "x-kubernetes-list-map-keys": [
+                  "uid"
+                ],
+                "x-kubernetes-list-type": "map"
               },
               "resourceVersion": {
                 "type": [
@@ -550,6 +580,87 @@
               "availabilityZone": {
                 "type": [
                   "string",
+                  "null"
+                ]
+              },
+              "host": {
+                "additionalProperties": false,
+                "properties": {
+                  "affinity": {
+                    "type": "string"
+                  },
+                  "dedicatedHost": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "allocationStrategy": {
+                        "default": "UserProvided",
+                        "enum": [
+                          "Dynamic",
+                          "UserProvided"
+                        ],
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "dynamicHostAllocation": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "tags": {
+                            "items": {
+                              "additionalProperties": false,
+                              "default": {},
+                              "properties": {
+                                "name": {
+                                  "default": "",
+                                  "type": "string"
+                                },
+                                "value": {
+                                  "default": "",
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "name"
+                              ],
+                              "type": "object"
+                            },
+                            "type": [
+                              "array",
+                              "null"
+                            ],
+                            "x-kubernetes-list-map-keys": [
+                              "name"
+                            ],
+                            "x-kubernetes-list-type": "map"
+                          }
+                        },
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      },
+                      "id": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "affinity"
+                ],
+                "type": [
+                  "object",
                   "null"
                 ]
               },
@@ -717,12 +828,14 @@
                 },
                 "value": {
                   "default": "",
-                  "type": "string"
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 }
               },
               "required": [
-                "name",
-                "value"
+                "name"
               ],
               "type": "object"
             },
@@ -745,7 +858,8 @@
             "type": [
               "object",
               "null"
-            ]
+            ],
+            "x-kubernetes-map-type": "atomic"
           }
         },
         "required": [

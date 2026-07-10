@@ -50,7 +50,8 @@
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-type": "set"
         },
         "generateName": {
           "type": [
@@ -129,7 +130,8 @@
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-type": "atomic"
         },
         "name": {
           "type": [
@@ -183,12 +185,17 @@
               "name",
               "uid"
             ],
-            "type": "object"
+            "type": "object",
+            "x-kubernetes-map-type": "atomic"
           },
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-map-keys": [
+            "uid"
+          ],
+          "x-kubernetes-list-type": "map"
         },
         "resourceVersion": {
           "type": [
@@ -281,7 +288,11 @@
               "type": [
                 "array",
                 "null"
-              ]
+              ],
+              "x-kubernetes-list-map-keys": [
+                "name"
+              ],
+              "x-kubernetes-list-type": "map"
             },
             "customLogoFile": {
               "additionalProperties": false,
@@ -398,7 +409,8 @@
                       "type": [
                         "array",
                         "null"
-                      ]
+                      ],
+                      "x-kubernetes-list-type": "set"
                     },
                     "enabled": {
                       "items": {
@@ -408,7 +420,8 @@
                       "type": [
                         "array",
                         "null"
-                      ]
+                      ],
+                      "x-kubernetes-list-type": "set"
                     },
                     "state": {
                       "default": "Enabled",
@@ -498,7 +511,11 @@
                       ],
                       "type": "object"
                     },
-                    "type": "array"
+                    "type": "array",
+                    "x-kubernetes-list-map-keys": [
+                      "mode"
+                    ],
+                    "x-kubernetes-list-type": "map"
                   },
                   "type": {
                     "default": "",
@@ -518,7 +535,11 @@
               "type": [
                 "array",
                 "null"
-              ]
+              ],
+              "x-kubernetes-list-map-keys": [
+                "type"
+              ],
+              "x-kubernetes-list-type": "map"
             },
             "perspectives": {
               "items": {
@@ -601,7 +622,8 @@
                                             "type": [
                                               "array",
                                               "null"
-                                            ]
+                                            ],
+                                            "x-kubernetes-list-type": "atomic"
                                           }
                                         },
                                         "required": [
@@ -613,7 +635,8 @@
                                       "type": [
                                         "array",
                                         "null"
-                                      ]
+                                      ],
+                                      "x-kubernetes-list-type": "atomic"
                                     }
                                   },
                                   "type": [
@@ -657,7 +680,8 @@
                                             "type": [
                                               "array",
                                               "null"
-                                            ]
+                                            ],
+                                            "x-kubernetes-list-type": "atomic"
                                           }
                                         },
                                         "required": [
@@ -669,7 +693,8 @@
                                       "type": [
                                         "array",
                                         "null"
-                                      ]
+                                      ],
+                                      "x-kubernetes-list-type": "atomic"
                                     }
                                   },
                                   "type": [
@@ -756,7 +781,8 @@
                                             "type": [
                                               "array",
                                               "null"
-                                            ]
+                                            ],
+                                            "x-kubernetes-list-type": "atomic"
                                           }
                                         },
                                         "required": [
@@ -768,7 +794,8 @@
                                       "type": [
                                         "array",
                                         "null"
-                                      ]
+                                      ],
+                                      "x-kubernetes-list-type": "atomic"
                                     }
                                   },
                                   "type": [
@@ -812,7 +839,8 @@
                                             "type": [
                                               "array",
                                               "null"
-                                            ]
+                                            ],
+                                            "x-kubernetes-list-type": "atomic"
                                           }
                                         },
                                         "required": [
@@ -824,7 +852,8 @@
                                       "type": [
                                         "array",
                                         "null"
-                                      ]
+                                      ],
+                                      "x-kubernetes-list-type": "atomic"
                                     }
                                   },
                                   "type": [
@@ -902,7 +931,11 @@
               "type": [
                 "array",
                 "null"
-              ]
+              ],
+              "x-kubernetes-list-map-keys": [
+                "id"
+              ],
+              "x-kubernetes-list-type": "map"
             },
             "projectAccess": {
               "additionalProperties": false,
@@ -1120,7 +1153,11 @@
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-map-keys": [
+            "type"
+          ],
+          "x-kubernetes-list-type": "map"
         },
         "generations": {
           "items": {
@@ -1166,7 +1203,14 @@
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-map-keys": [
+            "group",
+            "resource",
+            "namespace",
+            "name"
+          ],
+          "x-kubernetes-list-type": "map"
         },
         "latestAvailableRevision": {
           "format": "int32",

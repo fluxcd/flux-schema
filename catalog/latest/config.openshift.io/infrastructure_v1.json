@@ -50,7 +50,8 @@
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-type": "set"
         },
         "generateName": {
           "type": [
@@ -129,7 +130,8 @@
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-type": "atomic"
         },
         "name": {
           "type": [
@@ -183,12 +185,17 @@
               "name",
               "uid"
             ],
-            "type": "object"
+            "type": "object",
+            "x-kubernetes-map-type": "atomic"
           },
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-map-keys": [
+            "uid"
+          ],
+          "x-kubernetes-list-type": "map"
         },
         "resourceVersion": {
           "type": [
@@ -277,7 +284,8 @@
                   "type": [
                     "array",
                     "null"
-                  ]
+                  ],
+                  "x-kubernetes-list-type": "atomic"
                 }
               },
               "type": [
@@ -302,7 +310,8 @@
                   "type": [
                     "array",
                     "null"
-                  ]
+                  ],
+                  "x-kubernetes-list-type": "atomic"
                 },
                 "ingressIPs": {
                   "items": {
@@ -312,7 +321,8 @@
                   "type": [
                     "array",
                     "null"
-                  ]
+                  ],
+                  "x-kubernetes-list-type": "atomic"
                 },
                 "machineNetworks": {
                   "items": {
@@ -322,7 +332,8 @@
                   "type": [
                     "array",
                     "null"
-                  ]
+                  ],
+                  "x-kubernetes-list-type": "atomic"
                 }
               },
               "type": [
@@ -384,7 +395,11 @@
                   "type": [
                     "array",
                     "null"
-                  ]
+                  ],
+                  "x-kubernetes-list-map-keys": [
+                    "name"
+                  ],
+                  "x-kubernetes-list-type": "map"
                 }
               },
               "type": [
@@ -463,7 +478,8 @@
                           ],
                           "type": "object"
                         },
-                        "type": "array"
+                        "type": "array",
+                        "x-kubernetes-list-type": "atomic"
                       }
                     },
                     "required": [
@@ -476,7 +492,11 @@
                   "type": [
                     "array",
                     "null"
-                  ]
+                  ],
+                  "x-kubernetes-list-map-keys": [
+                    "name"
+                  ],
+                  "x-kubernetes-list-type": "map"
                 },
                 "prismCentral": {
                   "additionalProperties": false,
@@ -534,7 +554,11 @@
                     ],
                     "type": "object"
                   },
-                  "type": "array"
+                  "type": "array",
+                  "x-kubernetes-list-map-keys": [
+                    "name"
+                  ],
+                  "x-kubernetes-list-type": "map"
                 }
               },
               "required": [
@@ -557,7 +581,8 @@
                   "type": [
                     "array",
                     "null"
-                  ]
+                  ],
+                  "x-kubernetes-list-type": "atomic"
                 },
                 "ingressIPs": {
                   "items": {
@@ -567,7 +592,8 @@
                   "type": [
                     "array",
                     "null"
-                  ]
+                  ],
+                  "x-kubernetes-list-type": "atomic"
                 },
                 "machineNetworks": {
                   "items": {
@@ -577,7 +603,8 @@
                   "type": [
                     "array",
                     "null"
-                  ]
+                  ],
+                  "x-kubernetes-list-type": "atomic"
                 }
               },
               "type": [
@@ -617,7 +644,11 @@
                   "type": [
                     "array",
                     "null"
-                  ]
+                  ],
+                  "x-kubernetes-list-map-keys": [
+                    "name"
+                  ],
+                  "x-kubernetes-list-type": "map"
                 }
               },
               "type": [
@@ -640,7 +671,8 @@
                   "type": [
                     "array",
                     "null"
-                  ]
+                  ],
+                  "x-kubernetes-list-type": "atomic"
                 },
                 "failureDomains": {
                   "items": {
@@ -706,7 +738,8 @@
                               "default": "",
                               "type": "string"
                             },
-                            "type": "array"
+                            "type": "array",
+                            "x-kubernetes-list-type": "atomic"
                           },
                           "resourcePool": {
                             "type": [
@@ -792,7 +825,11 @@
                   "type": [
                     "array",
                     "null"
-                  ]
+                  ],
+                  "x-kubernetes-list-map-keys": [
+                    "name"
+                  ],
+                  "x-kubernetes-list-type": "map"
                 },
                 "ingressIPs": {
                   "items": {
@@ -802,7 +839,8 @@
                   "type": [
                     "array",
                     "null"
-                  ]
+                  ],
+                  "x-kubernetes-list-type": "atomic"
                 },
                 "machineNetworks": {
                   "items": {
@@ -812,7 +850,8 @@
                   "type": [
                     "array",
                     "null"
-                  ]
+                  ],
+                  "x-kubernetes-list-type": "atomic"
                 },
                 "nodeNetworking": {
                   "additionalProperties": false,
@@ -830,7 +869,8 @@
                           "type": [
                             "array",
                             "null"
-                          ]
+                          ],
+                          "x-kubernetes-list-type": "atomic"
                         },
                         "network": {
                           "type": [
@@ -846,7 +886,8 @@
                           "type": [
                             "array",
                             "null"
-                          ]
+                          ],
+                          "x-kubernetes-list-type": "set"
                         }
                       },
                       "type": [
@@ -866,7 +907,8 @@
                           "type": [
                             "array",
                             "null"
-                          ]
+                          ],
+                          "x-kubernetes-list-type": "atomic"
                         },
                         "network": {
                           "type": [
@@ -882,7 +924,8 @@
                           "type": [
                             "array",
                             "null"
-                          ]
+                          ],
+                          "x-kubernetes-list-type": "set"
                         }
                       },
                       "type": [
@@ -906,7 +949,8 @@
                           "default": "",
                           "type": "string"
                         },
-                        "type": "array"
+                        "type": "array",
+                        "x-kubernetes-list-type": "set"
                       },
                       "port": {
                         "format": "int32",
@@ -929,7 +973,8 @@
                   "type": [
                     "array",
                     "null"
-                  ]
+                  ],
+                  "x-kubernetes-list-type": "atomic"
                 }
               },
               "type": [
@@ -1046,7 +1091,11 @@
                   "type": [
                     "array",
                     "null"
-                  ]
+                  ],
+                  "x-kubernetes-list-map-keys": [
+                    "key"
+                  ],
+                  "x-kubernetes-list-type": "map"
                 }
               },
               "required": [
@@ -1077,7 +1126,8 @@
                           "type": [
                             "array",
                             "null"
-                          ]
+                          ],
+                          "x-kubernetes-list-type": "set"
                         },
                         "apiLoadBalancerIPs": {
                           "items": {
@@ -1087,7 +1137,8 @@
                           "type": [
                             "array",
                             "null"
-                          ]
+                          ],
+                          "x-kubernetes-list-type": "set"
                         },
                         "ingressLoadBalancerIPs": {
                           "items": {
@@ -1097,7 +1148,8 @@
                           "type": [
                             "array",
                             "null"
-                          ]
+                          ],
+                          "x-kubernetes-list-type": "set"
                         }
                       },
                       "type": [
@@ -1115,6 +1167,13 @@
                   },
                   "type": [
                     "object",
+                    "null"
+                  ]
+                },
+                "ipFamily": {
+                  "default": "IPv4",
+                  "type": [
+                    "string",
                     "null"
                   ]
                 },
@@ -1145,7 +1204,8 @@
                   "type": [
                     "array",
                     "null"
-                  ]
+                  ],
+                  "x-kubernetes-list-type": "atomic"
                 },
                 "serviceEndpoints": {
                   "items": {
@@ -1170,7 +1230,8 @@
                   "type": [
                     "array",
                     "null"
-                  ]
+                  ],
+                  "x-kubernetes-list-type": "atomic"
                 }
               },
               "required": [
@@ -1207,7 +1268,8 @@
                           "type": [
                             "array",
                             "null"
-                          ]
+                          ],
+                          "x-kubernetes-list-type": "set"
                         },
                         "apiLoadBalancerIPs": {
                           "items": {
@@ -1217,7 +1279,8 @@
                           "type": [
                             "array",
                             "null"
-                          ]
+                          ],
+                          "x-kubernetes-list-type": "set"
                         },
                         "ingressLoadBalancerIPs": {
                           "items": {
@@ -1227,7 +1290,8 @@
                           "type": [
                             "array",
                             "null"
-                          ]
+                          ],
+                          "x-kubernetes-list-type": "set"
                         }
                       },
                       "type": [
@@ -1249,6 +1313,13 @@
                   ]
                 },
                 "cloudName": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "ipFamily": {
+                  "default": "IPv4",
                   "type": [
                     "string",
                     "null"
@@ -1287,7 +1358,8 @@
                   "type": [
                     "array",
                     "null"
-                  ]
+                  ],
+                  "x-kubernetes-list-type": "atomic"
                 }
               },
               "required": [
@@ -1312,7 +1384,18 @@
                     "default": "",
                     "type": "string"
                   },
-                  "type": "array"
+                  "type": "array",
+                  "x-kubernetes-list-type": "atomic"
+                },
+                "dnsRecordsType": {
+                  "enum": [
+                    "External",
+                    "Internal"
+                  ],
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "ingressIP": {
                   "type": [
@@ -1325,7 +1408,8 @@
                     "default": "",
                     "type": "string"
                   },
-                  "type": "array"
+                  "type": "array",
+                  "x-kubernetes-list-type": "atomic"
                 },
                 "loadBalancer": {
                   "additionalProperties": false,
@@ -1354,7 +1438,8 @@
                   "type": [
                     "array",
                     "null"
-                  ]
+                  ],
+                  "x-kubernetes-list-type": "atomic"
                 },
                 "nodeDNSIP": {
                   "type": [
@@ -1439,7 +1524,8 @@
                           "type": [
                             "array",
                             "null"
-                          ]
+                          ],
+                          "x-kubernetes-list-type": "set"
                         },
                         "apiLoadBalancerIPs": {
                           "items": {
@@ -1449,7 +1535,8 @@
                           "type": [
                             "array",
                             "null"
-                          ]
+                          ],
+                          "x-kubernetes-list-type": "set"
                         },
                         "ingressLoadBalancerIPs": {
                           "items": {
@@ -1459,7 +1546,8 @@
                           "type": [
                             "array",
                             "null"
-                          ]
+                          ],
+                          "x-kubernetes-list-type": "set"
                         }
                       },
                       "type": [
@@ -1511,7 +1599,11 @@
                   "type": [
                     "array",
                     "null"
-                  ]
+                  ],
+                  "x-kubernetes-list-map-keys": [
+                    "key"
+                  ],
+                  "x-kubernetes-list-type": "map"
                 },
                 "resourceTags": {
                   "items": {
@@ -1541,32 +1633,11 @@
                   "type": [
                     "array",
                     "null"
-                  ]
-                },
-                "serviceEndpoints": {
-                  "items": {
-                    "additionalProperties": false,
-                    "default": {},
-                    "properties": {
-                      "name": {
-                        "default": "",
-                        "type": "string"
-                      },
-                      "url": {
-                        "default": "",
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "name",
-                      "url"
-                    ],
-                    "type": "object"
-                  },
-                  "type": [
-                    "array",
-                    "null"
-                  ]
+                  ],
+                  "x-kubernetes-list-map-keys": [
+                    "key"
+                  ],
+                  "x-kubernetes-list-type": "map"
                 }
               },
               "required": [
@@ -1634,7 +1705,11 @@
                   "type": [
                     "array",
                     "null"
-                  ]
+                  ],
+                  "x-kubernetes-list-map-keys": [
+                    "name"
+                  ],
+                  "x-kubernetes-list-type": "map"
                 }
               },
               "type": [
@@ -1677,7 +1752,18 @@
                     "default": "",
                     "type": "string"
                   },
-                  "type": "array"
+                  "type": "array",
+                  "x-kubernetes-list-type": "set"
+                },
+                "dnsRecordsType": {
+                  "enum": [
+                    "External",
+                    "Internal"
+                  ],
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "ingressIP": {
                   "type": [
@@ -1690,7 +1776,8 @@
                     "default": "",
                     "type": "string"
                   },
-                  "type": "array"
+                  "type": "array",
+                  "x-kubernetes-list-type": "set"
                 },
                 "loadBalancer": {
                   "additionalProperties": false,
@@ -1735,9 +1822,20 @@
                     "default": "",
                     "type": "string"
                   },
-                  "type": "array"
+                  "type": "array",
+                  "x-kubernetes-list-type": "atomic"
                 },
                 "cloudName": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "dnsRecordsType": {
+                  "enum": [
+                    "External",
+                    "Internal"
+                  ],
                   "type": [
                     "string",
                     "null"
@@ -1754,7 +1852,8 @@
                     "default": "",
                     "type": "string"
                   },
-                  "type": "array"
+                  "type": "array",
+                  "x-kubernetes-list-type": "atomic"
                 },
                 "loadBalancer": {
                   "additionalProperties": false,
@@ -1783,7 +1882,8 @@
                   "type": [
                     "array",
                     "null"
-                  ]
+                  ],
+                  "x-kubernetes-list-type": "atomic"
                 },
                 "nodeDNSIP": {
                   "type": [
@@ -1815,7 +1915,18 @@
                     "default": "",
                     "type": "string"
                   },
-                  "type": "array"
+                  "type": "array",
+                  "x-kubernetes-list-type": "set"
+                },
+                "dnsRecordsType": {
+                  "enum": [
+                    "External",
+                    "Internal"
+                  ],
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "ingressIP": {
                   "type": [
@@ -1828,7 +1939,8 @@
                     "default": "",
                     "type": "string"
                   },
-                  "type": "array"
+                  "type": "array",
+                  "x-kubernetes-list-type": "set"
                 },
                 "loadBalancer": {
                   "additionalProperties": false,
@@ -1914,7 +2026,11 @@
                   "type": [
                     "array",
                     "null"
-                  ]
+                  ],
+                  "x-kubernetes-list-map-keys": [
+                    "name"
+                  ],
+                  "x-kubernetes-list-type": "map"
                 },
                 "zone": {
                   "default": "",
@@ -1948,7 +2064,18 @@
                     "default": "",
                     "type": "string"
                   },
-                  "type": "array"
+                  "type": "array",
+                  "x-kubernetes-list-type": "atomic"
+                },
+                "dnsRecordsType": {
+                  "enum": [
+                    "External",
+                    "Internal"
+                  ],
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "ingressIP": {
                   "type": [
@@ -1961,7 +2088,8 @@
                     "default": "",
                     "type": "string"
                   },
-                  "type": "array"
+                  "type": "array",
+                  "x-kubernetes-list-type": "atomic"
                 },
                 "loadBalancer": {
                   "additionalProperties": false,
@@ -1990,7 +2118,8 @@
                   "type": [
                     "array",
                     "null"
-                  ]
+                  ],
+                  "x-kubernetes-list-type": "atomic"
                 },
                 "nodeDNSIP": {
                   "type": [

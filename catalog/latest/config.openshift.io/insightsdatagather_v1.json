@@ -50,7 +50,8 @@
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-type": "set"
         },
         "generateName": {
           "type": [
@@ -129,7 +130,8 @@
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-type": "atomic"
         },
         "name": {
           "type": [
@@ -183,12 +185,17 @@
               "name",
               "uid"
             ],
-            "type": "object"
+            "type": "object",
+            "x-kubernetes-map-type": "atomic"
           },
           "type": [
             "array",
             "null"
-          ]
+          ],
+          "x-kubernetes-list-map-keys": [
+            "uid"
+          ],
+          "x-kubernetes-list-type": "map"
         },
         "resourceVersion": {
           "type": [
@@ -218,85 +225,130 @@
       "additionalProperties": false,
       "default": {},
       "properties": {
-        "pinnedImages": {
-          "items": {
-            "additionalProperties": false,
-            "default": {},
-            "properties": {
-              "name": {
+        "gatherConfig": {
+          "additionalProperties": false,
+          "default": {},
+          "properties": {
+            "dataPolicy": {
+              "items": {
                 "default": "",
                 "type": "string"
-              }
+              },
+              "type": [
+                "array",
+                "null"
+              ],
+              "x-kubernetes-list-type": "atomic"
             },
-            "required": [
-              "name"
-            ],
-            "type": "object"
+            "gatherers": {
+              "additionalProperties": false,
+              "default": {},
+              "properties": {
+                "custom": {
+                  "additionalProperties": false,
+                  "default": {},
+                  "properties": {
+                    "configs": {
+                      "items": {
+                        "additionalProperties": false,
+                        "default": {},
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "state": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "state"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array",
+                      "x-kubernetes-list-map-keys": [
+                        "name"
+                      ],
+                      "x-kubernetes-list-type": "map"
+                    }
+                  },
+                  "required": [
+                    "configs"
+                  ],
+                  "type": [
+                    "object",
+                    "null"
+                  ]
+                },
+                "mode": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "mode"
+              ],
+              "type": "object"
+            },
+            "storage": {
+              "additionalProperties": false,
+              "default": {},
+              "properties": {
+                "persistentVolume": {
+                  "additionalProperties": false,
+                  "default": {},
+                  "properties": {
+                    "claim": {
+                      "additionalProperties": false,
+                      "default": {},
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "name"
+                      ],
+                      "type": "object"
+                    },
+                    "mountPath": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "claim"
+                  ],
+                  "type": [
+                    "object",
+                    "null"
+                  ]
+                },
+                "type": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type"
+              ],
+              "type": [
+                "object",
+                "null"
+              ]
+            }
           },
-          "type": "array"
+          "required": [
+            "gatherers"
+          ],
+          "type": "object"
         }
       },
       "required": [
-        "pinnedImages"
+        "gatherConfig"
       ],
       "type": "object"
-    },
-    "status": {
-      "additionalProperties": false,
-      "default": {},
-      "properties": {
-        "conditions": {
-          "items": {
-            "additionalProperties": false,
-            "default": {},
-            "properties": {
-              "lastTransitionTime": {
-                "format": "date-time",
-                "type": "string"
-              },
-              "message": {
-                "default": "",
-                "type": "string"
-              },
-              "observedGeneration": {
-                "format": "int64",
-                "type": [
-                  "integer",
-                  "null"
-                ]
-              },
-              "reason": {
-                "default": "",
-                "type": "string"
-              },
-              "status": {
-                "default": "",
-                "type": "string"
-              },
-              "type": {
-                "default": "",
-                "type": "string"
-              }
-            },
-            "required": [
-              "type",
-              "status",
-              "lastTransitionTime",
-              "reason",
-              "message"
-            ],
-            "type": "object"
-          },
-          "type": [
-            "array",
-            "null"
-          ]
-        }
-      },
-      "type": [
-        "object",
-        "null"
-      ]
     }
   },
   "required": [
