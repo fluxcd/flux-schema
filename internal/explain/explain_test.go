@@ -114,6 +114,7 @@ func TestEcosystemIndexResolveAndComplete(t *testing.T) {
 
 	var helmReleaseRequests int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		g.Expect(r.Header.Get("User-Agent")).To(Equal("flux-schema/internal-explain"))
 		switch r.URL.Path {
 		case "/index.json":
 			_, _ = fmt.Fprint(w, `{"v":3,"projects":[{"groups":[{"g":"helm.toolkit.fluxcd.io","kinds":[["helmrelease",["v2"],1,"HelmRelease",{"n":["hr"]}]]},{"g":"source.extensions.fluxcd.io","kinds":[["artifactgenerator",["v1beta1"],1,"ArtifactGenerator",{"n":["ag"]}]]}]}]}`)
@@ -150,6 +151,7 @@ func TestEcosystemIndexResolveAndComplete(t *testing.T) {
 	ex, err := New(Options{
 		SchemaLocations: []string{srv.URL + "/catalog/{{.Group}}/{{.Kind}}_{{.Version}}.json"},
 		IndexLocations:  []string{srv.URL + "/index.json"},
+		UserAgent:       "flux-schema/internal-explain",
 	})
 	g.Expect(err).ToNot(HaveOccurred())
 

@@ -42,6 +42,10 @@ func init() {
 	rootCmd.SetOut(os.Stdout)
 }
 
+func userAgent() string {
+	return "flux-schema/" + VERSION
+}
+
 // errSilent signals a non-zero exit without printing the usual "✗ ..." line.
 // Used by commands that have already emitted a self-describing summary
 // (e.g. `validate` prints its own "Summary: ... Invalid: N" line); restating

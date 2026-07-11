@@ -131,6 +131,7 @@ func buildExplainerOptions() (explainer.Options, error) {
 		APIVersion:            explainArgs.apiVersion,
 		OutputFormat:          explainArgs.output.String(),
 		Recursive:             explainArgs.recursive,
+		UserAgent:             userAgent(),
 		HTTPTimeout:           rootArgs.timeout,
 		InsecureSkipTLSVerify: explainArgs.insecureSkipTLSVerify,
 	}, nil

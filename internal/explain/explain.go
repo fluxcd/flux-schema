@@ -28,6 +28,7 @@ import (
 	kubeversion "k8s.io/apimachinery/pkg/version"
 
 	"github.com/fluxcd/flux-schema/internal/tmpl"
+	"github.com/fluxcd/flux-schema/internal/useragent"
 )
 
 const (
@@ -101,13 +102,16 @@ var versionCandidates = []string{
 var errResourceNotFound = errors.New("couldn't find resource")
 
 type Options struct {
-	SchemaLocations       []string
-	MetadataLocations     []string
-	IndexLocations        []string
-	APIVersion            string
-	OutputFormat          string
-	Recursive             bool
-	HTTPClient            *retryablehttp.Client
+	SchemaLocations   []string
+	MetadataLocations []string
+	IndexLocations    []string
+	APIVersion        string
+	OutputFormat      string
+	Recursive         bool
+	HTTPClient        *retryablehttp.Client
+	// UserAgent is the value for the User-Agent header on schema fetches;
+	// empty leaves the client untouched.
+	UserAgent             string
 	HTTPTimeout           time.Duration
 	InsecureSkipTLSVerify bool
 }
@@ -258,6 +262,9 @@ func New(opts Options) (*Explainer, error) {
 		if opts.InsecureSkipTLSVerify {
 			client.HTTPClient = &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}}
 		}
+	}
+	if opts.UserAgent != "" {
+		useragent.Wrap(client, opts.UserAgent)
 	}
 	opts.SchemaLocations = locations
 	return &Explainer{opts: opts, templates: compiled, client: client, byteCache: map[string]byteCacheEntry{}}, nil

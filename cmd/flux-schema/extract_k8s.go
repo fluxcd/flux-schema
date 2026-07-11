@@ -17,6 +17,7 @@ import (
 
 	"github.com/fluxcd/flux-schema/internal/extractor"
 	"github.com/fluxcd/flux-schema/internal/flags"
+	"github.com/fluxcd/flux-schema/internal/useragent"
 )
 
 const defaultK8sSwaggerURL = "https://raw.githubusercontent.com/kubernetes/kubernetes/%s/api/openapi-spec/swagger.json"
@@ -122,6 +123,7 @@ func k8sExtractWithVersionFallback(version string) func([]byte) ([]extractor.Sch
 func newDefaultK8sHTTPClient() *retryablehttp.Client {
 	c := retryablehttp.NewClient()
 	c.Logger = nil
+	useragent.Wrap(c, userAgent())
 	return c
 }
 

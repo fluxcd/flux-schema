@@ -451,6 +451,7 @@ func buildValidatorOptions(inputs []string) (validator.Options, error) {
 		SkipJSONPaths:         validateArgs.skipJSONPaths,
 		SkipFiles:             validateArgs.skipFiles,
 		SkipCELRules:          validateArgs.skipCELRules,
+		UserAgent:             userAgent(),
 		HTTPTimeout:           rootArgs.timeout,
 		Workers:               validateArgs.concurrent,
 		InsecureSkipTLSVerify: validateArgs.insecureSkipTLSVerify,

@@ -4,6 +4,8 @@
 package main
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -109,6 +111,42 @@ func TestExplainCmd_Recursive(t *testing.T) {
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(out).To(ContainSubstring("  metadata\t<ObjectMeta>\n    name\t<string>\n"))
 	g.Expect(out).To(ContainSubstring("  spec\t<PodSpec>\n    containers\t<[]Container> -required-\n      image\t<string>\n      imagePullPolicy\t<string>\n      enum: Always, IfNotPresent, Never\n"))
+}
+
+func TestExplainCmd_HTTPUserAgent(t *testing.T) {
+	g := NewWithT(t)
+
+	var userAgents []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		userAgents = append(userAgents, r.Header.Get("User-Agent"))
+		switch r.URL.Path {
+		case "/catalog/example.com/widget_v1.json":
+			_, _ = w.Write([]byte(`{
+				"description": "Widget is a test resource.",
+				"properties": {
+					"apiVersion": {"type": "string"},
+					"kind": {"type": "string"},
+					"spec": {"type": "object", "description": "Widget spec."}
+				},
+				"type": "object"
+			}`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(srv.Close)
+
+	out, err := executeCommand([]string{
+		"explain", "widgets",
+		"--api-version", "example.com/v1",
+		"--schema-location", srv.URL + "/catalog/{{.Group}}/{{.Kind}}_{{.Version}}.json",
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("KIND:       Widget\n"))
+	g.Expect(userAgents).ToNot(BeEmpty())
+	for _, ua := range userAgents {
+		g.Expect(ua).To(Equal("flux-schema/0.0.0-dev.0"))
+	}
 }
 
 func TestExplainCmd_FieldIndexMetadataFallback(t *testing.T) {
