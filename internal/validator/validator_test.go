@@ -1250,6 +1250,7 @@ func TestValidateBytes_MissingApiVersionAndKind_Skipped(t *testing.T) {
 func TestValidateSources_ConcurrencyCacheDedup(t *testing.T) {
 	g := NewWithT(t)
 	var requestCount atomic.Int32
+	var gotUserAgent string
 	// Build a valid schema to return on every request.
 	schemaBody, err := json.Marshal(map[string]any{
 		"type":     "object",
@@ -1265,6 +1266,7 @@ func TestValidateSources_ConcurrencyCacheDedup(t *testing.T) {
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestCount.Add(1)
+		gotUserAgent = r.Header.Get("User-Agent")
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write(schemaBody)
 	}))
@@ -1277,6 +1279,7 @@ func TestValidateSources_ConcurrencyCacheDedup(t *testing.T) {
 	v, err := New(Options{
 		SchemaLocations: []string{srv.URL + "/{{ .Kind }}_{{ .Version }}.json"},
 		HTTPClient:      client,
+		UserAgent:       "flux-schema/internal-validator",
 	})
 	g.Expect(err).ToNot(HaveOccurred())
 
@@ -1309,6 +1312,7 @@ spec: {}
 	g.Expect(count).To(Equal(50))
 	// Exactly one HTTP fetch thanks to the sync.Map + sync.Once cache.
 	g.Expect(requestCount.Load()).To(Equal(int32(1)))
+	g.Expect(gotUserAgent).To(Equal("flux-schema/internal-validator"))
 }
 
 // TestValidateSources_SourceLoadError exercises the produceFromPath →

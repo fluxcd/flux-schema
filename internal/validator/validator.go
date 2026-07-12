@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/fluxcd/flux-schema/internal/tmpl"
+	"github.com/fluxcd/flux-schema/internal/useragent"
 	"github.com/fluxcd/flux-schema/internal/yamldoc"
 )
 
@@ -100,13 +101,16 @@ func (r Result) Identifier() string {
 // StdinSource. It is the caller's responsibility to pass a non-nil reader
 // (typically os.Stdin) when that sentinel is used.
 type Options struct {
-	SchemaLocations       []string
-	SkipMissingSchemas    bool
-	SkipKinds             []string
-	SkipJSONPaths         []string
-	SkipFiles             []string
-	SkipCELRules          bool
-	HTTPClient            *retryablehttp.Client
+	SchemaLocations    []string
+	SkipMissingSchemas bool
+	SkipKinds          []string
+	SkipJSONPaths      []string
+	SkipFiles          []string
+	SkipCELRules       bool
+	HTTPClient         *retryablehttp.Client
+	// UserAgent is the value for the User-Agent header on schema fetches;
+	// empty leaves the client untouched.
+	UserAgent             string
 	HTTPTimeout           time.Duration
 	Workers               int
 	InsecureSkipTLSVerify bool
@@ -286,6 +290,9 @@ func New(opts Options) (*Validator, error) {
 			applyInsecureTLS(c)
 		}
 		opts.HTTPClient = c
+	}
+	if opts.UserAgent != "" {
+		useragent.Wrap(opts.HTTPClient, opts.UserAgent)
 	}
 
 	skipKinds := make([]skipKindMatcher, 0, len(opts.SkipKinds))

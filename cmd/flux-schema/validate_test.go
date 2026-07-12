@@ -485,7 +485,9 @@ func TestValidateCmd_InsecureSkipTLSVerify(t *testing.T) {
 	})
 	g.Expect(err).ToNot(HaveOccurred())
 
-	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	var gotUserAgent string
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotUserAgent = r.Header.Get("User-Agent")
 		_, _ = w.Write(schemaBody)
 	}))
 	t.Cleanup(srv.Close)
@@ -506,6 +508,7 @@ func TestValidateCmd_InsecureSkipTLSVerify(t *testing.T) {
 	})
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(out).To(ContainSubstring("Valid: 1"))
+	g.Expect(gotUserAgent).To(Equal("flux-schema/0.0.0-dev.0"))
 }
 
 // TestValidateCmd_SkipJSONPath strips the SOPS metadata block from the

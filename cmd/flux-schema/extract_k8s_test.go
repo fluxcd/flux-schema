@@ -473,7 +473,9 @@ func TestExtractK8sCmd_VersionFetch(t *testing.T) {
 	// Exercises the --version path via a monkey-patched URL template.
 	g := NewWithT(t)
 
+	var gotUserAgent string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotUserAgent = r.Header.Get("User-Agent")
 		g.Expect(r.URL.Path).To(Equal("/v1.35.0/swagger.json"))
 		_, _ = w.Write([]byte(minimalSwagger))
 	}))
@@ -484,6 +486,7 @@ func TestExtractK8sCmd_VersionFetch(t *testing.T) {
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(source).To(Equal(srv.URL + "/v1.35.0/swagger.json"))
 	g.Expect(data).To(ContainSubstring("Widget"))
+	g.Expect(gotUserAgent).To(Equal("flux-schema/0.0.0-dev.0"))
 }
 
 func TestK8sExtractWithVersionFallback(t *testing.T) {
