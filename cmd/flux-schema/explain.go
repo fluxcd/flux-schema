@@ -64,7 +64,7 @@ func init() {
 		"Get different explanations for particular API version (API group/version)")
 	explainCmd.Flags().VarP(&explainArgs.output, "output", "o", explainArgs.output.Description())
 	explainCmd.Flags().StringArrayVarP(&explainArgs.schemaLocations, "schema-location", "s", nil,
-		"URL or file path for schemas (repeatable); 'default' points at the built-in catalog, 'ecosystem' at schemas.fluxoperator.dev")
+		"URL or file path for schemas (repeatable); 'ecosystem' points at schemas.fluxoperator.dev; 'default' is not supported")
 	explainCmd.Flags().BoolVar(&explainArgs.insecureSkipTLSVerify, "insecure-skip-tls-verify", false,
 		"disable TLS certificate verification when fetching schemas over HTTPS")
 	explainCmd.Flags().StringVarP(&explainArgs.configFile, "config", "f", "", configFlagUsage())
@@ -141,7 +141,17 @@ func buildExplainSchemaLocations() ([]string, error) {
 	if len(explainArgs.schemaLocations) == 0 {
 		return nil, fmt.Errorf("no schema locations configured; pass --schema-location or set explain.schemaLocation in the config file")
 	}
-	return expandSchemaLocations(explainArgs.schemaLocations)
+	locations, err := expandSchemaLocations(explainArgs.schemaLocations)
+	if err != nil {
+		return nil, err
+	}
+	for _, location := range locations {
+		if isDefaultSchemaLocation(location) {
+			return nil, fmt.Errorf(
+				"the default catalog does not support flux-schema explain; use the ecosystem catalog with '-s ecosystem'; see https://fluxcd.io/flux/cli-plugins/flux-schema/explain/#ecosystem-catalog")
+		}
+	}
+	return locations, nil
 }
 
 func buildExplainMetadataLocations(schemaLocations []string) []string {
@@ -178,6 +188,17 @@ func isEcosystemSchemaLocation(location string) bool {
 	}
 	base = strings.TrimRight(base, "/\\")
 	return strings.EqualFold(base, validator.EcosystemSchemaBase)
+}
+
+func isDefaultSchemaLocation(location string) bool {
+	base, _ := splitLocationTail(location)
+	idx := strings.Index(base, "{{")
+	if idx >= 0 {
+		base = base[:idx]
+	}
+	base = strings.TrimRight(base, "/\\")
+	defaultBase := strings.TrimSuffix(validator.DefaultSchemaLocation, "/"+validator.DefaultSchemaLayout)
+	return strings.EqualFold(base, defaultBase)
 }
 
 func explainMetadataLocation(location string) (string, bool) {

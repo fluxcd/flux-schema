@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -352,21 +353,42 @@ func TestExplainCmd_MissingDefaultConfig(t *testing.T) {
 	g.Expect(err).To(MatchError(ContainSubstring("read " + exe + ".config")))
 }
 
-func TestExplainSchemaLocationDefaultExpansion(t *testing.T) {
+func TestExplainCmd_DefaultCatalog(t *testing.T) {
+	g := NewWithT(t)
+
+	_, err := executeCommand([]string{"explain", "pods", "-s", "default"})
+	g.Expect(err).To(MatchError(
+		"the default catalog does not support flux-schema explain; use the ecosystem catalog with '-s ecosystem'; " +
+			"see https://fluxcd.io/flux/cli-plugins/flux-schema/explain/#ecosystem-catalog"))
+}
+
+func TestExplainSchemaLocations(t *testing.T) {
 	g := NewWithT(t)
 	defer resetCmdArgs()
 
-	explainArgs.schemaLocations = []string{"default", "ecosystem", "./catalog"}
+	explainArgs.schemaLocations = []string{"ecosystem", "./catalog"}
 	locations, err := buildExplainSchemaLocations()
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(locations).To(Equal([]string{
-		"https://raw.githubusercontent.com/fluxcd/flux-schema/main/catalog/latest/{{.Group}}/{{.Kind}}_{{.Version}}.json",
 		validator.EcosystemSchemaLocation,
 		"./catalog/{{.Group}}/{{.Kind}}_{{.Version}}.json",
 	}))
 	g.Expect(buildExplainMetadataLocations(locations)).To(Equal([]string{
-		"https://raw.githubusercontent.com/fluxcd/flux-schema/main/catalog/latest/.explain",
 		"./catalog/.explain",
 	}))
 	g.Expect(buildExplainIndexLocations(locations)).To(Equal([]string{validator.EcosystemIndexLocation}))
+}
+
+func TestExplainSchemaLocations_DefaultCatalog(t *testing.T) {
+	defaultBase := strings.TrimSuffix(validator.DefaultSchemaLocation, "/"+validator.DefaultSchemaLayout)
+	for _, location := range []string{"default", "DEFAULT", defaultBase, validator.DefaultSchemaLocation} {
+		t.Run(location, func(t *testing.T) {
+			g := NewWithT(t)
+			defer resetCmdArgs()
+
+			explainArgs.schemaLocations = []string{location}
+			_, err := buildExplainSchemaLocations()
+			g.Expect(err).To(MatchError(ContainSubstring("use the ecosystem catalog with '-s ecosystem'")))
+		})
+	}
 }
