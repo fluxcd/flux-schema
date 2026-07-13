@@ -2,123 +2,177 @@
 weight: 25
 ---
 
-# Kubernetes Schema Explain with Flux Schema CLI
+# Explain Kubernetes Resources
 
-The `flux schema explain` command prints kubectl-style field documentation from
-JSON Schema catalogs, without contacting a Kubernetes API server.
+`flux schema explain` prints kubectl-style documentation for Kubernetes
+resources and fields. It reads JSON Schema catalogs and does not contact a
+Kubernetes API server.
 
-Examples:
+## Quick Start
+
+For most users, the hosted ecosystem catalog is the right choice:
 
 ```shell
-# Explain a native Kubernetes resource from a local catalog
-flux schema explain pods --api-version=v1 --schema-location ./catalog
-
-# Explain a Flux resource from a description-preserving remote catalog
-flux schema explain hr.spec -s ecosystem
-
-# Explain a nested field
-flux schema explain pods.spec.containers --api-version=v1 --schema-location ./catalog
-
-# Print nested fields recursively
-flux schema explain pods --api-version=v1 --recursive --schema-location ./catalog
+flux schema explain helmreleases -s ecosystem
 ```
+
+Add a dot-separated field path to explain a specific field:
+
+```shell
+flux schema explain helmreleases.spec.chart -s ecosystem
+```
+
+Other common examples:
+
+```shell
+# Include nested fields
+flux schema explain pods.spec --recursive -s ecosystem
+
+# Select an API version
+flux schema explain deployments --api-version=apps/v1 -s ecosystem
+```
+
+`explain` does not support the built-in validation catalog selected by
+`-s default`. Use `-s ecosystem` or a custom catalog generated with explain
+metadata.
+
+## Choose a Catalog
+
+`explain` requires either the ecosystem catalog or a custom catalog. If you
+omit `-s`, [configure a catalog](#configure-a-catalog) instead.
+
+### Ecosystem catalog
+
+Use `-s ecosystem` for the hosted catalog at
+[schemas.fluxoperator.dev](https://schemas.fluxoperator.dev). It includes
+Kubernetes APIs and CNCF ecosystem resources with field descriptions.
+
+```shell
+flux schema explain hr.spec -s ecosystem
+```
+
+### Custom catalog
+
+Use a custom catalog for schemas you build yourself, whether they are stored
+locally or hosted on your own server. Generate it with full explain metadata:
+
+```shell
+flux schema extract k8s --with-explain-metadata -d ./my-catalog
+flux schema extract crd crds.yaml --with-explain-metadata -d ./my-catalog
+```
+
+Then pass its directory or URL:
+
+```shell
+flux schema explain pods -s ./my-catalog
+```
+
+See the [custom catalog guide](custom-schema-catalog.md) for extraction,
+layout, and hosting details.
+
+## Resource and Field References
+
+`TYPE` can name a resource or a field within that resource.
+
+| Reference | Example |
+|-----------|---------|
+| Kind | `OCIRepository.spec.verify` |
+| Plural resource name | `ocirepositories.spec.verify` |
+| Fully qualified resource name | `ocirepositories.source.toolkit.fluxcd.io.spec.verify` |
+| Short name | `po.spec`, `hr.spec`, `ag.spec` |
+
+Built-in Kubernetes short names are recognized automatically. The ecosystem
+index and custom catalog metadata provide names for CRDs.
+
+Pass `--api-version=group/version` to select an API version explicitly. With
+this flag, every segment after the resource name is treated as a field. Without
+it, `explain` first checks whether dotted segments identify an API group, then
+falls back to treating them as fields.
 
 ## Flags
 
-| Flag                         | Description                                                                                              |
-|------------------------------|----------------------------------------------------------------------------------------------------------|
-| `-s, --schema-location`      | URL or file path for schemas (repeatable); `default` points at the built-in validation catalog, `ecosystem` at the CNCF ecosystem catalog. |
-| `-f, --config`               | YAML config file with `explain` defaults; defaults to `$FLUX_SCHEMA_CONFIG`, else `<executable>.config`. |
-| `--api-version`              | Get different explanations for a particular API version (`group/version`).                               |
-| `--recursive`                | Print fields of fields.                                                                                  |
-| `-o, --output`               | Output format, one of `plaintext` or `plaintext-openapiv2` (default: `plaintext`).                       |
-| `--insecure-skip-tls-verify` | Disable TLS certificate verification when fetching schemas over HTTPS.                                   |
+| Flag | Description |
+|------|-------------|
+| `-s, --schema-location` | `ecosystem`, or a custom catalog URL, path, or template. Repeat to try multiple catalogs in order. |
+| `-f, --config` | YAML configuration file. |
+| `--api-version` | API version to explain, in `group/version` form. |
+| `--recursive` | Include nested fields, one level deep. |
+| `-o, --output` | `plaintext` or `plaintext-openapiv2`; defaults to `plaintext`. |
+| `--insecure-skip-tls-verify` | Disable TLS certificate verification for HTTPS catalogs. |
 
-When `--schema-location` is not passed, `explain` reads config from
-`--config`, then `$FLUX_SCHEMA_CONFIG`, then a file next to the running binary
-named `<binary>.config`. That config must set `explain.schemaLocation`.
+## Configure a Catalog
+
+When `-s` is omitted, `explain` reads `explain.schemaLocation` from the first
+configured source:
+
+1. The file passed with `--config`.
+2. The file named by `FLUX_SCHEMA_CONFIG`.
+3. A `<binary>.config` file next to the running executable.
+
+The configuration must select `ecosystem` or a custom catalog:
 
 ```yaml
 apiVersion: schema.plugin.fluxcd.io/v1beta1
 kind: Config
 explain:
   schemaLocation:
-    - https://schemas.fluxoperator.dev/catalog
+    - ecosystem
 ```
 
-## Resource References
-
-`explain` resolves resource references in the same style as `kubectl explain`:
-kind names (`OCIRepository.spec.verify`), plural resource names
-(`ocirepositories.spec.verify`), full resource names
-(`ocirepositories.source.toolkit.fluxcd.io.spec.verify`), and short names
-(`po.spec`, `hr.spec`, `ag.spec`). Built-in Kubernetes short names are
-recognized by the command. CRD kinds, plural names, singular names, full
-resource names, and short names are resolved from sharded metadata under
-`.explain/refs/` when custom catalogs provide it. For the `ecosystem` catalog,
-`explain` uses the hosted `https://schemas.fluxoperator.dev/index.json` to
-resolve resource references and provide shell completion without fetching
-thousands of per-resource metadata files. Resource completion suggests the
-canonical resource name (`plural.group`, or `plural` for core resources) for all
-indexed resources matching the typed prefix. Field completion resolves the typed
-resource reference, fetches that schema, and suggests matching child field paths
-while preserving the resource reference the user typed. Loaded schemas and
-not-found lookups are cached in memory for the life of the process; no disk
-cache is written.
-
-When `--api-version` is set, dotted group suffixes are treated like kubectl:
-the first path segment is the resource name and the remaining segments are
-field names. Without `--api-version`, `explain` first tries to interpret dotted
-segments after the resource as an API group, then falls back to field lookup.
-
-## Catalogs
-
-`explain` has two catalog modes.
-
-### Ecosystem index mode
-
-The hosted `ecosystem` catalog is special. `flux schema explain -s ecosystem`
-uses `https://schemas.fluxoperator.dev/index.json` for resource lookup and
-resource-name completion. Field completion and command output fetch only the
-schema JSON needed for the resolved resource. Because the index already provides
-plural names, short names, full resource names, and resource completion
-candidates, the catalog does not need alias redirect files or a `.explain/`
-tree.
-
-Schemas used with this mode should be generated with JSON-only explain type
-metadata:
+With that configuration, the catalog flag can be omitted:
 
 ```shell
-flux schema extract k8s --with-explain-type-metadata -d ./catalog
+flux schema explain pods.spec
 ```
 
-`--with-explain-type-metadata` keeps only schema-local JSON hints used after a
-schema has been loaded, such as named field types (`Container`, `Quantity`,
-`IntOrString`) and referenced type descriptions. It does not write alias JSON
-files, `.explain/refs/`, or `.explain/completion/`.
+## Detailed Behavior
 
-### Standalone catalog mode
+The remaining sections describe catalog lookup and metadata. They are mainly
+useful when building catalogs or integrating shell completion.
 
-Use standalone mode for custom catalogs that must contain everything
-`flux schema explain` needs without the ecosystem index.
+### Ecosystem catalog lookup
 
-```shell
-flux schema extract k8s --with-explain-metadata -d ./catalog
-flux schema extract crd --with-explain-metadata -d ./catalog
-```
+The ecosystem catalog uses
+`https://schemas.fluxoperator.dev/index.json` for resource lookup and
+resource-name completion. This has two practical effects:
 
-`--with-explain-metadata` is the full explain mode. It is a superset of
-`--with-explain-type-metadata`: it keeps the schema-local JSON type hints and
-also writes alias redirects, `.explain/refs/` lookup files, and
-`.explain/completion/` shards used for kubectl-style resource references and
-type-reference shell completion.
+- Only the schema needed for the requested resource is fetched.
+- The hosted catalog does not need alias redirect files or a `.explain/` tree.
 
-`--with-field-index` is independent from both modes. It writes `.fields.txt`
-sidecars for search and agent workflows. `explain` does not use field indexes
-for resource lookup, completion, field rendering, type names, or descriptions.
-It can read them only as a fallback for root `apiVersion` and `kind` when JSON
-explain metadata is missing.
+Its schemas contain JSON-only type metadata generated with
+`--with-explain-type-metadata`. This preserves named field types such as
+`Container`, `Quantity`, and `IntOrString`, plus referenced type descriptions.
 
-Catalogs generated with `--strip-description` still resolve fields, but they
-cannot reproduce kubectl's descriptive output byte-for-byte because regular
-descriptions and explain type descriptions are removed.
+### Custom catalog metadata
+
+`--with-explain-metadata` writes everything a custom catalog needs:
+
+- Schema-local type hints and referenced type descriptions.
+- Alias redirect JSON files.
+- `.explain/refs/` files for resource lookup.
+- `.explain/completion/` shards for resource-name completion.
+
+This flag is a superset of `--with-explain-type-metadata`. Use the type-only
+flag when a separate index supplies resource lookup and completion, as the
+ecosystem catalog does.
+
+### Shell completion and caching
+
+Resource completion returns the canonical name: `plural.group` for grouped
+resources and `plural` for core resources. Field completion fetches the
+resolved schema and suggests child field paths while preserving the resource
+reference that was typed.
+
+Loaded schemas and not-found lookups are cached in memory for the life of the
+process. No disk cache is written.
+
+### Field indexes and descriptions
+
+`--with-field-index` is independent of explain metadata. Its `.fields.txt`
+files are intended for search, agents, and other catalog consumers. `explain`
+only reads them as a fallback for root `apiVersion` and `kind` when JSON explain
+metadata is missing.
+
+Catalogs generated with `--strip-description` can still resolve fields, but
+their descriptive output is limited because regular and explain type
+descriptions have been removed.
