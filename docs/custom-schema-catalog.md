@@ -79,7 +79,7 @@ emits one schema file per CRD version.
 | `--strip-description` | Drop `description` fields from the generated schemas to reduce their size. |
 | `--with-field-index` | Also write a `.fields.txt` field index next to each schema. |
 | `--with-explain-type-metadata` | Keep JSON-only explain type hints, without writing explain lookup files. |
-| `--with-explain-metadata` | Include JSON type hints, alias redirects, and `.explain/` lookup shards used by standalone `flux schema explain` catalogs. |
+| `--with-explain-metadata` | Include JSON type hints, alias redirects, and `.explain/` lookup shards for custom catalogs used by `flux schema explain`. |
 
 Generate schemas for every CRD installed in a cluster:
 
@@ -118,7 +118,7 @@ standalone files.
 | `--strip-description` | Drop `description` fields from the generated schemas to reduce their size. |
 | `--with-field-index` | Also write a `.fields.txt` field index next to each schema. |
 | `--with-explain-type-metadata` | Keep JSON-only explain type hints, without writing explain lookup files. |
-| `--with-explain-metadata` | Include JSON type hints, alias redirects, and `.explain/` lookup shards used by standalone `flux schema explain` catalogs. |
+| `--with-explain-metadata` | Include JSON type hints, alias redirects, and `.explain/` lookup shards for custom catalogs used by `flux schema explain`. |
 
 Pin the catalog to a specific Kubernetes release:
 
@@ -153,7 +153,7 @@ emitted; embedded upstream Kubernetes types (e.g. `Pod`) are inlined.
 | `--strip-description` | Drop `description` fields from the generated schemas to reduce their size. |
 | `--with-field-index` | Also write a `.fields.txt` field index next to each schema. |
 | `--with-explain-type-metadata` | Keep JSON-only explain type hints, without writing explain lookup files. |
-| `--with-explain-metadata` | Include JSON type hints, alias redirects, and `.explain/` lookup shards used by standalone `flux schema explain` catalogs. |
+| `--with-explain-metadata` | Include JSON type hints, alias redirects, and `.explain/` lookup shards for custom catalogs used by `flux schema explain`. |
 
 Pin to an OpenShift release branch:
 
@@ -234,12 +234,12 @@ field render hints that are otherwise lost when OpenAPI `$ref` definitions
 are inlined, such as named nested types (`Container`, `Quantity`,
 `IntOrString`) and referenced type descriptions. Pass
 `--with-explain-type-metadata` when another index provides resource lookup and
-resource-name completion. This is the ecosystem catalog mode used with
+resource-name completion. The ecosystem catalog uses this metadata level with
 `--schema-location ecosystem`, where `explain` resolves resources from
 `https://schemas.fluxoperator.dev/index.json` and uses the loaded JSON schema for
 kubectl-style field output and field-path completion.
 
-Standalone explain metadata includes the schema-local type metadata plus the
+Custom catalog explain metadata includes the schema-local type metadata plus the
 lookup files needed when there is no separate ecosystem index: alias redirect
 JSON files, `.explain/refs/`, and `.explain/completion/`. Pass
 `--with-explain-metadata` for custom catalogs that should support
