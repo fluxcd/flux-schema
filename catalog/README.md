@@ -10,11 +10,11 @@ via `--schema-location ecosystem` and browsable at https://schemas.fluxoperator.
 | Source | Version |
 | --- | --- |
 | [kubernetes/kubernetes](https://github.com/kubernetes/kubernetes) | v1.36.2 |
-| [kubernetes-sigs/gateway-api](https://github.com/kubernetes-sigs/gateway-api) | v1.6.0 |
+| [kubernetes-sigs/gateway-api](https://github.com/kubernetes-sigs/gateway-api) | v1.6.1 |
 | [openshift/api](https://github.com/openshift/api) | v4.22 |
-| [fluxcd/flux2](https://github.com/fluxcd/flux2) | v2.9.1 |
+| [fluxcd/flux2](https://github.com/fluxcd/flux2) | v2.9.2 |
 | [fluxcd/flagger](https://github.com/fluxcd/flagger) | v1.43.0 |
-| [controlplaneio-fluxcd/flux-operator](https://github.com/controlplaneio-fluxcd/flux-operator) | v0.54.1 |
+| [controlplaneio-fluxcd/flux-operator](https://github.com/controlplaneio-fluxcd/flux-operator) | v0.55.0 |
 <!-- versions:end -->
 
 ## Flux APIs
