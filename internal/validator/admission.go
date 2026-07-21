@@ -88,6 +88,12 @@ func hasAdmissionValidation(node any) bool {
 
 func newStructuralSchema(raw map[string]any) (*apiextschema.Structural, error) {
 	structuralRaw := rewriteForKubernetesStructural(raw).(map[string]any)
+	// $schema and $id are JSON Schema document metadata with no admission or
+	// CEL semantics, but they round-trip into JSONSchemaProps fields that
+	// NewStructural rejects. Third-party catalogs commonly set $schema, so
+	// drop both from the structural copy instead of failing the build.
+	delete(structuralRaw, "$schema")
+	delete(structuralRaw, "$id")
 	body, err := json.Marshal(structuralRaw)
 	if err != nil {
 		return nil, fmt.Errorf("marshal schema: %w", err)
