@@ -182,6 +182,41 @@ func TestNewCELValidator_RulePassesWhenSatisfied(t *testing.T) {
 	g.Expect(v.Validate(context.Background(), doc)).To(BeEmpty())
 }
 
+func TestNewStructuralSchema_IgnoresSchemaMetadataKeys(t *testing.T) {
+	g := NewWithT(t)
+	// Third-party catalogs commonly carry root $schema/$id; NewStructural
+	// rejects both, so the structural build must drop them instead of
+	// failing every schema that also has x-kubernetes-* extensions.
+	schema := schemaFromJSON(t, `{
+		"$schema": "https://json-schema.org/draft/2020-12/schema",
+		"$id": "https://example.com/widget_v1.json",
+		"type": "object",
+		"properties": {
+			"spec": {
+				"type": "object",
+				"properties": { "foo": { "type": "string" } },
+				"x-kubernetes-validations": [
+					{ "rule": "self.foo == 'ok'", "message": "spec.foo must be ok" }
+				]
+			}
+		}
+	}`)
+
+	v, err := newCELValidator(schema)
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(v).ToNot(BeNil())
+
+	doc := map[string]any{"spec": map[string]any{"foo": "bad"}}
+	errs := v.Validate(context.Background(), doc)
+	g.Expect(errs).To(HaveLen(1))
+	g.Expect(errs[0].Msg).To(ContainSubstring("spec.foo must be ok"))
+
+	// The loader reuses the raw map for JSON Schema compilation; the
+	// structural rewrite must not strip keys from the caller's copy.
+	g.Expect(schema).To(HaveKey("$schema"))
+	g.Expect(schema).To(HaveKey("$id"))
+}
+
 func TestNewCELValidator_DefaultsBeforeCELAllowsUnguardedGatewayFields(t *testing.T) {
 	g := NewWithT(t)
 	schema := schemaFromJSON(t, `{
