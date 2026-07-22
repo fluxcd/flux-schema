@@ -46,7 +46,8 @@ jobs:
 By default, the action looks for a `.fluxschema.yml` file at the repository
 root. When present, all validation options (schema locations, skipped kinds,
 SOPS field stripping, etc.) are read from it. When absent, the action falls
-back to a built-in set of defaults that targets the Flux Schema catalog.
+back to a built-in set of defaults that targets the ecosystem catalog at
+[schemas.fluxoperator.dev](https://schemas.fluxoperator.dev/).
 
 ### Using a config file
 
@@ -146,10 +147,10 @@ surface for tools and AI agents. It can be uploaded as a workflow artifact:
 
 ## Action Inputs
 
-| Name            | Description                                                                                                                   | Default           |
-|-----------------|-------------------------------------------------------------------------------------------------------------------------------|-------------------|
-| `path`          | Root directory to validate (relative to the repository root).                                                                 | `.`               |
-| `exclude`       | Newline-separated list of directories to exclude from validation and the bundle.                                              | `""`              |
-| `config`        | Path to Flux Schema CLI config file. When the file does not exist, sensible defaults targeting the built-in catalog are used. | `.fluxschema.yml` |
-| `helm-charts`   | Render Helm charts with `helm template` using their default values and validate the output. Requires `helm` on `PATH`.        | `"false"`         |
-| `output-bundle` | Path to a file where all manifests and rendered overlays are merged as a single YAML stream with provenance comments.         | `""`              |
+| Name            | Description                                                                                                                       | Default           |
+|-----------------|-----------------------------------------------------------------------------------------------------------------------------------|-------------------|
+| `path`          | Root directory to validate (relative to the repository root).                                                                     | `.`               |
+| `exclude`       | Newline-separated list of directories to exclude from validation and the bundle.                                                  | `""`              |
+| `config`        | Path to Flux Schema CLI config file. When the file does not exist, sensible defaults targeting the ecosystem catalog are used.    | `.fluxschema.yml` |
+| `helm-charts`   | Render Helm charts with `helm template` using their default values and validate the output. Requires `helm` on `PATH`.            | `"false"`         |
+| `output-bundle` | Path to a file where all manifests and rendered overlays are merged as a single YAML stream with provenance comments.             | `""`              |

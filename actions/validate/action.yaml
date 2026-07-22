@@ -16,7 +16,7 @@ inputs:
   config:
     description: |
       Path to a flux-schema config file (relative to the repository root).
-      When the file does not exist, the default Flux Schema catalog will be used.
+      When the file does not exist, the ecosystem catalog (schemas.fluxoperator.dev) will be used.
     required: false
     default: ".fluxschema.yml"
   output-bundle:
