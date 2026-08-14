@@ -113,7 +113,7 @@ systems and air-gapped environments.
 
 Two composite actions cover GitOps validation pipelines:
 
-- **[`fluxcd/flux-schema/actions/setup`](actions/setup)** — install the CLI on GitHub runners.
+- **[`fluxcd/flux2/action`]([actions/setup](https://github.com/fluxcd/flux2/tree/main/action))** — install the Flux CLI and plugins on GitHub runners.
 - **[`fluxcd/flux-schema/actions/validate`](actions/validate)** —
   auto-detect kustomize overlays, render them with `kubectl kustomize`, and
   validate every YAML document against the catalog (including CEL rules).
@@ -133,12 +133,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
-      - name: Setup Flux Schema CLI
-        uses: fluxcd/flux-schema/actions/setup@main
+        uses: actions/checkout@v7
+      - name: Setup Flux CLI with Schema Plugin
+        uses: fluxcd/flux2/action@main
+        with:
+          plugins: |
+            schema
       - name: Validate manifests
         uses: fluxcd/flux-schema/actions/validate@main
 ```
+
+For more advanced workflows, see the [actions/validate](actions/validate) documentation.
 
 ### Docker
 
