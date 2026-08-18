@@ -33,6 +33,15 @@ inputs:
       validate the output. Requires helm on PATH.
     required: false
     default: "false"
+  envsubst:
+    description: |
+      Path to a dotenv file with Flux post-build substitution variables
+      (relative to the repository root). When set, standalone manifests and
+      rendered kustomize overlays are piped through 'flux envsubst' before
+      validation. Requires the Flux CLI on PATH. When empty, no substitution
+      is performed.
+    required: false
+    default: ""
 runs:
   using: composite
   steps:
@@ -44,6 +53,7 @@ runs:
         CONFIG_FILE: ${{ inputs.config }}
         BUNDLE_FILE: ${{ inputs.output-bundle }}
         HELM_CHARTS: ${{ inputs.helm-charts }}
+        ENVSUBST_FILE: ${{ inputs.envsubst }}
       run: |
         set -euo pipefail
         args=("-d" "$ROOT_DIR" "-c" "$CONFIG_FILE")
@@ -55,6 +65,9 @@ runs:
         fi
         if [[ -n "$BUNDLE_FILE" ]]; then
           args+=("-b" "$BUNDLE_FILE")
+        fi
+        if [[ -n "$ENVSUBST_FILE" ]]; then
+          args+=("-E" "$ENVSUBST_FILE")
         fi
         if [[ "$HELM_CHARTS" == "true" ]]; then
           args+=("-H")

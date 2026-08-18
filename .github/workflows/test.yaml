@@ -42,6 +42,32 @@ jobs:
         uses: ./actions/validate
         with:
           path: example
+      - name: Test validate action with envsubst
+        run: |
+          mkdir -p "${RUNNER_TEMP}/envsubst-test/overlay"
+          cat << 'EOF' > "${RUNNER_TEMP}/envsubst-test/ingress.yaml"
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress
+          metadata:
+            name: app.${CLUSTER_DOMAIN}
+          spec:
+            rules:
+              - host: app.${CLUSTER_DOMAIN}
+          EOF
+          cat << 'EOF' > "${RUNNER_TEMP}/envsubst-test/overlay/kustomization.yaml"
+          apiVersion: kustomize.config.k8s.io/v1beta1
+          kind: Kustomization
+          resources:
+            - ../ingress.yaml
+          EOF
+          echo "CLUSTER_DOMAIN=example.com" > "${RUNNER_TEMP}/flux.env"
+          if ./actions/validate/validate.sh -d "${RUNNER_TEMP}/envsubst-test" -- \
+            --schema-location ./catalog/latest; then
+            echo "expected validation to fail without --envsubst"
+            exit 1
+          fi
+          ./actions/validate/validate.sh -d "${RUNNER_TEMP}/envsubst-test" \
+            -E "${RUNNER_TEMP}/flux.env" -- --schema-location ./catalog/latest
       - name: Build Docker image
         run: make docker-build
       - name: Run Docker smoke test

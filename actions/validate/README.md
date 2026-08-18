@@ -11,10 +11,10 @@ renders them with `helm template` using their default values.
 
 ## Prerequisites
 
-The action expects `kubectl` (for building overlays with `kubectl kustomize`)
-and `flux-schema` to be on `PATH`, plus `helm` when `helm-charts` is enabled.
-`kubectl` and `helm` are pre-installed on GitHub-hosted runners; compose with
-[`fluxcd/flux-schema/actions/setup`](../setup) to install the CLI.
+The action expects `flux` to be on `PATH` along with the schema plugin
+and `kubectl` (for building overlays with `kubectl kustomize`).
+Also `helm` when `helm-charts` is enabled.
+`kubectl` and `helm` are pre-installed on GitHub-hosted runners.
 
 ## Usage
 
@@ -32,9 +32,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
-      - name: Setup Flux Schema CLI
-        uses: fluxcd/flux-schema/actions/setup@main
+        uses: actions/checkout@v7
+      - name: Setup Flux CLI with Schema Plugin
+        uses: fluxcd/flux2/action@main
+        with:
+          plugins: |
+            schema
       - name: Validate manifests
         uses: fluxcd/flux-schema/actions/validate@main
         with:
@@ -97,6 +100,36 @@ part of their parent and are not templated standalone. Charts with remote
 dependencies must have them vendored (`helm dependency build`) before
 validation, otherwise the render fails and is reported as an error.
 
+### Post-build variable substitution
+
+Manifests using Flux
+[post-build variable substitution](https://fluxcd.io/flux/components/kustomize/kustomizations/#post-build-variable-substitution)
+may not pass validation if the substitutions are not applied in CI.
+
+The action exposes an `envsubst` input that takes a dotenv file,
+exports its variables, and pipes standalone manifests and rendered
+kustomize overlays through `flux envsubst` before validation:
+
+```yaml
+- uses: fluxcd/flux-schema/actions/validate@main
+  with:
+    envsubst: flux.env
+```
+
+```shell
+# flux.env
+CLUSTER_DOMAIN=example.com
+CLUSTER_REGION=eu-central-1
+```
+
+Variables that are not set are replaced with empty strings.
+It is recommended to specify all used vars in the dotenv file or
+define default values in the manifests e.g. `${CLUSTER_DOMAIN:=example.com}`.
+
+Note that Helm chart output is not substituted.
+
+When `output-bundle` is set, the bundle contains the substituted output.
+
 ### Writing a manifest bundle
 
 With `output-bundle`, the action merges every standalone manifest and the
@@ -123,7 +156,7 @@ kind: HelmRelease
 With `helm-charts` enabled, rendered charts are bundled as well under
 `# === helm-chart: <dir> ===` headers. Overlays and charts whose build fails
 are recorded with a `(build failed)` marker. A build or validation failure
-does not stop the run: all remaining files, overlays and charts are still
+does not stop the run: all remaining files, overlays, and charts are still
 validated and bundled, and the action fails at the end with the total error
 count.
 
@@ -153,4 +186,5 @@ surface for tools and AI agents. It can be uploaded as a workflow artifact:
 | `exclude`       | Newline-separated list of directories to exclude from validation and the bundle.                                                  | `""`              |
 | `config`        | Path to Flux Schema CLI config file. When the file does not exist, sensible defaults targeting the ecosystem catalog are used.    | `.fluxschema.yml` |
 | `helm-charts`   | Render Helm charts with `helm template` using their default values and validate the output. Requires `helm` on `PATH`.            | `"false"`         |
+| `envsubst`      | Path to a dotenv file with Flux post-build substitution variables, applied with `flux envsubst`. Requires `flux` on `PATH`.       | `""`              |
 | `output-bundle` | Path to a file where all manifests and rendered overlays are merged as a single YAML stream with provenance comments.             | `""`              |
