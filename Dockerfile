@@ -33,11 +33,12 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
 
 FROM alpine:3.23
 
-RUN apk --no-cache add ca-certificates \
+RUN apk --no-cache add bash ca-certificates \
   && update-ca-certificates
 
 COPY catalog/ /catalog/
 COPY --from=builder /usr/local/bin/flux-schema /usr/local/bin/
+COPY --chmod=0755 actions/validate/validate.sh /usr/local/bin/flux-schema-validate.sh
 
 USER 65534:65534
 
