@@ -874,6 +874,13 @@
                         "null"
                       ]
                     },
+                    "observedGeneration": {
+                      "format": "int64",
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
                     "reason": {
                       "type": [
                         "string",

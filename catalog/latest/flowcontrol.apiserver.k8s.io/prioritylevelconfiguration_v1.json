@@ -294,10 +294,7 @@
               "required": [
                 "type"
               ],
-              "type": [
-                "object",
-                "null"
-              ]
+              "type": "object"
             },
             "nominalConcurrencyShares": {
               "format": "int32",
@@ -307,6 +304,9 @@
               ]
             }
           },
+          "required": [
+            "limitResponse"
+          ],
           "type": [
             "object",
             "null"
@@ -319,10 +319,7 @@
       "required": [
         "type"
       ],
-      "type": [
-        "object",
-        "null"
-      ]
+      "type": "object"
     },
     "status": {
       "additionalProperties": false,
@@ -357,12 +354,12 @@
                 ]
               },
               "type": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": "string"
               }
             },
+            "required": [
+              "type"
+            ],
             "type": "object"
           },
           "type": [
@@ -382,6 +379,7 @@
     }
   },
   "required": [
+    "spec",
     "apiVersion",
     "kind"
   ],

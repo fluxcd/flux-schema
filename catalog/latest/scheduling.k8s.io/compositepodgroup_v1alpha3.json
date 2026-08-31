@@ -214,165 +214,185 @@
     "spec": {
       "additionalProperties": false,
       "properties": {
-        "controllerRef": {
+        "disruptionMode": {
           "additionalProperties": false,
           "properties": {
-            "apiGroup": {
+            "all": {
               "type": [
-                "string",
+                "object",
                 "null"
               ]
             },
-            "kind": {
-              "type": "string"
-            },
-            "name": {
-              "type": "string"
+            "single": {
+              "type": [
+                "object",
+                "null"
+              ]
             }
           },
-          "required": [
-            "kind",
-            "name"
-          ],
           "type": [
             "object",
             "null"
           ]
         },
-        "podGroupTemplates": {
+        "parentCompositePodGroupName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "preemptionPolicy": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "priority": {
+          "format": "int32",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "priorityClassName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "schedulingConstraints": {
+          "additionalProperties": false,
+          "properties": {
+            "topology": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "key"
+                ],
+                "type": "object"
+              },
+              "type": [
+                "array",
+                "null"
+              ],
+              "x-kubernetes-list-type": "atomic"
+            }
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "schedulingPolicy": {
+          "additionalProperties": false,
+          "properties": {
+            "basic": {
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "gang": {
+              "additionalProperties": false,
+              "properties": {
+                "minGroupCount": {
+                  "format": "int32",
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "minGroupCount"
+              ],
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          },
+          "type": "object"
+        },
+        "workloadRef": {
+          "additionalProperties": false,
+          "properties": {
+            "templateName": {
+              "type": "string"
+            },
+            "workloadName": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "workloadName",
+            "templateName"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "workloadRef",
+        "schedulingPolicy"
+      ],
+      "type": "object"
+    },
+    "status": {
+      "additionalProperties": false,
+      "properties": {
+        "conditions": {
           "items": {
             "additionalProperties": false,
             "properties": {
-              "disruptionMode": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "name": {
+              "lastTransitionTime": {
+                "format": "date-time",
                 "type": "string"
               },
-              "priority": {
-                "format": "int32",
+              "message": {
+                "type": "string"
+              },
+              "observedGeneration": {
+                "format": "int64",
                 "type": [
                   "integer",
                   "null"
                 ]
               },
-              "priorityClassName": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+              "reason": {
+                "type": "string"
               },
-              "resourceClaims": {
-                "items": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "name": {
-                      "type": "string"
-                    },
-                    "resourceClaimName": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    },
-                    "resourceClaimTemplateName": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "name"
-                  ],
-                  "type": "object"
-                },
-                "type": [
-                  "array",
-                  "null"
-                ],
-                "x-kubernetes-list-map-keys": [
-                  "name"
-                ],
-                "x-kubernetes-list-type": "map"
+              "status": {
+                "type": "string"
               },
-              "schedulingConstraints": {
-                "additionalProperties": false,
-                "properties": {
-                  "topology": {
-                    "items": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "key": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "key"
-                      ],
-                      "type": "object"
-                    },
-                    "type": [
-                      "array",
-                      "null"
-                    ],
-                    "x-kubernetes-list-type": "atomic"
-                  }
-                },
-                "type": [
-                  "object",
-                  "null"
-                ]
-              },
-              "schedulingPolicy": {
-                "additionalProperties": false,
-                "properties": {
-                  "basic": {
-                    "type": [
-                      "object",
-                      "null"
-                    ]
-                  },
-                  "gang": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "minCount": {
-                        "format": "int32",
-                        "type": "integer"
-                      }
-                    },
-                    "required": [
-                      "minCount"
-                    ],
-                    "type": [
-                      "object",
-                      "null"
-                    ]
-                  }
-                },
-                "type": "object"
+              "type": {
+                "type": "string"
               }
             },
             "required": [
-              "name",
-              "schedulingPolicy"
+              "type",
+              "status",
+              "lastTransitionTime",
+              "reason",
+              "message"
             ],
             "type": "object"
           },
-          "type": "array",
+          "type": [
+            "array",
+            "null"
+          ],
           "x-kubernetes-list-map-keys": [
-            "name"
+            "type"
           ],
           "x-kubernetes-list-type": "map"
         }
       },
-      "required": [
-        "podGroupTemplates"
-      ],
-      "type": "object"
+      "type": [
+        "object",
+        "null"
+      ]
     }
   },
   "required": [

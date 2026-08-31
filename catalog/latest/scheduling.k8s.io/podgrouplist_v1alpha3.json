@@ -14,9 +14,6 @@
               "null"
             ]
           },
-          "driverName": {
-            "type": "string"
-          },
           "kind": {
             "type": [
               "string",
@@ -227,9 +224,247 @@
               "null"
             ]
           },
-          "parameters": {
-            "additionalProperties": {
-              "type": "string"
+          "spec": {
+            "additionalProperties": false,
+            "properties": {
+              "disruptionMode": {
+                "additionalProperties": false,
+                "properties": {
+                  "all": {
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "single": {
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  }
+                },
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "parentCompositePodGroupName": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "preemptionPolicy": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "priority": {
+                "format": "int32",
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "priorityClassName": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "resourceClaims": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "resourceClaimName": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "resourceClaimTemplateName": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "name"
+                  ],
+                  "type": "object"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "x-kubernetes-list-map-keys": [
+                  "name"
+                ],
+                "x-kubernetes-list-type": "map"
+              },
+              "schedulingConstraints": {
+                "additionalProperties": false,
+                "properties": {
+                  "topology": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "key": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "key"
+                      ],
+                      "type": "object"
+                    },
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "x-kubernetes-list-type": "atomic"
+                  }
+                },
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "schedulingPolicy": {
+                "additionalProperties": false,
+                "properties": {
+                  "basic": {
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "gang": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "minCount": {
+                        "format": "int32",
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "minCount"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  }
+                },
+                "type": "object"
+              },
+              "workloadRef": {
+                "additionalProperties": false,
+                "properties": {
+                  "templateName": {
+                    "type": "string"
+                  },
+                  "workloadName": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "workloadName",
+                  "templateName"
+                ],
+                "type": [
+                  "object",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "schedulingPolicy"
+            ],
+            "type": "object"
+          },
+          "status": {
+            "additionalProperties": false,
+            "properties": {
+              "conditions": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "lastTransitionTime": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "observedGeneration": {
+                      "format": "int64",
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "reason": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "status",
+                    "lastTransitionTime",
+                    "reason",
+                    "message"
+                  ],
+                  "type": "object"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "x-kubernetes-list-map-keys": [
+                  "type"
+                ],
+                "x-kubernetes-list-type": "map"
+              },
+              "resourceClaimStatuses": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "resourceClaimName": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "name"
+                  ],
+                  "type": "object"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "x-kubernetes-list-map-keys": [
+                  "name"
+                ],
+                "x-kubernetes-list-type": "map"
+              }
             },
             "type": [
               "object",
@@ -238,7 +473,7 @@
           }
         },
         "required": [
-          "driverName"
+          "spec"
         ],
         "type": "object"
       },

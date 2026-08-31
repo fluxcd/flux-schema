@@ -214,6 +214,18 @@
     "spec": {
       "additionalProperties": false,
       "properties": {
+        "attestations": {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
         "audiences": {
           "items": {
             "type": "string"

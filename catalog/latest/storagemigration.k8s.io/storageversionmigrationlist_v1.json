@@ -227,17 +227,26 @@
           "spec": {
             "additionalProperties": false,
             "properties": {
-              "cidrs": {
-                "items": {
-                  "type": "string"
+              "resource": {
+                "additionalProperties": false,
+                "properties": {
+                  "group": {
+                    "type": "string"
+                  },
+                  "resource": {
+                    "type": "string"
+                  }
                 },
-                "type": [
-                  "array",
-                  "null"
+                "required": [
+                  "group",
+                  "resource"
                 ],
-                "x-kubernetes-list-type": "atomic"
+                "type": "object"
               }
             },
+            "required": [
+              "resource"
+            ],
             "type": [
               "object",
               "null"
@@ -291,6 +300,12 @@
                   "type"
                 ],
                 "x-kubernetes-list-type": "map"
+              },
+              "resourceVersion": {
+                "type": [
+                  "string",
+                  "null"
+                ]
               }
             },
             "type": [

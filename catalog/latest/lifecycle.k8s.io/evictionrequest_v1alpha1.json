@@ -214,71 +214,100 @@
     "spec": {
       "additionalProperties": false,
       "properties": {
-        "config": {
+        "intent": {
+          "type": "string"
+        },
+        "requester": {
+          "type": "string"
+        },
+        "target": {
+          "additionalProperties": false,
+          "properties": {
+            "pod": {
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "uid": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name",
+                "uid"
+              ],
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "target",
+        "requester",
+        "intent"
+      ],
+      "type": "object"
+    },
+    "status": {
+      "additionalProperties": false,
+      "properties": {
+        "conditions": {
           "items": {
             "additionalProperties": false,
             "properties": {
-              "opaque": {
-                "additionalProperties": false,
-                "properties": {
-                  "driver": {
-                    "type": "string"
-                  },
-                  "parameters": {
-                    "type": "object"
-                  }
-                },
-                "required": [
-                  "driver",
-                  "parameters"
-                ],
+              "lastTransitionTime": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "observedGeneration": {
+                "format": "int64",
                 "type": [
-                  "object",
+                  "integer",
                   "null"
                 ]
+              },
+              "reason": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
               }
             },
+            "required": [
+              "type",
+              "status",
+              "lastTransitionTime",
+              "reason",
+              "message"
+            ],
             "type": "object"
           },
           "type": [
             "array",
             "null"
           ],
-          "x-kubernetes-list-type": "atomic"
+          "x-kubernetes-list-map-keys": [
+            "type"
+          ],
+          "x-kubernetes-list-type": "map"
         },
-        "extendedResourceName": {
+        "observedGeneration": {
+          "format": "int64",
           "type": [
-            "string",
+            "integer",
             "null"
           ]
-        },
-        "selectors": {
-          "items": {
-            "additionalProperties": false,
-            "properties": {
-              "cel": {
-                "additionalProperties": false,
-                "properties": {
-                  "expression": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "expression"
-                ],
-                "type": [
-                  "object",
-                  "null"
-                ]
-              }
-            },
-            "type": "object"
-          },
-          "type": [
-            "array",
-            "null"
-          ],
-          "x-kubernetes-list-type": "atomic"
         }
       },
       "type": [
@@ -288,6 +317,7 @@
     }
   },
   "required": [
+    "spec",
     "apiVersion",
     "kind"
   ],

@@ -281,6 +281,85 @@
               "drivers"
             ],
             "type": "object"
+          },
+          "status": {
+            "additionalProperties": false,
+            "properties": {
+              "storageHealth": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "healthConditions": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "accessMode": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "lastTransitionTime": {
+                            "format": "date-time",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "message": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "reason": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "volumeMode": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "status",
+                          "reason"
+                        ],
+                        "type": "object"
+                      },
+                      "type": [
+                        "array",
+                        "null"
+                      ],
+                      "x-kubernetes-list-type": "atomic"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name"
+                  ],
+                  "type": "object"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "x-kubernetes-list-map-keys": [
+                  "name"
+                ],
+                "x-kubernetes-list-type": "map"
+              }
+            },
+            "type": [
+              "object",
+              "null"
+            ]
           }
         },
         "required": [

@@ -214,39 +214,141 @@
     "spec": {
       "additionalProperties": false,
       "properties": {
-        "parentRef": {
-          "additionalProperties": false,
-          "properties": {
-            "group": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "name": {
-              "type": "string"
-            },
-            "namespace": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "resource": {
-              "type": "string"
-            }
+        "maxExpirationSeconds": {
+          "format": "int32",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "nodeName": {
+          "type": "string"
+        },
+        "nodeUID": {
+          "type": "string"
+        },
+        "podName": {
+          "type": "string"
+        },
+        "podUID": {
+          "type": "string"
+        },
+        "serviceAccountName": {
+          "type": "string"
+        },
+        "serviceAccountUID": {
+          "type": "string"
+        },
+        "signerName": {
+          "type": "string"
+        },
+        "stubPKCS10Request": {
+          "format": "byte",
+          "type": "string"
+        },
+        "unverifiedUserAnnotations": {
+          "additionalProperties": {
+            "type": "string"
           },
-          "required": [
-            "resource",
-            "name"
-          ],
-          "type": "object"
+          "type": [
+            "object",
+            "null"
+          ]
         }
       },
       "required": [
-        "parentRef"
+        "signerName",
+        "podName",
+        "podUID",
+        "serviceAccountName",
+        "serviceAccountUID",
+        "nodeName",
+        "nodeUID",
+        "stubPKCS10Request"
       ],
       "type": "object"
+    },
+    "status": {
+      "additionalProperties": false,
+      "properties": {
+        "beginRefreshAt": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "certificateChain": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "conditions": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "lastTransitionTime": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "observedGeneration": {
+                "format": "int64",
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "reason": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "status",
+              "lastTransitionTime",
+              "reason",
+              "message"
+            ],
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ],
+          "x-kubernetes-list-map-keys": [
+            "type"
+          ],
+          "x-kubernetes-list-type": "map"
+        },
+        "notAfter": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "notBefore": {
+          "format": "date-time",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": [
+        "object",
+        "null"
+      ]
     }
   },
   "required": [

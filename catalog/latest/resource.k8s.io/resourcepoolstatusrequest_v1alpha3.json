@@ -211,6 +211,12 @@
     "spec": {
       "additionalProperties": false,
       "properties": {
+        "defaultPartitionTypeAttribute": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "driver": {
           "type": "string"
         },
@@ -317,6 +323,39 @@
                   "null"
                 ]
               },
+              "partitionSummary": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "allocatable": {
+                      "format": "int32",
+                      "type": "integer"
+                    },
+                    "attribute": {
+                      "type": "string"
+                    },
+                    "total": {
+                      "format": "int32",
+                      "type": "integer"
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "attribute",
+                    "type",
+                    "total",
+                    "allocatable"
+                  ],
+                  "type": "object"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "x-kubernetes-list-type": "atomic"
+              },
               "poolName": {
                 "type": "string"
               },
@@ -324,6 +363,58 @@
                 "format": "int32",
                 "type": [
                   "integer",
+                  "null"
+                ]
+              },
+              "shareableSummary": {
+                "additionalProperties": false,
+                "properties": {
+                  "capacity": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "available": {
+                          "type": "string"
+                        },
+                        "consumed": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "total": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "total",
+                        "consumed",
+                        "available"
+                      ],
+                      "type": "object"
+                    },
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "x-kubernetes-list-type": "atomic"
+                  },
+                  "fullyAvailableDevices": {
+                    "format": "int32",
+                    "type": "integer"
+                  },
+                  "partiallyAvailableDevices": {
+                    "format": "int32",
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "fullyAvailableDevices",
+                  "partiallyAvailableDevices"
+                ],
+                "type": [
+                  "object",
                   "null"
                 ]
               },

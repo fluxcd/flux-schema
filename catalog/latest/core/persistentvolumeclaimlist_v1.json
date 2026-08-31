@@ -502,6 +502,55 @@
                   "null"
                 ]
               },
+              "healthStatus": {
+                "additionalProperties": false,
+                "properties": {
+                  "healthConditions": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "message": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "reason"
+                      ],
+                      "type": "object"
+                    },
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "x-kubernetes-list-map-keys": [
+                      "status",
+                      "reason"
+                    ],
+                    "x-kubernetes-list-type": "map"
+                  },
+                  "lastTransitionTime": {
+                    "format": "date-time",
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
               "modifyVolumeStatus": {
                 "additionalProperties": false,
                 "properties": {
