@@ -417,6 +417,16 @@
                     "items": {
                       "additionalProperties": false,
                       "properties": {
+                        "compatibilityGroups": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": [
+                            "array",
+                            "null"
+                          ],
+                          "x-kubernetes-list-type": "atomic"
+                        },
                         "counterSet": {
                           "type": "string"
                         },
@@ -448,19 +458,55 @@
                     ],
                     "x-kubernetes-list-type": "atomic"
                   },
-                  "nodeAllocatableResourceMappings": {
+                  "nodeAllocatableResources": {
                     "additionalProperties": {
                       "additionalProperties": false,
                       "properties": {
-                        "allocationMultiplier": {
+                        "mapping": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "capacityKey": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "capacityMultiplier": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "deviceMultiplier": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
                           "type": [
-                            "string",
+                            "object",
                             "null"
                           ]
                         },
-                        "capacityKey": {
+                        "overhead": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "perContainer": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "perPod": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
                           "type": [
-                            "string",
+                            "object",
                             "null"
                           ]
                         }
@@ -724,6 +770,12 @@
           ],
           "x-kubernetes-map-type": "atomic"
         },
+        "partitionTypeAttribute": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "perDeviceNodeSelection": {
           "type": [
             "boolean",
@@ -786,6 +838,16 @@
             "null"
           ],
           "x-kubernetes-list-type": "atomic"
+        },
+        "skipNodeOperations": {
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ],
+          "x-kubernetes-list-type": "set"
         }
       },
       "required": [

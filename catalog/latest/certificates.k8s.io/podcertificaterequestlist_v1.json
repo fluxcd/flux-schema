@@ -227,251 +227,110 @@
           "spec": {
             "additionalProperties": false,
             "properties": {
-              "distinguisherMethod": {
-                "additionalProperties": false,
-                "properties": {
-                  "type": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "type"
-                ],
-                "type": [
-                  "object",
-                  "null"
-                ]
-              },
-              "matchingPrecedence": {
+              "maxExpirationSeconds": {
                 "format": "int32",
                 "type": [
                   "integer",
                   "null"
                 ]
               },
-              "priorityLevelConfiguration": {
-                "additionalProperties": false,
-                "properties": {
-                  "name": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "name"
-                ],
-                "type": "object"
+              "nodeName": {
+                "type": "string"
               },
-              "rules": {
-                "items": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "nonResourceRules": {
-                      "items": {
-                        "additionalProperties": false,
-                        "properties": {
-                          "nonResourceURLs": {
-                            "items": {
-                              "type": "string"
-                            },
-                            "type": "array",
-                            "x-kubernetes-list-type": "set"
-                          },
-                          "verbs": {
-                            "items": {
-                              "type": "string"
-                            },
-                            "type": "array",
-                            "x-kubernetes-list-type": "set"
-                          }
-                        },
-                        "required": [
-                          "verbs",
-                          "nonResourceURLs"
-                        ],
-                        "type": "object"
-                      },
-                      "type": [
-                        "array",
-                        "null"
-                      ],
-                      "x-kubernetes-list-type": "atomic"
-                    },
-                    "resourceRules": {
-                      "items": {
-                        "additionalProperties": false,
-                        "properties": {
-                          "apiGroups": {
-                            "items": {
-                              "type": "string"
-                            },
-                            "type": "array",
-                            "x-kubernetes-list-type": "set"
-                          },
-                          "clusterScope": {
-                            "type": [
-                              "boolean",
-                              "null"
-                            ]
-                          },
-                          "namespaces": {
-                            "items": {
-                              "type": "string"
-                            },
-                            "type": [
-                              "array",
-                              "null"
-                            ],
-                            "x-kubernetes-list-type": "set"
-                          },
-                          "resources": {
-                            "items": {
-                              "type": "string"
-                            },
-                            "type": "array",
-                            "x-kubernetes-list-type": "set"
-                          },
-                          "verbs": {
-                            "items": {
-                              "type": "string"
-                            },
-                            "type": "array",
-                            "x-kubernetes-list-type": "set"
-                          }
-                        },
-                        "required": [
-                          "verbs",
-                          "apiGroups",
-                          "resources"
-                        ],
-                        "type": "object"
-                      },
-                      "type": [
-                        "array",
-                        "null"
-                      ],
-                      "x-kubernetes-list-type": "atomic"
-                    },
-                    "subjects": {
-                      "items": {
-                        "additionalProperties": false,
-                        "properties": {
-                          "group": {
-                            "additionalProperties": false,
-                            "properties": {
-                              "name": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "name"
-                            ],
-                            "type": [
-                              "object",
-                              "null"
-                            ]
-                          },
-                          "kind": {
-                            "type": "string"
-                          },
-                          "serviceAccount": {
-                            "additionalProperties": false,
-                            "properties": {
-                              "name": {
-                                "type": "string"
-                              },
-                              "namespace": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "namespace",
-                              "name"
-                            ],
-                            "type": [
-                              "object",
-                              "null"
-                            ]
-                          },
-                          "user": {
-                            "additionalProperties": false,
-                            "properties": {
-                              "name": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "name"
-                            ],
-                            "type": [
-                              "object",
-                              "null"
-                            ]
-                          }
-                        },
-                        "required": [
-                          "kind"
-                        ],
-                        "type": "object"
-                      },
-                      "type": "array",
-                      "x-kubernetes-list-type": "atomic"
-                    }
-                  },
-                  "required": [
-                    "subjects"
-                  ],
-                  "type": "object"
+              "nodeUID": {
+                "type": "string"
+              },
+              "podName": {
+                "type": "string"
+              },
+              "podUID": {
+                "type": "string"
+              },
+              "serviceAccountName": {
+                "type": "string"
+              },
+              "serviceAccountUID": {
+                "type": "string"
+              },
+              "signerName": {
+                "type": "string"
+              },
+              "stubPKCS10Request": {
+                "format": "byte",
+                "type": "string"
+              },
+              "unverifiedUserAnnotations": {
+                "additionalProperties": {
+                  "type": "string"
                 },
                 "type": [
-                  "array",
+                  "object",
                   "null"
-                ],
-                "x-kubernetes-list-type": "atomic"
+                ]
               }
             },
             "required": [
-              "priorityLevelConfiguration"
+              "signerName",
+              "podName",
+              "podUID",
+              "serviceAccountName",
+              "serviceAccountUID",
+              "nodeName",
+              "nodeUID",
+              "stubPKCS10Request"
             ],
             "type": "object"
           },
           "status": {
             "additionalProperties": false,
             "properties": {
+              "beginRefreshAt": {
+                "format": "date-time",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "certificateChain": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
               "conditions": {
                 "items": {
                   "additionalProperties": false,
                   "properties": {
                     "lastTransitionTime": {
                       "format": "date-time",
-                      "type": [
-                        "string",
-                        "null"
-                      ]
+                      "type": "string"
                     },
                     "message": {
+                      "type": "string"
+                    },
+                    "observedGeneration": {
+                      "format": "int64",
                       "type": [
-                        "string",
+                        "integer",
                         "null"
                       ]
                     },
                     "reason": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
+                      "type": "string"
                     },
                     "status": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
+                      "type": "string"
                     },
                     "type": {
                       "type": "string"
                     }
                   },
                   "required": [
-                    "type"
+                    "type",
+                    "status",
+                    "lastTransitionTime",
+                    "reason",
+                    "message"
                   ],
                   "type": "object"
                 },
@@ -483,6 +342,20 @@
                   "type"
                 ],
                 "x-kubernetes-list-type": "map"
+              },
+              "notAfter": {
+                "format": "date-time",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "notBefore": {
+                "format": "date-time",
+                "type": [
+                  "string",
+                  "null"
+                ]
               }
             },
             "type": [

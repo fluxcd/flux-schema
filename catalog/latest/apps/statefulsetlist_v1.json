@@ -1772,6 +1772,12 @@
                                             }
                                           ]
                                         },
+                                        "protocol": {
+                                          "type": [
+                                            "string",
+                                            "null"
+                                          ]
+                                        },
                                         "scheme": {
                                           "type": [
                                             "string",
@@ -1907,6 +1913,12 @@
                                             }
                                           ]
                                         },
+                                        "protocol": {
+                                          "type": [
+                                            "string",
+                                            "null"
+                                          ]
+                                        },
                                         "scheme": {
                                           "type": [
                                             "string",
@@ -2016,6 +2028,12 @@
                                 "grpc": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "mode": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
                                     "port": {
                                       "format": "int32",
                                       "type": "integer"
@@ -2081,6 +2099,12 @@
                                         {
                                           "type": "integer"
                                         }
+                                      ]
+                                    },
+                                    "protocol": {
+                                      "type": [
+                                        "string",
+                                        "null"
                                       ]
                                     },
                                     "scheme": {
@@ -2251,6 +2275,12 @@
                                 "grpc": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "mode": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
                                     "port": {
                                       "format": "int32",
                                       "type": "integer"
@@ -2316,6 +2346,12 @@
                                         {
                                           "type": "integer"
                                         }
+                                      ]
+                                    },
+                                    "protocol": {
+                                      "type": [
+                                        "string",
+                                        "null"
                                       ]
                                     },
                                     "scheme": {
@@ -2753,6 +2789,12 @@
                                 "grpc": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "mode": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
                                     "port": {
                                       "format": "int32",
                                       "type": "integer"
@@ -2818,6 +2860,12 @@
                                         {
                                           "type": "integer"
                                         }
+                                      ]
+                                    },
+                                    "protocol": {
+                                      "type": [
+                                        "string",
+                                        "null"
                                       ]
                                     },
                                     "scheme": {
@@ -2964,6 +3012,16 @@
                               "items": {
                                 "additionalProperties": false,
                                 "properties": {
+                                  "bindMountOptions": {
+                                    "items": {
+                                      "type": "string"
+                                    },
+                                    "type": [
+                                      "array",
+                                      "null"
+                                    ],
+                                    "x-kubernetes-list-type": "set"
+                                  },
                                   "mountPath": {
                                     "type": "string"
                                   },
@@ -3443,6 +3501,12 @@
                                             }
                                           ]
                                         },
+                                        "protocol": {
+                                          "type": [
+                                            "string",
+                                            "null"
+                                          ]
+                                        },
                                         "scheme": {
                                           "type": [
                                             "string",
@@ -3578,6 +3642,12 @@
                                             }
                                           ]
                                         },
+                                        "protocol": {
+                                          "type": [
+                                            "string",
+                                            "null"
+                                          ]
+                                        },
                                         "scheme": {
                                           "type": [
                                             "string",
@@ -3687,6 +3757,12 @@
                                 "grpc": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "mode": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
                                     "port": {
                                       "format": "int32",
                                       "type": "integer"
@@ -3752,6 +3828,12 @@
                                         {
                                           "type": "integer"
                                         }
+                                      ]
+                                    },
+                                    "protocol": {
+                                      "type": [
+                                        "string",
+                                        "null"
                                       ]
                                     },
                                     "scheme": {
@@ -3922,6 +4004,12 @@
                                 "grpc": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "mode": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
                                     "port": {
                                       "format": "int32",
                                       "type": "integer"
@@ -3987,6 +4075,12 @@
                                         {
                                           "type": "integer"
                                         }
+                                      ]
+                                    },
+                                    "protocol": {
+                                      "type": [
+                                        "string",
+                                        "null"
                                       ]
                                     },
                                     "scheme": {
@@ -4424,6 +4518,12 @@
                                 "grpc": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "mode": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
                                     "port": {
                                       "format": "int32",
                                       "type": "integer"
@@ -4489,6 +4589,12 @@
                                         {
                                           "type": "integer"
                                         }
+                                      ]
+                                    },
+                                    "protocol": {
+                                      "type": [
+                                        "string",
+                                        "null"
                                       ]
                                     },
                                     "scheme": {
@@ -4641,6 +4747,16 @@
                               "items": {
                                 "additionalProperties": false,
                                 "properties": {
+                                  "bindMountOptions": {
+                                    "items": {
+                                      "type": "string"
+                                    },
+                                    "type": [
+                                      "array",
+                                      "null"
+                                    ],
+                                    "x-kubernetes-list-type": "set"
+                                  },
                                   "mountPath": {
                                     "type": "string"
                                   },
@@ -4704,6 +4820,34 @@
                             "name"
                           ],
                           "type": "object"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ],
+                        "x-kubernetes-list-map-keys": [
+                          "name"
+                        ],
+                        "x-kubernetes-list-type": "map"
+                      },
+                      "evictionResponders": {
+                        "items": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "priority": {
+                              "format": "int32",
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "priority"
+                          ],
+                          "type": "object",
+                          "x-kubernetes-map-type": "atomic"
                         },
                         "type": [
                           "array",
@@ -5148,6 +5292,12 @@
                                             }
                                           ]
                                         },
+                                        "protocol": {
+                                          "type": [
+                                            "string",
+                                            "null"
+                                          ]
+                                        },
                                         "scheme": {
                                           "type": [
                                             "string",
@@ -5283,6 +5433,12 @@
                                             }
                                           ]
                                         },
+                                        "protocol": {
+                                          "type": [
+                                            "string",
+                                            "null"
+                                          ]
+                                        },
                                         "scheme": {
                                           "type": [
                                             "string",
@@ -5392,6 +5548,12 @@
                                 "grpc": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "mode": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
                                     "port": {
                                       "format": "int32",
                                       "type": "integer"
@@ -5457,6 +5619,12 @@
                                         {
                                           "type": "integer"
                                         }
+                                      ]
+                                    },
+                                    "protocol": {
+                                      "type": [
+                                        "string",
+                                        "null"
                                       ]
                                     },
                                     "scheme": {
@@ -5627,6 +5795,12 @@
                                 "grpc": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "mode": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
                                     "port": {
                                       "format": "int32",
                                       "type": "integer"
@@ -5692,6 +5866,12 @@
                                         {
                                           "type": "integer"
                                         }
+                                      ]
+                                    },
+                                    "protocol": {
+                                      "type": [
+                                        "string",
+                                        "null"
                                       ]
                                     },
                                     "scheme": {
@@ -6129,6 +6309,12 @@
                                 "grpc": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "mode": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
                                     "port": {
                                       "format": "int32",
                                       "type": "integer"
@@ -6194,6 +6380,12 @@
                                         {
                                           "type": "integer"
                                         }
+                                      ]
+                                    },
+                                    "protocol": {
+                                      "type": [
+                                        "string",
+                                        "null"
                                       ]
                                     },
                                     "scheme": {
@@ -6340,6 +6532,16 @@
                               "items": {
                                 "additionalProperties": false,
                                 "properties": {
+                                  "bindMountOptions": {
+                                    "items": {
+                                      "type": "string"
+                                    },
+                                    "type": [
+                                      "array",
+                                      "null"
+                                    ],
+                                    "x-kubernetes-list-type": "set"
+                                  },
                                   "mountPath": {
                                     "type": "string"
                                   },
@@ -7243,6 +7445,13 @@
                                     "null"
                                   ]
                                 },
+                                "defaultUser": {
+                                  "format": "int64",
+                                  "type": [
+                                    "integer",
+                                    "null"
+                                  ]
+                                },
                                 "items": {
                                   "items": {
                                     "additionalProperties": false,
@@ -7259,6 +7468,13 @@
                                       },
                                       "path": {
                                         "type": "string"
+                                      },
+                                      "user": {
+                                        "format": "int64",
+                                        "type": [
+                                          "integer",
+                                          "null"
+                                        ]
                                       }
                                     },
                                     "required": [
@@ -7353,6 +7569,13 @@
                                     "null"
                                   ]
                                 },
+                                "defaultUser": {
+                                  "format": "int64",
+                                  "type": [
+                                    "integer",
+                                    "null"
+                                  ]
+                                },
                                 "items": {
                                   "items": {
                                     "additionalProperties": false,
@@ -7416,6 +7639,13 @@
                                           "null"
                                         ],
                                         "x-kubernetes-map-type": "atomic"
+                                      },
+                                      "user": {
+                                        "format": "int64",
+                                        "type": [
+                                          "integer",
+                                          "null"
+                                        ]
                                       }
                                     },
                                     "required": [
@@ -7441,6 +7671,13 @@
                                 "medium": {
                                   "type": [
                                     "string",
+                                    "null"
+                                  ]
+                                },
+                                "mode": {
+                                  "format": "int32",
+                                  "type": [
+                                    "integer",
                                     "null"
                                   ]
                                 },
@@ -8299,6 +8536,13 @@
                                     "null"
                                   ]
                                 },
+                                "defaultUser": {
+                                  "format": "int64",
+                                  "type": [
+                                    "integer",
+                                    "null"
+                                  ]
+                                },
                                 "sources": {
                                   "items": {
                                     "additionalProperties": false,
@@ -8378,6 +8622,13 @@
                                               "string",
                                               "null"
                                             ]
+                                          },
+                                          "user": {
+                                            "format": "int64",
+                                            "type": [
+                                              "integer",
+                                              "null"
+                                            ]
                                           }
                                         },
                                         "required": [
@@ -8407,6 +8658,13 @@
                                                 },
                                                 "path": {
                                                   "type": "string"
+                                                },
+                                                "user": {
+                                                  "format": "int64",
+                                                  "type": [
+                                                    "integer",
+                                                    "null"
+                                                  ]
                                                 }
                                               },
                                               "required": [
@@ -8505,6 +8763,13 @@
                                                     "null"
                                                   ],
                                                   "x-kubernetes-map-type": "atomic"
+                                                },
+                                                "user": {
+                                                  "format": "int64",
+                                                  "type": [
+                                                    "integer",
+                                                    "null"
+                                                  ]
                                                 }
                                               },
                                               "required": [
@@ -8558,6 +8823,13 @@
                                           "signerName": {
                                             "type": "string"
                                           },
+                                          "user": {
+                                            "format": "int64",
+                                            "type": [
+                                              "integer",
+                                              "null"
+                                            ]
+                                          },
                                           "userAnnotations": {
                                             "additionalProperties": {
                                               "type": "string"
@@ -8596,6 +8868,13 @@
                                                 },
                                                 "path": {
                                                   "type": "string"
+                                                },
+                                                "user": {
+                                                  "format": "int64",
+                                                  "type": [
+                                                    "integer",
+                                                    "null"
+                                                  ]
                                                 }
                                               },
                                               "required": [
@@ -8646,6 +8925,13 @@
                                           },
                                           "path": {
                                             "type": "string"
+                                          },
+                                          "user": {
+                                            "format": "int64",
+                                            "type": [
+                                              "integer",
+                                              "null"
+                                            ]
                                           }
                                         },
                                         "required": [
@@ -8868,6 +9154,13 @@
                                     "null"
                                   ]
                                 },
+                                "defaultUser": {
+                                  "format": "int64",
+                                  "type": [
+                                    "integer",
+                                    "null"
+                                  ]
+                                },
                                 "items": {
                                   "items": {
                                     "additionalProperties": false,
@@ -8884,6 +9177,13 @@
                                       },
                                       "path": {
                                         "type": "string"
+                                      },
+                                      "user": {
+                                        "format": "int64",
+                                        "type": [
+                                          "integer",
+                                          "null"
+                                        ]
                                       }
                                     },
                                     "required": [
@@ -9567,6 +9867,55 @@
                             "null"
                           ]
                         },
+                        "healthStatus": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "healthConditions": {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "message": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "reason": {
+                                    "type": "string"
+                                  },
+                                  "status": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "status",
+                                  "reason"
+                                ],
+                                "type": "object"
+                              },
+                              "type": [
+                                "array",
+                                "null"
+                              ],
+                              "x-kubernetes-list-map-keys": [
+                                "status",
+                                "reason"
+                              ],
+                              "x-kubernetes-list-type": "map"
+                            },
+                            "lastTransitionTime": {
+                              "format": "date-time",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "type": [
+                            "object",
+                            "null"
+                          ]
+                        },
                         "modifyVolumeStatus": {
                           "additionalProperties": false,
                           "properties": {
@@ -9614,10 +9963,7 @@
               "selector",
               "template"
             ],
-            "type": [
-              "object",
-              "null"
-            ]
+            "type": "object"
           },
           "status": {
             "additionalProperties": false,
@@ -9660,16 +10006,18 @@
                       ]
                     },
                     "status": {
-                      "type": "string"
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "type": {
-                      "type": "string"
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     }
                   },
-                  "required": [
-                    "type",
-                    "status"
-                  ],
                   "type": "object"
                 },
                 "type": [
@@ -9735,6 +10083,9 @@
             ]
           }
         },
+        "required": [
+          "spec"
+        ],
         "type": "object"
       },
       "type": "array"

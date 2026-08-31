@@ -293,6 +293,25 @@
                 ],
                 "x-kubernetes-list-type": "set"
               },
+              "podPreemptionPolicy": {
+                "additionalProperties": false,
+                "properties": {
+                  "disableResizePreemption": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "x-kubernetes-list-type": "set"
+                  }
+                },
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
               "providerID": {
                 "type": [
                   "string",
@@ -702,6 +721,12 @@
                   },
                   "osImage": {
                     "type": "string"
+                  },
+                  "runningInUserNamespace": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
                   },
                   "swap": {
                     "additionalProperties": false,

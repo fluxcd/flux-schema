@@ -348,6 +348,29 @@
                             "null"
                           ]
                         },
+                        "derivedAttributes": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "expression": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "expression"
+                            ],
+                            "type": "object"
+                          },
+                          "type": [
+                            "array",
+                            "null"
+                          ],
+                          "x-kubernetes-list-type": "atomic"
+                        },
                         "deviceClassName": {
                           "type": [
                             "string",
@@ -388,6 +411,29 @@
                                   "integer",
                                   "null"
                                 ]
+                              },
+                              "derivedAttributes": {
+                                "items": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "expression": {
+                                      "type": "string"
+                                    },
+                                    "name": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "name",
+                                    "expression"
+                                  ],
+                                  "type": "object"
+                                },
+                                "type": [
+                                  "array",
+                                  "null"
+                                ],
+                                "x-kubernetes-list-type": "atomic"
                               },
                               "deviceClassName": {
                                 "type": "string"
@@ -574,7 +620,10 @@
                 ]
               }
             },
-            "type": "object"
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "status": {
             "additionalProperties": false,
@@ -696,6 +745,16 @@
                                 "string",
                                 "null"
                               ]
+                            },
+                            "skipNodeOperations": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": [
+                                "array",
+                                "null"
+                              ],
+                              "x-kubernetes-list-type": "set"
                             },
                             "tolerations": {
                               "items": {
@@ -1023,9 +1082,6 @@
             ]
           }
         },
-        "required": [
-          "spec"
-        ],
         "type": "object"
       },
       "type": "array"

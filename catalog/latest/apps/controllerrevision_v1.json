@@ -5,10 +5,7 @@
       "type": "string"
     },
     "data": {
-      "type": [
-        "object",
-        "null"
-      ]
+      "type": "object"
     },
     "kind": {
       "type": "string"
@@ -219,11 +216,14 @@
     },
     "revision": {
       "format": "int64",
-      "type": "integer"
+      "type": [
+        "integer",
+        "null"
+      ]
     }
   },
   "required": [
-    "revision",
+    "data",
     "apiVersion",
     "kind"
   ],

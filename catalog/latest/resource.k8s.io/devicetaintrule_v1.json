@@ -4,9 +4,6 @@
     "apiVersion": {
       "type": "string"
     },
-    "driverName": {
-      "type": "string"
-    },
     "kind": {
       "type": "string"
     },
@@ -214,9 +211,120 @@
         "null"
       ]
     },
-    "parameters": {
-      "additionalProperties": {
-        "type": "string"
+    "spec": {
+      "additionalProperties": false,
+      "properties": {
+        "deviceSelector": {
+          "additionalProperties": false,
+          "properties": {
+            "device": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "driver": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "pool": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "taint": {
+          "additionalProperties": false,
+          "properties": {
+            "effect": {
+              "type": "string"
+            },
+            "key": {
+              "type": "string"
+            },
+            "timeAdded": {
+              "format": "date-time",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "value": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "key",
+            "effect"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "taint"
+      ],
+      "type": "object"
+    },
+    "status": {
+      "additionalProperties": false,
+      "properties": {
+        "conditions": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "lastTransitionTime": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "observedGeneration": {
+                "format": "int64",
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "reason": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "status",
+              "lastTransitionTime",
+              "reason",
+              "message"
+            ],
+            "type": "object"
+          },
+          "type": [
+            "array",
+            "null"
+          ],
+          "x-kubernetes-list-map-keys": [
+            "type"
+          ],
+          "x-kubernetes-list-type": "map"
+        }
       },
       "type": [
         "object",
@@ -225,7 +333,7 @@
     }
   },
   "required": [
-    "driverName",
+    "spec",
     "apiVersion",
     "kind"
   ],
