@@ -57,7 +57,8 @@
                 "graphite",
                 "dynatrace",
                 "keptn",
-                "splunk"
+                "splunk",
+                "azuremonitor"
               ],
               "type": "string"
             }
