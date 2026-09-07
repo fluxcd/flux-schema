@@ -1652,6 +1652,12 @@
                           "key"
                         ],
                         "x-kubernetes-list-type": "map"
+                      },
+                      "universeDomain": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
                       }
                     },
                     "required": [
