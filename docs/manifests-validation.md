@@ -28,7 +28,7 @@ A non-zero exit code is returned when any document is invalid or errored.
 | `--skip-missing-schemas`     | Skip documents for which no schema can be found.                                                         |
 | `--skip-kind`                | Skip documents matching `kind` or `apiVersion/kind` (repeatable).                                        |
 | `--skip-json-path`           | Strip a JSON Pointer field before validation, optionally scoped: `[apiVersion/kind:]/path` (repeatable). |
-| `--ignore-json-path-if-absent` | Ignore missing required-field errors for a JSON Pointer field, optionally scoped: `[apiVersion/kind:]/path` (repeatable). |
+| `--skip-json-path-if-absent` | Skip missing required-field errors for a JSON Pointer field, optionally scoped: `[apiVersion/kind:]/path` (repeatable). |
 | `--skip-file`                | Glob pattern matched against files and dirs; defaults to skipping dotfiles and dot-dirs (repeatable).    |
 | `--skip-cel-rules`           | Skip evaluation of `x-kubernetes-validations` CEL rules.                                                 |
 | `--fail-fast`                | Exit after the first invalid document.                                                                   |
@@ -105,14 +105,14 @@ flux schema validate ./manifests \
 ```
 
 If admission hooks such as Kyverno or `MutatingAdmissionPolicy` add default
-values before API server validation, use `--ignore-json-path-if-absent` for
+values before API server validation, use `--skip-json-path-if-absent` for
 required fields that may be omitted from Git. Only the missing-field error is
-ignored; if the field is present, its value is still validated against the
+skipped; if the field is present, its value is still validated against the
 schema and CEL rules:
 
 ```shell
 flux schema validate ./manifests \
-  --ignore-json-path-if-absent 'Widget:/spec/replicas'
+  --skip-json-path-if-absent 'Widget:/spec/replicas'
 ```
 
 When a matching path is absent, CEL evaluation is skipped for that document
@@ -282,7 +282,7 @@ validate:
     - source.toolkit.fluxcd.io/v1/ExternalArtifact
   skipJSONPath:
     - Secret:/sops
-  ignoreJSONPathIfAbsent:
+  skipJSONPathIfAbsent:
     - Widget:/spec/replicas
   skipFile:
     - '.*'

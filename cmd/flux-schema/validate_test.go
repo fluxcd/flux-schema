@@ -578,7 +578,7 @@ func TestValidateCmd_SkipJSONPath_Invalid(t *testing.T) {
 	g.Expect(err).To(MatchError(ContainSubstring("skip JSON path pattern")))
 }
 
-func TestValidateCmd_IgnoreJSONPathIfAbsent(t *testing.T) {
+func TestValidateCmd_SkipJSONPathIfAbsent(t *testing.T) {
 	g := NewWithT(t)
 	schemaDir := t.TempDir()
 	writeRequiredWidgetSchema(t, schemaDir)
@@ -594,13 +594,13 @@ spec: {}
 	out, err := executeCommand([]string{
 		"validate", manifestDir,
 		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
-		"--ignore-json-path-if-absent", "Widget:/spec/name",
+		"--skip-json-path-if-absent", "Widget:/spec/name",
 	})
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(out).To(ContainSubstring("Summary: 1 resource found in 1 file - Valid: 1, Invalid: 0, Skipped: 0"))
 }
 
-func TestValidateCmd_IgnoreJSONPathIfAbsent_Invalid(t *testing.T) {
+func TestValidateCmd_SkipJSONPathIfAbsent_Invalid(t *testing.T) {
 	g := NewWithT(t)
 	manifestDir := t.TempDir()
 	writeManifest(t, manifestDir, "ok.yaml", validWidget)
@@ -608,9 +608,9 @@ func TestValidateCmd_IgnoreJSONPathIfAbsent_Invalid(t *testing.T) {
 	_, err := executeCommand([]string{
 		"validate", manifestDir,
 		"--schema-location", filepath.Join(t.TempDir(), "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
-		"--ignore-json-path-if-absent", "no-leading-slash",
+		"--skip-json-path-if-absent", "no-leading-slash",
 	})
-	g.Expect(err).To(MatchError(ContainSubstring("ignore JSON path if absent pattern")))
+	g.Expect(err).To(MatchError(ContainSubstring("skip JSON path if absent pattern")))
 }
 
 func TestValidateCmd_SkipKind_Invalid(t *testing.T) {
@@ -714,9 +714,9 @@ validate:
 	g.Expect(err).To(HaveOccurred())
 }
 
-// Config file's ignore-json-path-if-absent entries are picked up when the
+// Config file's skip-json-path-if-absent entries are picked up when the
 // flag is absent.
-func TestValidateCmd_Config_IgnoreJSONPathIfAbsent(t *testing.T) {
+func TestValidateCmd_Config_SkipJSONPathIfAbsent(t *testing.T) {
 	g := NewWithT(t)
 	schemaDir := t.TempDir()
 	writeRequiredWidgetSchema(t, schemaDir)
@@ -732,7 +732,7 @@ spec: {}
 	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
 kind: Config
 validate:
-  ignoreJSONPathIfAbsent:
+  skipJSONPathIfAbsent:
     - Widget:/spec/name
 `)
 	out, err := executeCommand([]string{
@@ -744,9 +744,9 @@ validate:
 	g.Expect(out).To(ContainSubstring("Valid: 1, Invalid: 0, Skipped: 0"))
 }
 
-// CLI --ignore-json-path-if-absent replaces (does not merge with) the config's
+// CLI --skip-json-path-if-absent replaces (does not merge with) the config's
 // list.
-func TestValidateCmd_Config_CLIOverridesIgnoreJSONPathIfAbsent(t *testing.T) {
+func TestValidateCmd_Config_CLIOverridesSkipJSONPathIfAbsent(t *testing.T) {
 	g := NewWithT(t)
 	schemaDir := t.TempDir()
 	writeRequiredWidgetSchema(t, schemaDir)
@@ -762,14 +762,14 @@ spec: {}
 	cfg := writeManifest(t, t.TempDir(), ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
 kind: Config
 validate:
-  ignoreJSONPathIfAbsent:
+  skipJSONPathIfAbsent:
     - Widget:/spec/name
 `)
 	_, err := executeCommand([]string{
 		"validate", manifestDir,
 		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
 		"--config", cfg,
-		"--ignore-json-path-if-absent", "Widget:/spec/doesNotExist",
+		"--skip-json-path-if-absent", "Widget:/spec/doesNotExist",
 	})
 	g.Expect(err).To(HaveOccurred())
 }
@@ -1139,7 +1139,7 @@ validate:
     - Widget
   skipJSONPath:
     - Secret:/sops
-  ignoreJSONPathIfAbsent:
+  skipJSONPathIfAbsent:
     - Widget:/spec/name
   skipFile:
     - '.*'

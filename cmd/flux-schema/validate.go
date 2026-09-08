@@ -52,9 +52,9 @@ var validateCmd = &cobra.Command{
   flux-schema validate ./manifests \
     --skip-json-path v1/Secret:/sops
 
-  # Ignore required-field errors for values defaulted by admission hooks
+  # Skip required-field errors for values defaulted by admission hooks
   flux-schema validate ./manifests \
-    --ignore-json-path-if-absent Widget:/spec/replicas
+    --skip-json-path-if-absent Widget:/spec/replicas
 
   # Skip files and directories by basename glob
   # default skips dotfiles and dot-directories e.g. '.git'
@@ -68,19 +68,19 @@ var validateCmd = &cobra.Command{
 }
 
 type validateFlags struct {
-	schemaLocations        []string
-	skipMissingSchemas     bool
-	skipKinds              []string
-	skipJSONPaths          []string
-	ignoreJSONPathIfAbsent []string
-	skipFiles              []string
-	skipCELRules           bool
-	verbose                bool
-	failFast               bool
-	concurrent             int
-	insecureSkipTLSVerify  bool
-	configFile             string
-	output                 flags.Output
+	schemaLocations       []string
+	skipMissingSchemas    bool
+	skipKinds             []string
+	skipJSONPaths         []string
+	skipJSONPathIfAbsent  []string
+	skipFiles             []string
+	skipCELRules          bool
+	verbose               bool
+	failFast              bool
+	concurrent            int
+	insecureSkipTLSVerify bool
+	configFile            string
+	output                flags.Output
 }
 
 var validateArgs = validateFlags{
@@ -97,8 +97,8 @@ func init() {
 		"skip documents matching kind or apiVersion/kind e.g. 'v1/Secret' (repeatable)")
 	validateCmd.Flags().StringArrayVar(&validateArgs.skipJSONPaths, "skip-json-path", nil,
 		"strip a JSON Pointer field, optionally scoped e.g. 'v1/Secret:/sops' (repeatable)")
-	validateCmd.Flags().StringArrayVar(&validateArgs.ignoreJSONPathIfAbsent, "ignore-json-path-if-absent", nil,
-		"ignore a missing required JSON Pointer field, optionally scoped e.g. 'Widget:/spec/replicas' (repeatable)")
+	validateCmd.Flags().StringArrayVar(&validateArgs.skipJSONPathIfAbsent, "skip-json-path-if-absent", nil,
+		"skip a missing required JSON Pointer field, optionally scoped e.g. 'Widget:/spec/replicas' (repeatable)")
 	validateCmd.Flags().StringArrayVar(&validateArgs.skipFiles, "skip-file", nil,
 		"glob pattern matched against files and dirs "+
 			"defaults to skipping dotfiles and dot-dirs (repeatable)")
@@ -452,17 +452,17 @@ func buildValidatorOptions(inputs []string) (validator.Options, error) {
 		return validator.Options{}, fmt.Errorf("--concurrent must be >= 1, got %d", validateArgs.concurrent)
 	}
 	opts := validator.Options{
-		SchemaLocations:        locations,
-		SkipMissingSchemas:     validateArgs.skipMissingSchemas,
-		SkipKinds:              validateArgs.skipKinds,
-		SkipJSONPaths:          validateArgs.skipJSONPaths,
-		IgnoreJSONPathIfAbsent: validateArgs.ignoreJSONPathIfAbsent,
-		SkipFiles:              validateArgs.skipFiles,
-		SkipCELRules:           validateArgs.skipCELRules,
-		UserAgent:              userAgent(),
-		HTTPTimeout:            rootArgs.timeout,
-		Workers:                validateArgs.concurrent,
-		InsecureSkipTLSVerify:  validateArgs.insecureSkipTLSVerify,
+		SchemaLocations:       locations,
+		SkipMissingSchemas:    validateArgs.skipMissingSchemas,
+		SkipKinds:             validateArgs.skipKinds,
+		SkipJSONPaths:         validateArgs.skipJSONPaths,
+		SkipJSONPathIfAbsent:  validateArgs.skipJSONPathIfAbsent,
+		SkipFiles:             validateArgs.skipFiles,
+		SkipCELRules:          validateArgs.skipCELRules,
+		UserAgent:             userAgent(),
+		HTTPTimeout:           rootArgs.timeout,
+		Workers:               validateArgs.concurrent,
+		InsecureSkipTLSVerify: validateArgs.insecureSkipTLSVerify,
 	}
 	if slices.Contains(inputs, stdinLabel) {
 		opts.Stdin = stdinReader

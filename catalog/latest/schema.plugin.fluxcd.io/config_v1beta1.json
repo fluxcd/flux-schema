@@ -58,13 +58,6 @@
           "description": "FailFast exits after the first invalid document.",
           "type": "boolean"
         },
-        "ignoreJSONPathIfAbsent": {
-          "description": "IgnoreJSONPathIfAbsent contains JSON Pointers whose required-property errors\nare ignored when the field is absent; CEL is skipped for matching documents.",
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
         "insecureSkipTLSVerify": {
           "description": "InsecureSkipTLSVerify disables TLS certificate verification for HTTPS schemas.",
           "type": "boolean"
@@ -98,6 +91,13 @@
         },
         "skipJSONPath": {
           "description": "SkipJSONPaths contains JSON Pointers stripped before validation.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "skipJSONPathIfAbsent": {
+          "description": "SkipJSONPathIfAbsent contains JSON Pointers whose required-property errors\nare skipped when the field is absent; CEL is skipped for matching documents.",
           "items": {
             "type": "string"
           },

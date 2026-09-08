@@ -290,8 +290,8 @@ func (in *ValidateConfig) DeepCopyInto(out *ValidateConfig) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
-	if in.IgnoreJSONPathIfAbsent != nil {
-		in, out := &in.IgnoreJSONPathIfAbsent, &out.IgnoreJSONPathIfAbsent
+	if in.SkipJSONPathIfAbsent != nil {
+		in, out := &in.SkipJSONPathIfAbsent, &out.SkipJSONPathIfAbsent
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}

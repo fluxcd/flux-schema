@@ -390,7 +390,7 @@ spec:
 	g.Expect(results[0].Errors[0].Msg).To(ContainSubstring("port must be positive"))
 }
 
-func TestValidateBytes_IgnoreJSONPathIfAbsent_SkipsCELWhenPathAbsent(t *testing.T) {
+func TestValidateBytes_SkipJSONPathIfAbsent_SkipsCELWhenPathAbsent(t *testing.T) {
 	g := NewWithT(t)
 	dir := t.TempDir()
 	writeWidgetSchemaWithOptionalIntCEL(t, dir)
@@ -409,8 +409,8 @@ spec: {}
 	g.Expect(baseResults[0].Errors[0].Msg).To(ContainSubstring("no such key: port"))
 
 	v, err := New(Options{
-		SchemaLocations:        []string{filepath.Join(dir, "{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json")},
-		IgnoreJSONPathIfAbsent: []string{"Widget:/spec/port"},
+		SchemaLocations:      []string{filepath.Join(dir, "{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json")},
+		SkipJSONPathIfAbsent: []string{"Widget:/spec/port"},
 	})
 	g.Expect(err).ToNot(HaveOccurred())
 	results := v.ValidateBytes(context.Background(), "test.yaml", doc)
@@ -419,13 +419,13 @@ spec: {}
 	g.Expect(results[0].Errors).To(BeEmpty())
 }
 
-func TestValidateBytes_IgnoreJSONPathIfAbsent_RunsCELWhenPathPresent(t *testing.T) {
+func TestValidateBytes_SkipJSONPathIfAbsent_RunsCELWhenPathPresent(t *testing.T) {
 	g := NewWithT(t)
 	dir := t.TempDir()
 	writeWidgetSchemaWithOptionalIntCEL(t, dir)
 	v, err := New(Options{
-		SchemaLocations:        []string{filepath.Join(dir, "{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json")},
-		IgnoreJSONPathIfAbsent: []string{"Widget:/spec/port"},
+		SchemaLocations:      []string{filepath.Join(dir, "{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json")},
+		SkipJSONPathIfAbsent: []string{"Widget:/spec/port"},
 	})
 	g.Expect(err).ToNot(HaveOccurred())
 
@@ -2111,13 +2111,13 @@ spec:
 	g.Expect(results[0].Status).To(Equal(StatusValid))
 }
 
-func TestValidateBytes_IgnoreJSONPathIfAbsent_AllowsMissingRequiredField(t *testing.T) {
+func TestValidateBytes_SkipJSONPathIfAbsent_AllowsMissingRequiredField(t *testing.T) {
 	g := NewWithT(t)
 	dir := t.TempDir()
 	writeWidgetSchema(t, dir)
 	v, err := New(Options{
-		SchemaLocations:        []string{filepath.Join(dir, "{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json")},
-		IgnoreJSONPathIfAbsent: []string{"Widget:/spec/name"},
+		SchemaLocations:      []string{filepath.Join(dir, "{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json")},
+		SkipJSONPathIfAbsent: []string{"Widget:/spec/name"},
 	})
 	g.Expect(err).ToNot(HaveOccurred())
 
@@ -2134,13 +2134,13 @@ spec:
 	g.Expect(results[0].Errors).To(BeEmpty())
 }
 
-func TestValidateBytes_IgnoreJSONPathIfAbsent_ValidatesPresentValue(t *testing.T) {
+func TestValidateBytes_SkipJSONPathIfAbsent_ValidatesPresentValue(t *testing.T) {
 	g := NewWithT(t)
 	dir := t.TempDir()
 	writeWidgetSchema(t, dir)
 	v, err := New(Options{
-		SchemaLocations:        []string{filepath.Join(dir, "{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json")},
-		IgnoreJSONPathIfAbsent: []string{"Widget:/spec/name"},
+		SchemaLocations:      []string{filepath.Join(dir, "{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json")},
+		SkipJSONPathIfAbsent: []string{"Widget:/spec/name"},
 	})
 	g.Expect(err).ToNot(HaveOccurred())
 
@@ -2161,13 +2161,13 @@ spec:
 	}))
 }
 
-func TestValidateBytes_IgnoreJSONPathIfAbsent_KindScopeBlocksUnrelatedDocs(t *testing.T) {
+func TestValidateBytes_SkipJSONPathIfAbsent_KindScopeBlocksUnrelatedDocs(t *testing.T) {
 	g := NewWithT(t)
 	dir := t.TempDir()
 	writeWidgetSchema(t, dir)
 	v, err := New(Options{
-		SchemaLocations:        []string{filepath.Join(dir, "{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json")},
-		IgnoreJSONPathIfAbsent: []string{"Secret:/spec/name"},
+		SchemaLocations:      []string{filepath.Join(dir, "{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json")},
+		SkipJSONPathIfAbsent: []string{"Secret:/spec/name"},
 	})
 	g.Expect(err).ToNot(HaveOccurred())
 
@@ -2187,7 +2187,7 @@ spec:
 	}))
 }
 
-func TestValidateBytes_IgnoreJSONPathIfAbsent_KeepsOtherMissingFields(t *testing.T) {
+func TestValidateBytes_SkipJSONPathIfAbsent_KeepsOtherMissingFields(t *testing.T) {
 	g := NewWithT(t)
 	dir := t.TempDir()
 	schema := map[string]any{
@@ -2212,8 +2212,8 @@ func TestValidateBytes_IgnoreJSONPathIfAbsent_KeepsOtherMissingFields(t *testing
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(os.WriteFile(filepath.Join(dir, "widget-example-v1.json"), b, 0o644)).To(Succeed())
 	v, err := New(Options{
-		SchemaLocations:        []string{filepath.Join(dir, "{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json")},
-		IgnoreJSONPathIfAbsent: []string{"Widget:/spec/name"},
+		SchemaLocations:      []string{filepath.Join(dir, "{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json")},
+		SkipJSONPathIfAbsent: []string{"Widget:/spec/name"},
 	})
 	g.Expect(err).ToNot(HaveOccurred())
 
@@ -2232,7 +2232,7 @@ spec: {}
 	}))
 }
 
-func TestValidateBytes_IgnoreJSONPathIfAbsent_PrunesAllOfParent(t *testing.T) {
+func TestValidateBytes_SkipJSONPathIfAbsent_PrunesAllOfParent(t *testing.T) {
 	g := NewWithT(t)
 	dir := t.TempDir()
 	schema := map[string]any{
@@ -2259,8 +2259,8 @@ func TestValidateBytes_IgnoreJSONPathIfAbsent_PrunesAllOfParent(t *testing.T) {
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(os.WriteFile(filepath.Join(dir, "widget-example-v1.json"), b, 0o644)).To(Succeed())
 	v, err := New(Options{
-		SchemaLocations:        []string{filepath.Join(dir, "{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json")},
-		IgnoreJSONPathIfAbsent: []string{"Widget:/spec/name"},
+		SchemaLocations:      []string{filepath.Join(dir, "{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json")},
+		SkipJSONPathIfAbsent: []string{"Widget:/spec/name"},
 	})
 	g.Expect(err).ToNot(HaveOccurred())
 
@@ -2276,7 +2276,7 @@ spec: {}
 	g.Expect(results[0].Errors).To(BeEmpty())
 }
 
-func TestValidateBytes_IgnoreJSONPathIfAbsent_PrunesPassingCompositeBranch(t *testing.T) {
+func TestValidateBytes_SkipJSONPathIfAbsent_PrunesPassingCompositeBranch(t *testing.T) {
 	for _, keyword := range []string{"anyOf", "oneOf"} {
 		t.Run(keyword, func(t *testing.T) {
 			g := NewWithT(t)
@@ -2308,8 +2308,8 @@ func TestValidateBytes_IgnoreJSONPathIfAbsent_PrunesPassingCompositeBranch(t *te
 			g.Expect(err).ToNot(HaveOccurred())
 			g.Expect(os.WriteFile(filepath.Join(dir, "widget-example-v1.json"), b, 0o644)).To(Succeed())
 			v, err := New(Options{
-				SchemaLocations:        []string{filepath.Join(dir, "{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json")},
-				IgnoreJSONPathIfAbsent: []string{"Widget:/spec/name"},
+				SchemaLocations:      []string{filepath.Join(dir, "{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json")},
+				SkipJSONPathIfAbsent: []string{"Widget:/spec/name"},
 			})
 			g.Expect(err).ToNot(HaveOccurred())
 
@@ -2327,7 +2327,7 @@ spec: {}
 	}
 }
 
-func TestValidateBytes_IgnoreJSONPathIfAbsent_PrunesRefParent(t *testing.T) {
+func TestValidateBytes_SkipJSONPathIfAbsent_PrunesRefParent(t *testing.T) {
 	g := NewWithT(t)
 	dir := t.TempDir()
 	schema := map[string]any{
@@ -2355,8 +2355,8 @@ func TestValidateBytes_IgnoreJSONPathIfAbsent_PrunesRefParent(t *testing.T) {
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(os.WriteFile(filepath.Join(dir, "widget-example-v1.json"), b, 0o644)).To(Succeed())
 	v, err := New(Options{
-		SchemaLocations:        []string{filepath.Join(dir, "{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json")},
-		IgnoreJSONPathIfAbsent: []string{"Widget:/spec/name"},
+		SchemaLocations:      []string{filepath.Join(dir, "{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json")},
+		SkipJSONPathIfAbsent: []string{"Widget:/spec/name"},
 	})
 	g.Expect(err).ToNot(HaveOccurred())
 
@@ -2372,13 +2372,13 @@ spec: {}
 	g.Expect(results[0].Errors).To(BeEmpty())
 }
 
-func TestNew_RejectsBadIgnoreJSONPathIfAbsent(t *testing.T) {
+func TestNew_RejectsBadSkipJSONPathIfAbsent(t *testing.T) {
 	g := NewWithT(t)
 	_, err := New(Options{
-		SchemaLocations:        []string{"./{{ .Kind }}.json"},
-		IgnoreJSONPathIfAbsent: []string{"no-leading-slash"},
+		SchemaLocations:      []string{"./{{ .Kind }}.json"},
+		SkipJSONPathIfAbsent: []string{"no-leading-slash"},
 	})
-	g.Expect(err).To(MatchError(ContainSubstring("ignore JSON path if absent pattern")))
+	g.Expect(err).To(MatchError(ContainSubstring("skip JSON path if absent pattern")))
 }
 
 func TestNew_RejectsBadSkipJSONPath(t *testing.T) {

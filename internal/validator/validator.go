@@ -107,12 +107,12 @@ type Options struct {
 	SkipMissingSchemas bool
 	SkipKinds          []string
 	SkipJSONPaths      []string
-	// IgnoreJSONPathIfAbsent suppresses JSON Schema required-property errors
+	// SkipJSONPathIfAbsent suppresses JSON Schema required-property errors
 	// for matching fields. Present values are still validated normally.
-	IgnoreJSONPathIfAbsent []string
-	SkipFiles              []string
-	SkipCELRules           bool
-	HTTPClient             *retryablehttp.Client
+	SkipJSONPathIfAbsent []string
+	SkipFiles            []string
+	SkipCELRules         bool
+	HTTPClient           *retryablehttp.Client
 	// UserAgent is the value for the User-Agent header on schema fetches;
 	// empty leaves the client untouched.
 	UserAgent             string
@@ -130,12 +130,12 @@ var DefaultSkipFiles = []string{".*"}
 // Validator resolves and applies JSON Schemas to Kubernetes manifests.
 // It is safe for concurrent use by multiple goroutines.
 type Validator struct {
-	opts              Options
-	loader            *SchemaLoader
-	skipKinds         []skipKindMatcher
-	skipPaths         []skipPathMatcher
-	ignoreAbsentPaths []skipPathMatcher
-	skipFiles         []string
+	opts            Options
+	loader          *SchemaLoader
+	skipKinds       []skipKindMatcher
+	skipPaths       []skipPathMatcher
+	skipAbsentPaths []skipPathMatcher
+	skipFiles       []string
 }
 
 // skipKindMatcher matches a document by Kind, optionally scoped to an
@@ -198,8 +198,8 @@ func parseSkipJSONPath(s string) (skipPathMatcher, error) {
 	return parseJSONPathMatcher(s, "skip JSON path")
 }
 
-func parseIgnoreJSONPathIfAbsent(s string) (skipPathMatcher, error) {
-	return parseJSONPathMatcher(s, "ignore JSON path if absent")
+func parseSkipJSONPathIfAbsent(s string) (skipPathMatcher, error) {
+	return parseJSONPathMatcher(s, "skip JSON path if absent")
 }
 
 func parseJSONPathMatcher(s, label string) (skipPathMatcher, error) {
@@ -368,13 +368,13 @@ func New(opts Options) (*Validator, error) {
 		skipPaths = append(skipPaths, m)
 	}
 
-	ignoreAbsentPaths := make([]skipPathMatcher, 0, len(opts.IgnoreJSONPathIfAbsent))
-	for _, s := range opts.IgnoreJSONPathIfAbsent {
-		m, err := parseIgnoreJSONPathIfAbsent(s)
+	skipAbsentPaths := make([]skipPathMatcher, 0, len(opts.SkipJSONPathIfAbsent))
+	for _, s := range opts.SkipJSONPathIfAbsent {
+		m, err := parseSkipJSONPathIfAbsent(s)
 		if err != nil {
 			return nil, err
 		}
-		ignoreAbsentPaths = append(ignoreAbsentPaths, m)
+		skipAbsentPaths = append(skipAbsentPaths, m)
 	}
 
 	skipFiles := opts.SkipFiles
@@ -393,12 +393,12 @@ func New(opts Options) (*Validator, error) {
 	}
 
 	return &Validator{
-		opts:              opts,
-		loader:            NewSchemaLoader(templates, opts.HTTPClient, opts.HTTPTimeout),
-		skipKinds:         skipKinds,
-		skipPaths:         skipPaths,
-		ignoreAbsentPaths: ignoreAbsentPaths,
-		skipFiles:         skipFiles,
+		opts:            opts,
+		loader:          NewSchemaLoader(templates, opts.HTTPClient, opts.HTTPTimeout),
+		skipKinds:       skipKinds,
+		skipPaths:       skipPaths,
+		skipAbsentPaths: skipAbsentPaths,
+		skipFiles:       skipFiles,
 	}, nil
 }
 
@@ -774,7 +774,7 @@ func (v *Validator) validateDoc(ctx context.Context, source string, idx int, raw
 
 	var errs []ValidationError
 	if err := resolved.JSON.Validate(doc); err != nil {
-		errs = flattenErrors(err, v.ignoreAbsentPaths, r.APIVersion, r.Kind)
+		errs = flattenErrors(err, v.skipAbsentPaths, r.APIVersion, r.Kind)
 	}
 	if !skipMetadata {
 		errs = append(errs, validateMetadata(doc)...)
@@ -805,7 +805,7 @@ func (v *Validator) validateDoc(ctx context.Context, source string, idx int, raw
 	// metadata, and Kubernetes admission-extension checks pass. Most CEL rules
 	// presume a well-shaped object, so adding CEL noise on top of structural
 	// failures rarely helps; the user can fix those problems and re-run.
-	if !v.opts.SkipCELRules && !hasIgnoredAbsentPath(v.ignoreAbsentPaths, r.APIVersion, r.Kind, doc) {
+	if !v.opts.SkipCELRules && !hasSkippedAbsentPath(v.skipAbsentPaths, r.APIVersion, r.Kind, doc) {
 		if resolved.CELBuildErr != nil {
 			r.Errors = []ValidationError{{
 				Msg: resolved.CELBuildErr.Error(),
@@ -977,14 +977,14 @@ func applyInsecureTLS(c *retryablehttp.Client) {
 
 // flattenErrors walks a ValidationError tree and returns one entry per leaf
 // error, with the JSON Pointer path to the failing field.
-func flattenErrors(err error, ignoreAbsentPaths []skipPathMatcher, apiVersion, kind string) []ValidationError {
+func flattenErrors(err error, skipAbsentPaths []skipPathMatcher, apiVersion, kind string) []ValidationError {
 	var verr *jsonschema.ValidationError
 	ok := errors.As(err, &verr)
 	if !ok {
 		return []ValidationError{{Msg: err.Error()}}
 	}
-	if len(ignoreAbsentPaths) > 0 {
-		verr = pruneIgnoredAbsentRequired(verr, ignoreAbsentPaths, apiVersion, kind)
+	if len(skipAbsentPaths) > 0 {
+		verr = pruneSkippedAbsentRequired(verr, skipAbsentPaths, apiVersion, kind)
 		if verr == nil {
 			return nil
 		}
@@ -1008,7 +1008,7 @@ func flattenErrors(err error, ignoreAbsentPaths []skipPathMatcher, apiVersion, k
 	return out
 }
 
-func pruneIgnoredAbsentRequired(err *jsonschema.ValidationError, matchers []skipPathMatcher, apiVersion, kind string) *jsonschema.ValidationError {
+func pruneSkippedAbsentRequired(err *jsonschema.ValidationError, matchers []skipPathMatcher, apiVersion, kind string) *jsonschema.ValidationError {
 	if err == nil {
 		return nil
 	}
@@ -1017,7 +1017,7 @@ func pruneIgnoredAbsentRequired(err *jsonschema.ValidationError, matchers []skip
 		prunedCauses := 0
 		clone.Causes = make([]*jsonschema.ValidationError, 0, len(err.Causes))
 		for _, cause := range err.Causes {
-			pruned := pruneIgnoredAbsentRequired(cause, matchers, apiVersion, kind)
+			pruned := pruneSkippedAbsentRequired(cause, matchers, apiVersion, kind)
 			if pruned != nil {
 				clone.Causes = append(clone.Causes, pruned)
 			} else {
@@ -1062,14 +1062,14 @@ func keepRequiredFields(parentSegments []string, missing []string,
 		fieldSegments := make([]string, len(parentSegments), len(parentSegments)+1)
 		copy(fieldSegments, parentSegments)
 		fieldSegments = append(fieldSegments, prop)
-		if !matchesIgnoredAbsentPath(matchers, apiVersion, kind, fieldSegments) {
+		if !matchesSkippedAbsentPath(matchers, apiVersion, kind, fieldSegments) {
 			kept = append(kept, prop)
 		}
 	}
 	return kept
 }
 
-func matchesIgnoredAbsentPath(matchers []skipPathMatcher, apiVersion, kind string, segments []string) bool {
+func matchesSkippedAbsentPath(matchers []skipPathMatcher, apiVersion, kind string, segments []string) bool {
 	for _, m := range matchers {
 		if m.matchesPath(apiVersion, kind, segments) {
 			return true
@@ -1078,7 +1078,7 @@ func matchesIgnoredAbsentPath(matchers []skipPathMatcher, apiVersion, kind strin
 	return false
 }
 
-func hasIgnoredAbsentPath(matchers []skipPathMatcher, apiVersion, kind string, doc map[string]any) bool {
+func hasSkippedAbsentPath(matchers []skipPathMatcher, apiVersion, kind string, doc map[string]any) bool {
 	for _, m := range matchers {
 		if m.matches(apiVersion, kind) && !m.pathExists(doc) {
 			return true

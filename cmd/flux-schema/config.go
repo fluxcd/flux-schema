@@ -121,8 +121,8 @@ func applyValidateConfig(cmd *cobra.Command, cfg *apiv1.ValidateConfig, args *va
 	if cfg.SkipJSONPaths != nil && !flags.Changed("skip-json-path") {
 		args.skipJSONPaths = cfg.SkipJSONPaths
 	}
-	if cfg.IgnoreJSONPathIfAbsent != nil && !flags.Changed("ignore-json-path-if-absent") {
-		args.ignoreJSONPathIfAbsent = cfg.IgnoreJSONPathIfAbsent
+	if cfg.SkipJSONPathIfAbsent != nil && !flags.Changed("skip-json-path-if-absent") {
+		args.skipJSONPathIfAbsent = cfg.SkipJSONPathIfAbsent
 	}
 	if cfg.SkipFiles != nil && !flags.Changed("skip-file") {
 		args.skipFiles = cfg.SkipFiles
