@@ -108,16 +108,16 @@ If admission hooks such as Kyverno or `MutatingAdmissionPolicy` add default
 values before API server validation, use `--ignore-json-path-if-absent` for
 required fields that may be omitted from Git. Only the missing-field error is
 ignored; if the field is present, its value is still validated against the
-schema:
+schema and CEL rules:
 
 ```shell
 flux schema validate ./manifests \
   --ignore-json-path-if-absent 'Widget:/spec/replicas'
 ```
 
-CEL rules still evaluate the manifest as written. If a CEL rule assumes an
-admission-defaulted field exists, validation may still fail on the absent field;
-use `--skip-cel-rules` for those schemas.
+When a matching path is absent, CEL evaluation is skipped for that document
+because Flux Schema cannot apply out-of-band admission defaults before running
+CEL.
 
 ## Output
 

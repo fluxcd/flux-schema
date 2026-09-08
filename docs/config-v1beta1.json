@@ -59,7 +59,7 @@
           "type": "boolean"
         },
         "ignoreJSONPathIfAbsent": {
-          "description": "IgnoreJSONPathIfAbsent contains JSON Pointers whose required-property\nerrors are ignored when the field is absent.",
+          "description": "IgnoreJSONPathIfAbsent contains JSON Pointers whose required-property errors\nare ignored when the field is absent; CEL is skipped for matching documents.",
           "items": {
             "type": "string"
           },

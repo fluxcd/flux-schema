@@ -41,9 +41,10 @@
 //     layer is skipped for Flux plugin API groups. Violations merge under
 //     ReasonSchemaViolation.
 //  7. CEL x-kubernetes-validations — runs only after steps 1-6 pass and
-//     unless Options.SkipCELRules is set. Rule compile errors and runtime
-//     violations both surface as ReasonCELViolation; oldSelf is unbound
-//     (static validator, no transition state).
+//     unless Options.SkipCELRules is set or IgnoreJSONPathIfAbsent matched an
+//     absent path on the document. Rule compile errors and runtime violations
+//     both surface as ReasonCELViolation; oldSelf is unbound (static
+//     validator, no transition state).
 //
 // Schemas produced by the extractor close objects with
 // additionalProperties: false, so undocumented spec fields fail.

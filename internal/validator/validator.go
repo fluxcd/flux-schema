@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"text/template"
@@ -289,6 +290,29 @@ func (m skipPathMatcher) stripPath(doc map[string]any) {
 		}
 		parent = next
 	}
+}
+
+func (m skipPathMatcher) pathExists(doc map[string]any) bool {
+	var node any = doc
+	for _, seg := range m.segments {
+		switch n := node.(type) {
+		case map[string]any:
+			next, ok := n[seg]
+			if !ok {
+				return false
+			}
+			node = next
+		case []any:
+			i, err := strconv.Atoi(seg)
+			if err != nil || i < 0 || i >= len(n) {
+				return false
+			}
+			node = n[i]
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 // New returns a Validator configured from opts. Each location template is
@@ -781,7 +805,7 @@ func (v *Validator) validateDoc(ctx context.Context, source string, idx int, raw
 	// metadata, and Kubernetes admission-extension checks pass. Most CEL rules
 	// presume a well-shaped object, so adding CEL noise on top of structural
 	// failures rarely helps; the user can fix those problems and re-run.
-	if !v.opts.SkipCELRules {
+	if !v.opts.SkipCELRules && !hasIgnoredAbsentPath(v.ignoreAbsentPaths, r.APIVersion, r.Kind, doc) {
 		if resolved.CELBuildErr != nil {
 			r.Errors = []ValidationError{{
 				Msg: resolved.CELBuildErr.Error(),
@@ -1048,6 +1072,15 @@ func keepRequiredFields(parentSegments []string, missing []string,
 func matchesIgnoredAbsentPath(matchers []skipPathMatcher, apiVersion, kind string, segments []string) bool {
 	for _, m := range matchers {
 		if m.matchesPath(apiVersion, kind, segments) {
+			return true
+		}
+	}
+	return false
+}
+
+func hasIgnoredAbsentPath(matchers []skipPathMatcher, apiVersion, kind string, doc map[string]any) bool {
+	for _, m := range matchers {
+		if m.matches(apiVersion, kind) && !m.pathExists(doc) {
 			return true
 		}
 	}
