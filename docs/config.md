@@ -21,6 +21,8 @@ validate:
     - source.toolkit.fluxcd.io/v1/ExternalArtifact
   skipJSONPath:
     - Secret:/sops
+  ignoreJSONPathIfAbsent:
+    - Widget:/spec/replicas
   skipFile:
     - '.*'
     - kustomization.yaml
@@ -71,6 +73,7 @@ The `validate` section configures defaults for the `flux schema validate` flags.
 | `skipMissingSchemas`    | Skip documents for which no schema can be found.                                                                                                                          |
 | `skipKind[]`            | Kind or apiVersion/kind patterns excluded from validation.                                                                                                                |
 | `skipJSONPath[]`        | JSON Pointers stripped before validation.                                                                                                                                 |
+| `ignoreJSONPathIfAbsent[]` | JSON Pointers whose required-field errors are ignored when the field is absent. Present values are still validated.                                                     |
 | `skipFile[]`            | Basename glob patterns excluded from validation.                                                                                                                          |
 | `skipCELRules`          | Disable evaluation of `x-kubernetes-validations` CEL rules.                                                                                                               |
 | `verbose`               | Print a line for every document, including valid and skipped.                                                                                                             |

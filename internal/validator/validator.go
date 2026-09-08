@@ -21,6 +21,7 @@ import (
 
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/santhosh-tekuri/jsonschema/v6"
+	jsonschemakind "github.com/santhosh-tekuri/jsonschema/v6/kind"
 	utiljson "k8s.io/apimachinery/pkg/util/json"
 	"sigs.k8s.io/yaml"
 
@@ -105,9 +106,12 @@ type Options struct {
 	SkipMissingSchemas bool
 	SkipKinds          []string
 	SkipJSONPaths      []string
-	SkipFiles          []string
-	SkipCELRules       bool
-	HTTPClient         *retryablehttp.Client
+	// IgnoreJSONPathIfAbsent suppresses JSON Schema required-property errors
+	// for matching fields. Present values are still validated normally.
+	IgnoreJSONPathIfAbsent []string
+	SkipFiles              []string
+	SkipCELRules           bool
+	HTTPClient             *retryablehttp.Client
 	// UserAgent is the value for the User-Agent header on schema fetches;
 	// empty leaves the client untouched.
 	UserAgent             string
@@ -125,11 +129,12 @@ var DefaultSkipFiles = []string{".*"}
 // Validator resolves and applies JSON Schemas to Kubernetes manifests.
 // It is safe for concurrent use by multiple goroutines.
 type Validator struct {
-	opts      Options
-	loader    *SchemaLoader
-	skipKinds []skipKindMatcher
-	skipPaths []skipPathMatcher
-	skipFiles []string
+	opts              Options
+	loader            *SchemaLoader
+	skipKinds         []skipKindMatcher
+	skipPaths         []skipPathMatcher
+	ignoreAbsentPaths []skipPathMatcher
+	skipFiles         []string
 }
 
 // skipKindMatcher matches a document by Kind, optionally scoped to an
@@ -189,9 +194,17 @@ type skipPathMatcher struct {
 // from the pointer half, which follows RFC 6901; '~1' decodes to '/' and '~0'
 // to '~'. Pointer descent through arrays is a silent no-op (map keys only).
 func parseSkipJSONPath(s string) (skipPathMatcher, error) {
+	return parseJSONPathMatcher(s, "skip JSON path")
+}
+
+func parseIgnoreJSONPathIfAbsent(s string) (skipPathMatcher, error) {
+	return parseJSONPathMatcher(s, "ignore JSON path if absent")
+}
+
+func parseJSONPathMatcher(s, label string) (skipPathMatcher, error) {
 	s = strings.TrimSpace(s)
 	if s == "" {
-		return skipPathMatcher{}, errors.New("skip JSON path pattern must not be empty")
+		return skipPathMatcher{}, fmt.Errorf("%s pattern must not be empty", label)
 	}
 	var selector, pointer string
 	switch {
@@ -201,29 +214,43 @@ func parseSkipJSONPath(s string) (skipPathMatcher, error) {
 	default:
 		left, right, hasSelector := strings.Cut(s, ":")
 		if !hasSelector {
-			return skipPathMatcher{}, fmt.Errorf("skip JSON path pattern %q: pointer must start with '/'", s)
+			return skipPathMatcher{}, fmt.Errorf("%s pattern %q: pointer must start with '/'", label, s)
 		}
 		selector, pointer = left, right
 	}
 	if !strings.HasPrefix(pointer, "/") {
-		return skipPathMatcher{}, fmt.Errorf("skip JSON path pattern %q: pointer must start with '/'", s)
+		return skipPathMatcher{}, fmt.Errorf("%s pattern %q: pointer must start with '/'", label, s)
 	}
 	if pointer == "/" {
-		return skipPathMatcher{}, fmt.Errorf("skip JSON path pattern %q: pointer must target a property", s)
+		return skipPathMatcher{}, fmt.Errorf("%s pattern %q: pointer must target a property", label, s)
 	}
 	var apiVersion, kind string
 	if selector != "" {
 		m, err := parseSkipKind(selector)
 		if err != nil {
-			return skipPathMatcher{}, fmt.Errorf("skip JSON path pattern %q: %w", s, err)
+			return skipPathMatcher{}, fmt.Errorf("%s pattern %q: %w", label, s, err)
 		}
 		apiVersion, kind = m.apiVersion, m.kind
+	}
+	segments, err := parseJSONPointerSegments(pointer)
+	if err != nil {
+		return skipPathMatcher{}, fmt.Errorf("%s pattern %q: %w", label, s, err)
+	}
+	return skipPathMatcher{apiVersion: apiVersion, kind: kind, segments: segments}, nil
+}
+
+func parseJSONPointerSegments(pointer string) ([]string, error) {
+	if pointer == "" {
+		return nil, nil
+	}
+	if !strings.HasPrefix(pointer, "/") {
+		return nil, errors.New("pointer must start with '/'")
 	}
 	rawSegments := strings.Split(strings.TrimPrefix(pointer, "/"), "/")
 	segments := make([]string, len(rawSegments))
 	for i, seg := range rawSegments {
 		if seg == "" {
-			return skipPathMatcher{}, fmt.Errorf("skip JSON path pattern %q: empty segment in pointer", s)
+			return nil, errors.New("empty segment in pointer")
 		}
 		// RFC 6901: decode '~1' before '~0' so '~01' decodes to literal '~1'
 		// rather than collapsing into '/'.
@@ -231,7 +258,7 @@ func parseSkipJSONPath(s string) (skipPathMatcher, error) {
 		seg = strings.ReplaceAll(seg, "~0", "~")
 		segments[i] = seg
 	}
-	return skipPathMatcher{apiVersion: apiVersion, kind: kind, segments: segments}, nil
+	return segments, nil
 }
 
 func (m skipPathMatcher) matches(apiVersion, kind string) bool {
@@ -239,6 +266,10 @@ func (m skipPathMatcher) matches(apiVersion, kind string) bool {
 		return false
 	}
 	return m.apiVersion == "" || m.apiVersion == apiVersion
+}
+
+func (m skipPathMatcher) matchesPath(apiVersion, kind string, segments []string) bool {
+	return m.matches(apiVersion, kind) && slices.Equal(m.segments, segments)
 }
 
 // stripPath deletes the field referenced by m.segments from doc when present.
@@ -313,6 +344,15 @@ func New(opts Options) (*Validator, error) {
 		skipPaths = append(skipPaths, m)
 	}
 
+	ignoreAbsentPaths := make([]skipPathMatcher, 0, len(opts.IgnoreJSONPathIfAbsent))
+	for _, s := range opts.IgnoreJSONPathIfAbsent {
+		m, err := parseIgnoreJSONPathIfAbsent(s)
+		if err != nil {
+			return nil, err
+		}
+		ignoreAbsentPaths = append(ignoreAbsentPaths, m)
+	}
+
 	skipFiles := opts.SkipFiles
 	if skipFiles == nil {
 		// Clone so DefaultSkipFiles can never be mutated through a
@@ -329,11 +369,12 @@ func New(opts Options) (*Validator, error) {
 	}
 
 	return &Validator{
-		opts:      opts,
-		loader:    NewSchemaLoader(templates, opts.HTTPClient, opts.HTTPTimeout),
-		skipKinds: skipKinds,
-		skipPaths: skipPaths,
-		skipFiles: skipFiles,
+		opts:              opts,
+		loader:            NewSchemaLoader(templates, opts.HTTPClient, opts.HTTPTimeout),
+		skipKinds:         skipKinds,
+		skipPaths:         skipPaths,
+		ignoreAbsentPaths: ignoreAbsentPaths,
+		skipFiles:         skipFiles,
 	}, nil
 }
 
@@ -709,7 +750,7 @@ func (v *Validator) validateDoc(ctx context.Context, source string, idx int, raw
 
 	var errs []ValidationError
 	if err := resolved.JSON.Validate(doc); err != nil {
-		errs = flattenErrors(err)
+		errs = flattenErrors(err, v.ignoreAbsentPaths, r.APIVersion, r.Kind)
 	}
 	if !skipMetadata {
 		errs = append(errs, validateMetadata(doc)...)
@@ -912,7 +953,7 @@ func applyInsecureTLS(c *retryablehttp.Client) {
 
 // flattenErrors walks a ValidationError tree and returns one entry per leaf
 // error, with the JSON Pointer path to the failing field.
-func flattenErrors(err error) []ValidationError {
+func flattenErrors(err error, ignoreAbsentPaths []skipPathMatcher, apiVersion, kind string) []ValidationError {
 	var verr *jsonschema.ValidationError
 	ok := errors.As(err, &verr)
 	if !ok {
@@ -920,8 +961,15 @@ func flattenErrors(err error) []ValidationError {
 	}
 	basic := verr.BasicOutput()
 	var out []ValidationError
+	seenLeaf := false
 	for _, unit := range basic.Errors {
 		if unit.Error == nil {
+			continue
+		}
+		seenLeaf = true
+		if required, ok := unit.Error.Kind.(*jsonschemakind.Required); ok && len(ignoreAbsentPaths) > 0 {
+			out = appendRequiredErrors(out, unit.InstanceLocation, unit.Error.String(), required.Missing,
+				ignoreAbsentPaths, apiVersion, kind)
 			continue
 		}
 		out = append(out, ValidationError{
@@ -929,8 +977,55 @@ func flattenErrors(err error) []ValidationError {
 			Msg:  unit.Error.String(),
 		})
 	}
-	if len(out) == 0 {
+	if len(out) == 0 && !seenLeaf {
 		out = append(out, ValidationError{Msg: err.Error()})
 	}
 	return out
+}
+
+func appendRequiredErrors(out []ValidationError, parentPath, originalMsg string, missing []string,
+	ignoreAbsentPaths []skipPathMatcher, apiVersion, kind string,
+) []ValidationError {
+	if len(missing) == 0 {
+		return append(out, ValidationError{Path: parentPath, Msg: originalMsg})
+	}
+	parentSegments, err := parseJSONPointerSegments(parentPath)
+	if err != nil {
+		return append(out, ValidationError{Path: parentPath, Msg: originalMsg})
+	}
+	kept := make([]string, 0, len(missing))
+	for _, prop := range missing {
+		if !matchesIgnoredAbsentPath(ignoreAbsentPaths, apiVersion, kind, append(parentSegments, prop)) {
+			kept = append(kept, prop)
+		}
+	}
+	if len(kept) == 0 {
+		return out
+	}
+	if len(kept) == len(missing) {
+		return append(out, ValidationError{Path: parentPath, Msg: originalMsg})
+	}
+	for _, prop := range kept {
+		out = append(out, ValidationError{
+			Path: parentPath,
+			Msg:  "missing property " + quoteSchemaString(prop),
+		})
+	}
+	return out
+}
+
+func matchesIgnoredAbsentPath(matchers []skipPathMatcher, apiVersion, kind string, segments []string) bool {
+	for _, m := range matchers {
+		if m.matchesPath(apiVersion, kind, segments) {
+			return true
+		}
+	}
+	return false
+}
+
+func quoteSchemaString(s string) string {
+	q := fmt.Sprintf("%q", s)
+	q = strings.ReplaceAll(q, `\"`, `"`)
+	q = strings.ReplaceAll(q, `'`, `\'`)
+	return "'" + q[1:len(q)-1] + "'"
 }
