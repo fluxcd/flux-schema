@@ -115,6 +115,10 @@ flux schema validate ./manifests \
   --ignore-json-path-if-absent 'Widget:/spec/replicas'
 ```
 
+CEL rules still evaluate the manifest as written. If a CEL rule assumes an
+admission-defaulted field exists, validation may still fail on the absent field;
+use `--skip-cel-rules` for those schemas.
+
 ## Output
 
 Default output (`-o text`) prints one line per document with its validation result,
