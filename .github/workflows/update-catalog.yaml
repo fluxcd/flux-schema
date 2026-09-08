@@ -22,7 +22,7 @@ jobs:
       - name: Setup flux-schema
         uses: ./actions/setup
       - name: Setup flux-operator
-        uses: controlplaneio-fluxcd/flux-operator/actions/setup@a380bb9f2759b4c5138201631e91f4a435c5b7b0 # v0.58.0
+        uses: controlplaneio-fluxcd/flux-operator/actions/setup@e0f71db839116724c84caf8e06ab8423e7d9b174 # v0.59.0
       - name: Reset catalog directory
         run: find ./catalog/latest -mindepth 1 -maxdepth 1 ! -name 'schema.plugin.fluxcd.io' -exec rm -rf {} +
       - name: Update Kubernetes schemas
