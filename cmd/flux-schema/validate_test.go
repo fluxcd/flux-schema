@@ -1470,3 +1470,75 @@ func TestValidateCmd_CELRule_SkipJSONPath(t *testing.T) {
 	g.Expect(res.Reason).To(Equal(apiv1.ReportReason(validator.ReasonCELViolation)))
 	g.Expect(res.Violations[0].Message).ToNot(BeEmpty())
 }
+
+// metadataCRDYAML declares a metadata schema constraining only name, as
+// Crossplane-generated CRDs do. Extracted schemas must still accept the
+// implicit ObjectMeta fields such as namespace.
+const metadataCRDYAML = `apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: keyvaults.example.com
+spec:
+  group: example.com
+  scope: Namespaced
+  names:
+    kind: KeyVault
+    plural: keyvaults
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+              properties:
+                name:
+                  type: string
+                  maxLength: 11
+            spec:
+              type: object
+              properties:
+                name:
+                  type: string
+`
+
+func TestValidateCmd_CRDMetadataSchema_AcceptsNamespace(t *testing.T) {
+	g := NewWithT(t)
+	schemaDir := extractCRDSchema(t, metadataCRDYAML)
+	manifestDir := t.TempDir()
+	writeManifest(t, manifestDir, "ok.yaml", `apiVersion: example.com/v1alpha1
+kind: KeyVault
+metadata:
+  name: testkv
+  namespace: stas
+  labels:
+    app: kv
+spec:
+  name: hello
+`)
+	path := writeManifest(t, manifestDir, "bad.yaml", `apiVersion: example.com/v1alpha1
+kind: KeyVault
+metadata:
+  name: name-too-long
+  namespace: stas
+spec:
+  name: hello
+`)
+
+	out, err := executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+	})
+	g.Expect(err).To(HaveOccurred())
+	g.Expect(out).ToNot(ContainSubstring("additional properties 'namespace' not allowed"))
+	g.Expect(out).To(ContainSubstring(path + " - KeyVault/stas/name-too-long is invalid: schema violation"))
+	g.Expect(out).To(MatchRegexp(`(?m)^  - /metadata/name: `))
+	g.Expect(out).To(ContainSubstring("Summary: 2 resources found in 2 files - Valid: 1, Invalid: 1, Skipped: 0"))
+}

@@ -504,6 +504,24 @@ func closeAdditionalPropertiesNameMap(k string, v any) bool {
 	return true
 }
 
+// openRootMetadata removes the additionalProperties:false that
+// closeAdditionalPropertiesChildren sets on the root "metadata" property of a
+// CRD schema. The API server only lets a CRD constrain metadata.name and
+// metadata.generateName and validates the rest of ObjectMeta (namespace,
+// labels, annotations, ...) implicitly, so a closed metadata object would
+// reject every namespaced resource whose CRD declares a metadata schema
+// (Crossplane-generated CRDs do this).
+func openRootMetadata(schema map[string]any) {
+	props, _ := schema[keyProperties].(map[string]any)
+	meta, _ := props["metadata"].(map[string]any)
+	if meta == nil {
+		return
+	}
+	if ap, ok := meta["additionalProperties"].(bool); ok && !ap {
+		delete(meta, "additionalProperties")
+	}
+}
+
 // --- vendor extension stripping ---
 
 // stripVendorExtensions removes x-kubernetes-* keys from the tree except those

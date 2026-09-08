@@ -4,6 +4,7 @@
 package extractor
 
 import (
+	"fmt"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -386,4 +387,55 @@ func TestExtractCRDs_MissingSpec(t *testing.T) {
 	_, errs := ExtractCRDs([]byte("apiVersion: apiextensions.k8s.io/v1\nkind: CustomResourceDefinition\nmetadata:\n  name: x\n"))
 	g.Expect(errs).To(HaveLen(1))
 	g.Expect(errs[0].Error()).To(ContainSubstring("missing 'spec'"))
+}
+
+// metadataCRD mirrors a Crossplane-generated CRD that declares a metadata
+// schema constraining only name, which is all the API server allows.
+const metadataCRD = `
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: keyvaults.example.com
+spec:
+  group: example.com
+  scope: Namespaced
+  names:
+    kind: KeyVault
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+              properties:
+                name:
+                  type: string
+                  maxLength: 63
+            spec:
+              type: object
+              properties:
+                name:
+                  type: string
+`
+
+func TestExtractCRDs_RootMetadataStaysOpen(t *testing.T) {
+	g := NewWithT(t)
+	crds, errs := ExtractCRDs([]byte(metadataCRD))
+	g.Expect(errs).To(BeEmpty())
+	g.Expect(crds).To(HaveLen(1))
+
+	props := crds[0].JSON["properties"].(map[string]any)
+	meta := props["metadata"].(map[string]any)
+	g.Expect(meta).ToNot(HaveKey("additionalProperties"), "root metadata must stay open")
+	name := meta["properties"].(map[string]any)["name"].(map[string]any)
+	g.Expect(fmt.Sprint(name["maxLength"])).To(Equal("63"), "name constraint must be preserved")
+
+	spec := props["spec"].(map[string]any)
+	g.Expect(spec["additionalProperties"]).To(BeFalse(), "sibling objects must still be closed")
 }
