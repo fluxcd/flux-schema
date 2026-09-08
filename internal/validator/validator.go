@@ -959,6 +959,12 @@ func flattenErrors(err error, ignoreAbsentPaths []skipPathMatcher, apiVersion, k
 	if !ok {
 		return []ValidationError{{Msg: err.Error()}}
 	}
+	if len(ignoreAbsentPaths) > 0 {
+		verr = pruneIgnoredAbsentRequired(verr, ignoreAbsentPaths, apiVersion, kind)
+		if verr == nil {
+			return nil
+		}
+	}
 	basic := verr.BasicOutput()
 	var out []ValidationError
 	seenLeaf := false
@@ -967,51 +973,76 @@ func flattenErrors(err error, ignoreAbsentPaths []skipPathMatcher, apiVersion, k
 			continue
 		}
 		seenLeaf = true
-		if required, ok := unit.Error.Kind.(*jsonschemakind.Required); ok && len(ignoreAbsentPaths) > 0 {
-			out = appendRequiredErrors(out, unit.InstanceLocation, unit.Error.String(), required.Missing,
-				ignoreAbsentPaths, apiVersion, kind)
-			continue
-		}
 		out = append(out, ValidationError{
 			Path: unit.InstanceLocation,
 			Msg:  unit.Error.String(),
 		})
 	}
 	if len(out) == 0 && !seenLeaf {
-		out = append(out, ValidationError{Msg: err.Error()})
+		out = append(out, ValidationError{Msg: verr.Error()})
 	}
 	return out
 }
 
-func appendRequiredErrors(out []ValidationError, parentPath, originalMsg string, missing []string,
-	ignoreAbsentPaths []skipPathMatcher, apiVersion, kind string,
-) []ValidationError {
-	if len(missing) == 0 {
-		return append(out, ValidationError{Path: parentPath, Msg: originalMsg})
+func pruneIgnoredAbsentRequired(err *jsonschema.ValidationError, matchers []skipPathMatcher, apiVersion, kind string) *jsonschema.ValidationError {
+	if err == nil {
+		return nil
 	}
-	parentSegments, err := parseJSONPointerSegments(parentPath)
-	if err != nil {
-		return append(out, ValidationError{Path: parentPath, Msg: originalMsg})
+	clone := *err
+	if len(err.Causes) > 0 {
+		prunedCauses := 0
+		clone.Causes = make([]*jsonschema.ValidationError, 0, len(err.Causes))
+		for _, cause := range err.Causes {
+			pruned := pruneIgnoredAbsentRequired(cause, matchers, apiVersion, kind)
+			if pruned != nil {
+				clone.Causes = append(clone.Causes, pruned)
+			} else {
+				prunedCauses++
+			}
+		}
+		switch err.ErrorKind.(type) {
+		case *jsonschemakind.AnyOf:
+			if prunedCauses > 0 {
+				return nil
+			}
+		case *jsonschemakind.OneOf:
+			if prunedCauses == 1 {
+				return nil
+			}
+		}
+		if len(clone.Causes) == 0 {
+			return nil
+		}
 	}
+	required, ok := err.ErrorKind.(*jsonschemakind.Required)
+	if !ok || len(required.Missing) == 0 {
+		return &clone
+	}
+	kept := keepRequiredFields(err.InstanceLocation, required.Missing, matchers, apiVersion, kind)
+	if len(kept) == 0 {
+		return nil
+	}
+	if len(kept) < len(required.Missing) {
+		copied := *required
+		copied.Missing = kept
+		clone.ErrorKind = &copied
+	}
+	return &clone
+}
+
+func keepRequiredFields(parentSegments []string, missing []string,
+	matchers []skipPathMatcher, apiVersion, kind string,
+) []string {
 	kept := make([]string, 0, len(missing))
 	for _, prop := range missing {
-		if !matchesIgnoredAbsentPath(ignoreAbsentPaths, apiVersion, kind, append(parentSegments, prop)) {
+		fieldSegments := make([]string, len(parentSegments), len(parentSegments)+1)
+		copy(fieldSegments, parentSegments)
+		fieldSegments = append(fieldSegments, prop)
+		if !matchesIgnoredAbsentPath(matchers, apiVersion, kind, fieldSegments) {
 			kept = append(kept, prop)
 		}
 	}
-	if len(kept) == 0 {
-		return out
-	}
-	if len(kept) == len(missing) {
-		return append(out, ValidationError{Path: parentPath, Msg: originalMsg})
-	}
-	for _, prop := range kept {
-		out = append(out, ValidationError{
-			Path: parentPath,
-			Msg:  "missing property " + quoteSchemaString(prop),
-		})
-	}
-	return out
+	return kept
 }
 
 func matchesIgnoredAbsentPath(matchers []skipPathMatcher, apiVersion, kind string, segments []string) bool {
@@ -1021,11 +1052,4 @@ func matchesIgnoredAbsentPath(matchers []skipPathMatcher, apiVersion, kind strin
 		}
 	}
 	return false
-}
-
-func quoteSchemaString(s string) string {
-	q := fmt.Sprintf("%q", s)
-	q = strings.ReplaceAll(q, `\"`, `"`)
-	q = strings.ReplaceAll(q, `'`, `\'`)
-	return "'" + q[1:len(q)-1] + "'"
 }
