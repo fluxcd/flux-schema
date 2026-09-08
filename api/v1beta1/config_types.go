@@ -44,6 +44,11 @@ type ValidateConfig struct {
 	// +optional
 	SkipJSONPaths []string `json:"skipJSONPath,omitempty"`
 
+	// IgnoreJSONPathIfAbsent contains JSON Pointers whose required-property
+	// errors are ignored when the field is absent.
+	// +optional
+	IgnoreJSONPathIfAbsent []string `json:"ignoreJSONPathIfAbsent,omitempty"`
+
 	// SkipFiles contains basename glob patterns excluded from validation.
 	// +optional
 	SkipFiles []string `json:"skipFile,omitempty"`
