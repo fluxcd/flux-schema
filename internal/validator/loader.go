@@ -158,6 +158,9 @@ func (l *SchemaLoader) loadAndCompile(ctx context.Context, location string) (loa
 	if err := yaml.Unmarshal(body, &doc); err != nil {
 		return r, fmt.Errorf("parse schema: %w", err)
 	}
+	if rootMap, ok := doc.(map[string]any); ok {
+		augmentRootObjectMetaSchema(rootMap)
+	}
 
 	r.schema, err = l.compileJSONSchema(baseURI, doc)
 	if err != nil {
