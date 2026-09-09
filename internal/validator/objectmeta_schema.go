@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 const (
@@ -29,6 +30,10 @@ func augmentRootObjectMetaSchema(schema map[string]any) {
 	metadata, _ := props["metadata"].(map[string]any)
 	if metadata == nil {
 		return
+	}
+	if inlined, ok := inlineLocalRef(schema, metadata); ok {
+		metadata = inlined
+		props["metadata"] = metadata
 	}
 	metadataProps, _ := metadata[jsonSchemaProperties].(map[string]any)
 	if metadataProps == nil {
@@ -54,7 +59,55 @@ func augmentRootObjectMetaSchema(schema map[string]any) {
 				existing[key] = value
 			}
 		}
+		if acceptsNull(objectMetaProp) {
+			addNullType(existing)
+		}
 	}
+}
+
+func inlineLocalRef(root, node map[string]any) (map[string]any, bool) {
+	ref, _ := node["$ref"].(string)
+	if ref == "" {
+		return nil, false
+	}
+	target, ok := resolveLocalRef(root, ref)
+	if !ok {
+		return nil, false
+	}
+	inlined := runtime.DeepCopyJSON(target)
+	for key, value := range node {
+		if key == "$ref" {
+			continue
+		}
+		inlined[key] = runtime.DeepCopyJSONValue(value)
+	}
+	return inlined, true
+}
+
+func resolveLocalRef(root map[string]any, ref string) (map[string]any, bool) {
+	pointer, ok := strings.CutPrefix(ref, "#/")
+	if !ok {
+		return nil, false
+	}
+	var node any = root
+	for _, segment := range strings.Split(pointer, "/") {
+		m, ok := node.(map[string]any)
+		if !ok {
+			return nil, false
+		}
+		node, ok = m[unescapeJSONPointer(segment)]
+		if !ok {
+			return nil, false
+		}
+	}
+	target, ok := node.(map[string]any)
+	return target, ok
+}
+
+func unescapeJSONPointer(s string) string {
+	s = strings.ReplaceAll(s, "~1", "/")
+	s = strings.ReplaceAll(s, "~0", "~")
+	return s
 }
 
 func objectMetaPropertySchemas() map[string]map[string]any {
@@ -153,8 +206,12 @@ func objectSchemaForGoStruct(t reflect.Type, seen map[reflect.Type]bool) map[str
 			}
 			continue
 		}
-		props[name] = schemaForGoType(field.Type, nextSeen)
-		if !slices.Contains(opts, "omitempty") && !slices.Contains(opts, "omitzero") {
+		fieldSchema := schemaForGoType(field.Type, nextSeen)
+		if optionalJSONField(opts) {
+			addNullType(fieldSchema)
+		}
+		props[name] = fieldSchema
+		if !optionalJSONField(opts) {
 			required = append(required, name)
 		}
 	}
@@ -168,6 +225,10 @@ func objectSchemaForGoStruct(t reflect.Type, seen map[reflect.Type]bool) map[str
 		schema["required"] = required
 	}
 	return schema
+}
+
+func optionalJSONField(opts []string) bool {
+	return slices.Contains(opts, "omitempty") || slices.Contains(opts, "omitzero")
 }
 
 func schemaPropertiesForGoType(t reflect.Type, seen map[reflect.Type]bool) map[string]any {
@@ -214,5 +275,16 @@ func addNullType(schema map[string]any) {
 		if !slices.Contains(typed, jsonNullType) {
 			schema["type"] = append(typed, jsonNullType)
 		}
+	}
+}
+
+func acceptsNull(schema map[string]any) bool {
+	switch typed := schema["type"].(type) {
+	case string:
+		return typed == jsonNullType
+	case []any:
+		return slices.Contains(typed, jsonNullType)
+	default:
+		return false
 	}
 }

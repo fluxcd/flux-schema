@@ -89,7 +89,9 @@ During validation, resource-root `metadata` is treated as Kubernetes
 `metadata.properties`, Flux Schema completes the loaded schema in memory so
 standard fields like `namespace`, `labels`, and `annotations` do not fail as
 additional properties. Existing schema constraints on fields such as
-`metadata.name` and `metadata.generateName` are preserved.
+`metadata.name` and `metadata.generateName` are preserved. CEL rules still use
+Kubernetes' structural schema view of root metadata, where only `name` and
+`generateName` are implicitly visible.
 
 ## Skipping documents and fields
 

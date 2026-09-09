@@ -19,6 +19,7 @@ import (
 
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/santhosh-tekuri/jsonschema/v6"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
 
 	"github.com/fluxcd/flux-schema/internal/tmpl"
@@ -132,8 +133,8 @@ func (l *SchemaLoader) cacheEntry(location string) *schemaCacheEntry {
 	return entry.(*schemaCacheEntry)
 }
 
-// loadAndCompile fetches location and compiles its contents as a JSON Schema,
-// then builds Kubernetes admission and CEL evaluators from the same document.
+// loadAndCompile fetches location, compiles its contents as a JSON Schema,
+// then builds Kubernetes admission and CEL evaluators from the source schema.
 // The returned loadResult has found=false when the location responded with
 // "not found", so the caller can fall through to the next template.
 //
@@ -158,11 +159,18 @@ func (l *SchemaLoader) loadAndCompile(ctx context.Context, location string) (loa
 	if err := yaml.Unmarshal(body, &doc); err != nil {
 		return r, fmt.Errorf("parse schema: %w", err)
 	}
+
+	jsonSchemaDoc := doc
 	if rootMap, ok := doc.(map[string]any); ok {
-		augmentRootObjectMetaSchema(rootMap)
+		// Root ObjectMeta completion is a JSON Schema compatibility layer.
+		// Kubernetes CEL only exposes its documented implicit fields through
+		// the source structural schema below.
+		jsonSchemaMap := runtime.DeepCopyJSON(rootMap)
+		augmentRootObjectMetaSchema(jsonSchemaMap)
+		jsonSchemaDoc = jsonSchemaMap
 	}
 
-	r.schema, err = l.compileJSONSchema(baseURI, doc)
+	r.schema, err = l.compileJSONSchema(baseURI, jsonSchemaDoc)
 	if err != nil {
 		return loadResult{}, err
 	}

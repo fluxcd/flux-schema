@@ -183,6 +183,18 @@ func TestSchemaLoader_Resolve_WithInternalRef(t *testing.T) {
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(found).To(BeTrue())
 	g.Expect(resolved.JSON.Validate(map[string]any{"metadata": map[string]any{"name": "r1"}})).To(Succeed())
+	g.Expect(resolved.JSON.Validate(map[string]any{
+		"metadata": map[string]any{
+			"name":      "r1",
+			"namespace": "default",
+		},
+	})).To(Succeed())
+	g.Expect(resolved.JSON.Validate(map[string]any{
+		"metadata": map[string]any{
+			"name":      "r1",
+			"namepaceX": "default",
+		},
+	})).ToNot(Succeed())
 }
 
 func TestSchemaLoader_Resolve_CachesAcrossCalls(t *testing.T) {
