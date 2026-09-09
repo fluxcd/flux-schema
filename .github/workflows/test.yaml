@@ -15,11 +15,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Test suite setup
-        uses: fluxcd/gha-workflows/.github/actions/setup-kubernetes@v0.13.0
+        uses: fluxcd/gha-workflows/.github/actions/setup-kubernetes@v0.14.0
         with:
           go-version: 1.26.x
       - name: Setup Flux CLI
-        uses: fluxcd/flux2/action@889be9d6cc8afa8ed639e1e1ba4ab678e3b38d8c # v2.9.4
+        uses: fluxcd/flux2/action@dd233c4fadef306a62b7893204f8e3817fecc2b2 # v2.9.5
       - name: Run shellcheck
         run: shellcheck scripts/*.sh actions/validate/*.sh
       - name: Run tests
