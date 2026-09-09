@@ -341,6 +341,42 @@ func writeWidgetSchemaWithOptionalIntCEL(t *testing.T, dir string) {
 	}
 }
 
+func writeWidgetSchemaWithRootObjectMetaCEL(t *testing.T, dir, rule string, metadataProps map[string]any) {
+	t.Helper()
+	schema := map[string]any{
+		"type":     "object",
+		"required": []any{"apiVersion", "kind", "spec"},
+		"properties": map[string]any{
+			"apiVersion": map[string]any{"type": "string"},
+			"kind":       map[string]any{"type": "string"},
+			"metadata": map[string]any{
+				"type":                 "object",
+				"additionalProperties": false,
+				"properties":           metadataProps,
+			},
+			"spec": map[string]any{
+				"type":                 "object",
+				"additionalProperties": false,
+				"required":             []any{"name"},
+				"properties": map[string]any{
+					"name": map[string]any{"type": "string"},
+				},
+			},
+		},
+		"x-kubernetes-validations": []any{
+			map[string]any{"rule": rule},
+		},
+	}
+	b, err := json.MarshalIndent(schema, "", "  ")
+	if err != nil {
+		t.Fatalf("marshal schema: %v", err)
+	}
+	path := filepath.Join(dir, "widget-example-v1.json")
+	if err := os.WriteFile(path, b, 0o644); err != nil {
+		t.Fatalf("write schema: %v", err)
+	}
+}
+
 // Regression: a CEL rule that references an integer field used to fail with
 // "invalid data, expected int, got float64" because sigs.k8s.io/yaml decoded
 // JSON numbers via stdlib encoding/json (float64 by default for any).
@@ -388,6 +424,58 @@ spec:
 	g.Expect(results[0].Reason).To(Equal(ReasonCELViolation))
 	g.Expect(results[0].Errors).ToNot(BeEmpty())
 	g.Expect(results[0].Errors[0].Msg).To(ContainSubstring("port must be positive"))
+}
+
+func TestValidateBytes_CELSeesImplicitObjectMetaFields(t *testing.T) {
+	g := NewWithT(t)
+	dir := t.TempDir()
+	writeWidgetSchemaWithRootObjectMetaCEL(
+		t,
+		dir,
+		"has(self.metadata.name) || has(self.metadata.generateName)",
+		map[string]any{},
+	)
+	v := newLocalValidator(t, dir, false)
+
+	doc := []byte(`apiVersion: example.com/v1
+kind: Widget
+metadata:
+  name: w1
+  namespace: default
+spec:
+  name: my-widget
+`)
+	results := v.ValidateBytes(context.Background(), "test.yaml", doc)
+	g.Expect(results).To(HaveLen(1))
+	g.Expect(results[0].Status).To(Equal(StatusValid), "errors: %+v", results[0].Errors)
+	g.Expect(results[0].Errors).To(BeEmpty())
+}
+
+func TestValidateBytes_CELDoesNotSeeAugmentedObjectMetaFields(t *testing.T) {
+	g := NewWithT(t)
+	dir := t.TempDir()
+	writeWidgetSchemaWithRootObjectMetaCEL(
+		t,
+		dir,
+		"has(self.metadata.namespace)",
+		map[string]any{"name": map[string]any{"type": "string"}},
+	)
+	v := newLocalValidator(t, dir, false)
+
+	doc := []byte(`apiVersion: example.com/v1
+kind: Widget
+metadata:
+  name: w1
+  namespace: default
+spec:
+  name: my-widget
+`)
+	results := v.ValidateBytes(context.Background(), "test.yaml", doc)
+	g.Expect(results).To(HaveLen(1))
+	g.Expect(results[0].Status).To(Equal(StatusInvalid))
+	g.Expect(results[0].Reason).To(Equal(ReasonCELViolation))
+	g.Expect(results[0].Errors).ToNot(BeEmpty())
+	g.Expect(results[0].Errors[0].Msg).To(ContainSubstring("undefined field 'namespace'"))
 }
 
 func TestValidateBytes_SkipJSONPathIfAbsent_SkipsCELWhenPathAbsent(t *testing.T) {

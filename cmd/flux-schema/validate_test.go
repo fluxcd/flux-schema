@@ -96,6 +96,39 @@ spec:
   name: 42
 `
 
+const crdWithRootMetadataNameOnly = `apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: widgets.example.com
+spec:
+  group: example.com
+  scope: Namespaced
+  names:
+    kind: Widget
+    plural: widgets
+  versions:
+    - name: v1
+      schema:
+        openAPIV3Schema:
+          type: object
+          required:
+            - spec
+          properties:
+            metadata:
+              type: object
+              properties:
+                name:
+                  type: string
+                  maxLength: 63
+            spec:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+`
+
 func TestValidateCmd_ValidManifest_QuietNoOutput(t *testing.T) {
 	g := NewWithT(t)
 	schemaDir := extractWidgetSchema(t)
@@ -109,6 +142,50 @@ func TestValidateCmd_ValidManifest_QuietNoOutput(t *testing.T) {
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(out).ToNot(ContainSubstring("is valid"))
 	g.Expect(out).To(ContainSubstring("Summary: 1 resource found in 1 file - Valid: 1, Invalid: 0, Skipped: 0"))
+}
+
+func TestValidateCmd_CRDImplicitObjectMetaFields(t *testing.T) {
+	g := NewWithT(t)
+	schemaDir := extractCRDSchema(t, crdWithRootMetadataNameOnly)
+	schemaFiles, err := filepath.Glob(filepath.Join(schemaDir, "*.json"))
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(schemaFiles).To(HaveLen(1))
+	schemaData, err := os.ReadFile(schemaFiles[0])
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(string(schemaData)).ToNot(ContainSubstring(`"namespace"`), "extract crd output must stay compact")
+
+	manifestDir := t.TempDir()
+	writeManifest(t, manifestDir, "ok.yaml", validWidget)
+	longName := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	longNamePath := writeManifest(t, manifestDir, "long-name.yaml", `apiVersion: example.com/v1
+kind: Widget
+metadata:
+  name: `+longName+`
+  namespace: default
+spec:
+  name: hello
+`)
+	typoPath := writeManifest(t, manifestDir, "typo.yaml", `apiVersion: example.com/v1
+kind: Widget
+metadata:
+  name: typo-widget
+  namespace: default
+  namepaceX: default
+spec:
+  name: hello
+`)
+
+	out, err := executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+	})
+	g.Expect(err).To(HaveOccurred())
+	g.Expect(out).ToNot(ContainSubstring("additional properties 'namespace' not allowed"))
+	g.Expect(out).To(ContainSubstring(longNamePath + " - Widget/default/" + longName + " is invalid: schema violation"))
+	g.Expect(out).To(MatchRegexp(`(?m)^  - /metadata/name: `))
+	g.Expect(out).To(ContainSubstring(typoPath + " - Widget/default/typo-widget is invalid: schema violation"))
+	g.Expect(out).To(ContainSubstring("additional properties 'namepaceX' not allowed"))
+	g.Expect(out).To(ContainSubstring("Summary: 3 resources found in 3 files - Valid: 1, Invalid: 2, Skipped: 0"))
 }
 
 func TestValidateCmd_InvalidManifest_PrintsViolationAndFails(t *testing.T) {

@@ -223,6 +223,55 @@ spec:
 	g.Expect(paths).To(HaveKey("/metadata/name"))
 }
 
+func TestValidateBytes_RejectsUnknownObjectMetaField(t *testing.T) {
+	g := NewWithT(t)
+	dir := t.TempDir()
+	writeWidgetSchema(t, dir)
+	v := newLocalValidator(t, dir, false)
+
+	doc := []byte(`apiVersion: example.com/v1
+kind: Widget
+metadata:
+  name: w1
+  namespace: default
+  namepaceX: default
+spec:
+  name: ok
+`)
+	results := v.ValidateBytes(context.Background(), "test.yaml", doc)
+	g.Expect(results).To(HaveLen(1))
+	g.Expect(results[0].Status).To(Equal(StatusInvalid))
+	g.Expect(results[0].Reason).To(Equal(ReasonSchemaViolation))
+	g.Expect(results[0].Errors).To(ContainElement(ValidationError{
+		Path: "/metadata",
+		Msg:  "additional properties 'namepaceX' not allowed",
+	}))
+}
+
+func TestValidateBytes_AllowsNullOptionalObjectMetaFields(t *testing.T) {
+	g := NewWithT(t)
+	dir := t.TempDir()
+	writeWidgetSchema(t, dir)
+	v := newLocalValidator(t, dir, false)
+
+	doc := []byte(`apiVersion: example.com/v1
+kind: Widget
+metadata:
+  name: w1
+  namespace: null
+  labels: null
+  annotations: null
+  finalizers: null
+  managedFields: null
+spec:
+  name: ok
+`)
+	results := v.ValidateBytes(context.Background(), "test.yaml", doc)
+	g.Expect(results).To(HaveLen(1))
+	g.Expect(results[0].Status).To(Equal(StatusValid))
+	g.Expect(results[0].Errors).To(BeEmpty())
+}
+
 // TestValidateBytes_SchemaAndMetadataViolations pins that both error sets
 // surface in one Result so users don't have to re-run after fixing one half.
 func TestValidateBytes_SchemaAndMetadataViolations(t *testing.T) {

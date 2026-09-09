@@ -84,6 +84,15 @@ projects and rebuilt daily from upstream releases.
 See [custom catalogs](custom-schema-catalog.md) for guidance on building and hosting
 your own schema catalog.
 
+During validation, resource-root `metadata` is treated as Kubernetes
+`ObjectMeta`. If a compact CRD schema declares only part of
+`metadata.properties`, Flux Schema completes the loaded schema in memory so
+standard fields like `namespace`, `labels`, and `annotations` do not fail as
+additional properties. Existing schema constraints on fields such as
+`metadata.name` and `metadata.generateName` are preserved. CEL rules still use
+Kubernetes' structural schema view of root metadata, where only `name` and
+`generateName` are implicitly visible.
+
 ## Skipping documents and fields
 
 Manifests can be piped in and certain documents skipped with `--skip-kind`:
