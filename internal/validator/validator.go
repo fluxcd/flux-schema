@@ -1015,13 +1015,15 @@ func pruneSkippedAbsentRequired(err *jsonschema.ValidationError, matchers []skip
 	clone := *err
 	if len(err.Causes) > 0 {
 		prunedCauses := 0
+		prunedIndexes := make([]int, 0, len(err.Causes))
 		clone.Causes = make([]*jsonschema.ValidationError, 0, len(err.Causes))
-		for _, cause := range err.Causes {
+		for i, cause := range err.Causes {
 			pruned := pruneSkippedAbsentRequired(cause, matchers, apiVersion, kind)
 			if pruned != nil {
 				clone.Causes = append(clone.Causes, pruned)
 			} else {
 				prunedCauses++
+				prunedIndexes = append(prunedIndexes, i)
 			}
 		}
 		switch err.ErrorKind.(type) {
@@ -1032,6 +1034,11 @@ func pruneSkippedAbsentRequired(err *jsonschema.ValidationError, matchers []skip
 		case *jsonschemakind.OneOf:
 			if prunedCauses == 1 {
 				return nil
+			}
+			if prunedCauses > 1 {
+				clone.Causes = nil
+				clone.ErrorKind = &jsonschemakind.OneOf{Subschemas: prunedIndexes[:2]}
+				return &clone
 			}
 		}
 		if len(clone.Causes) == 0 {

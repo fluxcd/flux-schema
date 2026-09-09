@@ -2327,6 +2327,63 @@ spec: {}
 	}
 }
 
+func TestValidateBytes_SkipJSONPathIfAbsent_OneOfMultiplePrunedBranchesFails(t *testing.T) {
+	g := NewWithT(t)
+	dir := t.TempDir()
+	schema := map[string]any{
+		"type":     "object",
+		"required": []any{"apiVersion", "kind", "spec"},
+		"properties": map[string]any{
+			"apiVersion": map[string]any{"type": "string"},
+			"kind":       map[string]any{"type": "string"},
+			"metadata":   map[string]any{"type": "object"},
+			"spec": map[string]any{
+				"oneOf": []any{
+					map[string]any{
+						"type":     "object",
+						"required": []any{"alpha"},
+						"properties": map[string]any{
+							"alpha": map[string]any{"type": "string"},
+						},
+					},
+					map[string]any{
+						"type":     "object",
+						"required": []any{"beta"},
+						"properties": map[string]any{
+							"beta": map[string]any{"type": "string"},
+						},
+					},
+				},
+			},
+		},
+	}
+	b, err := json.MarshalIndent(schema, "", "  ")
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(os.WriteFile(filepath.Join(dir, "widget-example-v1.json"), b, 0o644)).To(Succeed())
+	v, err := New(Options{
+		SchemaLocations: []string{filepath.Join(dir, "{{ .Kind }}-{{ .GroupPrefix }}-{{ .Version }}.json")},
+		SkipJSONPathIfAbsent: []string{
+			"Widget:/spec/alpha",
+			"Widget:/spec/beta",
+		},
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	doc := []byte(`apiVersion: example.com/v1
+kind: Widget
+metadata:
+  name: w1
+spec: {}
+`)
+	results := v.ValidateBytes(context.Background(), "test.yaml", doc)
+	g.Expect(results).To(HaveLen(1))
+	g.Expect(results[0].Status).To(Equal(StatusInvalid))
+	g.Expect(results[0].Errors).To(ConsistOf(ValidationError{
+		Path: "/spec",
+		Msg:  "'oneOf' failed, subschemas 0, 1 matched",
+	}))
+}
+
 func TestValidateBytes_SkipJSONPathIfAbsent_PrunesRefParent(t *testing.T) {
 	g := NewWithT(t)
 	dir := t.TempDir()
