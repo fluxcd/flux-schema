@@ -34,14 +34,17 @@
 //  5. SkipJSONPaths — matching pointers are deleted from the document
 //     before schema validation.
 //  6. JSON Schema + ObjectMeta — the compiled schema runs against the
-//     document; DNS-1123 and qualified-name rules are layered on metadata
-//     since Kubernetes schemas leave it effectively unconstrained. The
-//     metadata layer is skipped for Flux plugin API groups. Violations merge
-//     under ReasonSchemaViolation.
+//     document. SkipJSONPathIfAbsent suppresses matching required-property
+//     errors for absent fields only; present values are still checked by the
+//     schema. DNS-1123 and qualified-name rules are layered on metadata since
+//     Kubernetes schemas leave it effectively unconstrained. The metadata
+//     layer is skipped for Flux plugin API groups. Violations merge under
+//     ReasonSchemaViolation.
 //  7. CEL x-kubernetes-validations — runs only after steps 1-6 pass and
-//     unless Options.SkipCELRules is set. Rule compile errors and runtime
-//     violations both surface as ReasonCELViolation; oldSelf is unbound
-//     (static validator, no transition state).
+//     unless Options.SkipCELRules is set or SkipJSONPathIfAbsent matched an
+//     absent path on the document. Rule compile errors and runtime violations
+//     both surface as ReasonCELViolation; oldSelf is unbound (static
+//     validator, no transition state).
 //
 // Schemas produced by the extractor close objects with
 // additionalProperties: false, so undocumented spec fields fail.

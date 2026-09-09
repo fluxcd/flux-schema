@@ -52,6 +52,10 @@ var validateCmd = &cobra.Command{
   flux-schema validate ./manifests \
     --skip-json-path v1/Secret:/sops
 
+  # Skip required-field errors for values defaulted by admission hooks
+  flux-schema validate ./manifests \
+    --skip-json-path-if-absent Widget:/spec/replicas
+
   # Skip files and directories by basename glob
   # default skips dotfiles and dot-directories e.g. '.git'
   flux-schema validate ./manifests \
@@ -68,6 +72,7 @@ type validateFlags struct {
 	skipMissingSchemas    bool
 	skipKinds             []string
 	skipJSONPaths         []string
+	skipJSONPathIfAbsent  []string
 	skipFiles             []string
 	skipCELRules          bool
 	verbose               bool
@@ -92,6 +97,8 @@ func init() {
 		"skip documents matching kind or apiVersion/kind e.g. 'v1/Secret' (repeatable)")
 	validateCmd.Flags().StringArrayVar(&validateArgs.skipJSONPaths, "skip-json-path", nil,
 		"strip a JSON Pointer field, optionally scoped e.g. 'v1/Secret:/sops' (repeatable)")
+	validateCmd.Flags().StringArrayVar(&validateArgs.skipJSONPathIfAbsent, "skip-json-path-if-absent", nil,
+		"skip a missing required JSON Pointer field, optionally scoped e.g. 'Widget:/spec/replicas' (repeatable)")
 	validateCmd.Flags().StringArrayVar(&validateArgs.skipFiles, "skip-file", nil,
 		"glob pattern matched against files and dirs "+
 			"defaults to skipping dotfiles and dot-dirs (repeatable)")
@@ -449,6 +456,7 @@ func buildValidatorOptions(inputs []string) (validator.Options, error) {
 		SkipMissingSchemas:    validateArgs.skipMissingSchemas,
 		SkipKinds:             validateArgs.skipKinds,
 		SkipJSONPaths:         validateArgs.skipJSONPaths,
+		SkipJSONPathIfAbsent:  validateArgs.skipJSONPathIfAbsent,
 		SkipFiles:             validateArgs.skipFiles,
 		SkipCELRules:          validateArgs.skipCELRules,
 		UserAgent:             userAgent(),

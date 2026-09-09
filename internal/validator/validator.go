@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"text/template"
@@ -21,6 +22,7 @@ import (
 
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/santhosh-tekuri/jsonschema/v6"
+	jsonschemakind "github.com/santhosh-tekuri/jsonschema/v6/kind"
 	utiljson "k8s.io/apimachinery/pkg/util/json"
 	"sigs.k8s.io/yaml"
 
@@ -105,9 +107,12 @@ type Options struct {
 	SkipMissingSchemas bool
 	SkipKinds          []string
 	SkipJSONPaths      []string
-	SkipFiles          []string
-	SkipCELRules       bool
-	HTTPClient         *retryablehttp.Client
+	// SkipJSONPathIfAbsent suppresses JSON Schema required-property errors
+	// for matching fields. Present values are still validated normally.
+	SkipJSONPathIfAbsent []string
+	SkipFiles            []string
+	SkipCELRules         bool
+	HTTPClient           *retryablehttp.Client
 	// UserAgent is the value for the User-Agent header on schema fetches;
 	// empty leaves the client untouched.
 	UserAgent             string
@@ -125,11 +130,12 @@ var DefaultSkipFiles = []string{".*"}
 // Validator resolves and applies JSON Schemas to Kubernetes manifests.
 // It is safe for concurrent use by multiple goroutines.
 type Validator struct {
-	opts      Options
-	loader    *SchemaLoader
-	skipKinds []skipKindMatcher
-	skipPaths []skipPathMatcher
-	skipFiles []string
+	opts            Options
+	loader          *SchemaLoader
+	skipKinds       []skipKindMatcher
+	skipPaths       []skipPathMatcher
+	skipAbsentPaths []skipPathMatcher
+	skipFiles       []string
 }
 
 // skipKindMatcher matches a document by Kind, optionally scoped to an
@@ -189,9 +195,17 @@ type skipPathMatcher struct {
 // from the pointer half, which follows RFC 6901; '~1' decodes to '/' and '~0'
 // to '~'. Pointer descent through arrays is a silent no-op (map keys only).
 func parseSkipJSONPath(s string) (skipPathMatcher, error) {
+	return parseJSONPathMatcher(s, "skip JSON path")
+}
+
+func parseSkipJSONPathIfAbsent(s string) (skipPathMatcher, error) {
+	return parseJSONPathMatcher(s, "skip JSON path if absent")
+}
+
+func parseJSONPathMatcher(s, label string) (skipPathMatcher, error) {
 	s = strings.TrimSpace(s)
 	if s == "" {
-		return skipPathMatcher{}, errors.New("skip JSON path pattern must not be empty")
+		return skipPathMatcher{}, fmt.Errorf("%s pattern must not be empty", label)
 	}
 	var selector, pointer string
 	switch {
@@ -201,29 +215,43 @@ func parseSkipJSONPath(s string) (skipPathMatcher, error) {
 	default:
 		left, right, hasSelector := strings.Cut(s, ":")
 		if !hasSelector {
-			return skipPathMatcher{}, fmt.Errorf("skip JSON path pattern %q: pointer must start with '/'", s)
+			return skipPathMatcher{}, fmt.Errorf("%s pattern %q: pointer must start with '/'", label, s)
 		}
 		selector, pointer = left, right
 	}
 	if !strings.HasPrefix(pointer, "/") {
-		return skipPathMatcher{}, fmt.Errorf("skip JSON path pattern %q: pointer must start with '/'", s)
+		return skipPathMatcher{}, fmt.Errorf("%s pattern %q: pointer must start with '/'", label, s)
 	}
 	if pointer == "/" {
-		return skipPathMatcher{}, fmt.Errorf("skip JSON path pattern %q: pointer must target a property", s)
+		return skipPathMatcher{}, fmt.Errorf("%s pattern %q: pointer must target a property", label, s)
 	}
 	var apiVersion, kind string
 	if selector != "" {
 		m, err := parseSkipKind(selector)
 		if err != nil {
-			return skipPathMatcher{}, fmt.Errorf("skip JSON path pattern %q: %w", s, err)
+			return skipPathMatcher{}, fmt.Errorf("%s pattern %q: %w", label, s, err)
 		}
 		apiVersion, kind = m.apiVersion, m.kind
+	}
+	segments, err := parseJSONPointerSegments(pointer)
+	if err != nil {
+		return skipPathMatcher{}, fmt.Errorf("%s pattern %q: %w", label, s, err)
+	}
+	return skipPathMatcher{apiVersion: apiVersion, kind: kind, segments: segments}, nil
+}
+
+func parseJSONPointerSegments(pointer string) ([]string, error) {
+	if pointer == "" {
+		return nil, nil
+	}
+	if !strings.HasPrefix(pointer, "/") {
+		return nil, errors.New("pointer must start with '/'")
 	}
 	rawSegments := strings.Split(strings.TrimPrefix(pointer, "/"), "/")
 	segments := make([]string, len(rawSegments))
 	for i, seg := range rawSegments {
 		if seg == "" {
-			return skipPathMatcher{}, fmt.Errorf("skip JSON path pattern %q: empty segment in pointer", s)
+			return nil, errors.New("empty segment in pointer")
 		}
 		// RFC 6901: decode '~1' before '~0' so '~01' decodes to literal '~1'
 		// rather than collapsing into '/'.
@@ -231,7 +259,7 @@ func parseSkipJSONPath(s string) (skipPathMatcher, error) {
 		seg = strings.ReplaceAll(seg, "~0", "~")
 		segments[i] = seg
 	}
-	return skipPathMatcher{apiVersion: apiVersion, kind: kind, segments: segments}, nil
+	return segments, nil
 }
 
 func (m skipPathMatcher) matches(apiVersion, kind string) bool {
@@ -239,6 +267,10 @@ func (m skipPathMatcher) matches(apiVersion, kind string) bool {
 		return false
 	}
 	return m.apiVersion == "" || m.apiVersion == apiVersion
+}
+
+func (m skipPathMatcher) matchesPath(apiVersion, kind string, segments []string) bool {
+	return m.matches(apiVersion, kind) && slices.Equal(m.segments, segments)
 }
 
 // stripPath deletes the field referenced by m.segments from doc when present.
@@ -258,6 +290,29 @@ func (m skipPathMatcher) stripPath(doc map[string]any) {
 		}
 		parent = next
 	}
+}
+
+func (m skipPathMatcher) pathExists(doc map[string]any) bool {
+	var node any = doc
+	for _, seg := range m.segments {
+		switch n := node.(type) {
+		case map[string]any:
+			next, ok := n[seg]
+			if !ok {
+				return false
+			}
+			node = next
+		case []any:
+			i, err := strconv.Atoi(seg)
+			if err != nil || i < 0 || i >= len(n) {
+				return false
+			}
+			node = n[i]
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 // New returns a Validator configured from opts. Each location template is
@@ -313,6 +368,15 @@ func New(opts Options) (*Validator, error) {
 		skipPaths = append(skipPaths, m)
 	}
 
+	skipAbsentPaths := make([]skipPathMatcher, 0, len(opts.SkipJSONPathIfAbsent))
+	for _, s := range opts.SkipJSONPathIfAbsent {
+		m, err := parseSkipJSONPathIfAbsent(s)
+		if err != nil {
+			return nil, err
+		}
+		skipAbsentPaths = append(skipAbsentPaths, m)
+	}
+
 	skipFiles := opts.SkipFiles
 	if skipFiles == nil {
 		// Clone so DefaultSkipFiles can never be mutated through a
@@ -329,11 +393,12 @@ func New(opts Options) (*Validator, error) {
 	}
 
 	return &Validator{
-		opts:      opts,
-		loader:    NewSchemaLoader(templates, opts.HTTPClient, opts.HTTPTimeout),
-		skipKinds: skipKinds,
-		skipPaths: skipPaths,
-		skipFiles: skipFiles,
+		opts:            opts,
+		loader:          NewSchemaLoader(templates, opts.HTTPClient, opts.HTTPTimeout),
+		skipKinds:       skipKinds,
+		skipPaths:       skipPaths,
+		skipAbsentPaths: skipAbsentPaths,
+		skipFiles:       skipFiles,
 	}, nil
 }
 
@@ -709,7 +774,11 @@ func (v *Validator) validateDoc(ctx context.Context, source string, idx int, raw
 
 	var errs []ValidationError
 	if err := resolved.JSON.Validate(doc); err != nil {
-		errs = flattenErrors(err)
+		errs = flattenErrors(err, v.skipAbsentPaths, r.APIVersion, r.Kind)
+	}
+	hasAbsentSkippedPath := hasSkippedAbsentPath(v.skipAbsentPaths, r.APIVersion, r.Kind, doc)
+	if len(errs) == 0 && hasAbsentSkippedPath {
+		errs = append(errs, skippedAbsentOneOfErrors(resolved.JSON, doc, nil, v.skipAbsentPaths, r.APIVersion, r.Kind)...)
 	}
 	if !skipMetadata {
 		errs = append(errs, validateMetadata(doc)...)
@@ -740,7 +809,7 @@ func (v *Validator) validateDoc(ctx context.Context, source string, idx int, raw
 	// metadata, and Kubernetes admission-extension checks pass. Most CEL rules
 	// presume a well-shaped object, so adding CEL noise on top of structural
 	// failures rarely helps; the user can fix those problems and re-run.
-	if !v.opts.SkipCELRules {
+	if !v.opts.SkipCELRules && !hasAbsentSkippedPath {
 		if resolved.CELBuildErr != nil {
 			r.Errors = []ValidationError{{
 				Msg: resolved.CELBuildErr.Error(),
@@ -912,25 +981,316 @@ func applyInsecureTLS(c *retryablehttp.Client) {
 
 // flattenErrors walks a ValidationError tree and returns one entry per leaf
 // error, with the JSON Pointer path to the failing field.
-func flattenErrors(err error) []ValidationError {
+func flattenErrors(err error, skipAbsentPaths []skipPathMatcher, apiVersion, kind string) []ValidationError {
+	return flattenErrorsAt(err, skipAbsentPaths, apiVersion, kind, nil)
+}
+
+func flattenErrorsAt(err error, skipAbsentPaths []skipPathMatcher, apiVersion, kind string, baseSegments []string) []ValidationError {
 	var verr *jsonschema.ValidationError
 	ok := errors.As(err, &verr)
 	if !ok {
 		return []ValidationError{{Msg: err.Error()}}
 	}
+	if len(skipAbsentPaths) > 0 {
+		verr = pruneSkippedAbsentRequired(verr, skipAbsentPaths, apiVersion, kind, baseSegments)
+		if verr == nil {
+			return nil
+		}
+	} else if len(baseSegments) > 0 {
+		verr = cloneValidationErrorAtBase(verr, baseSegments)
+	}
 	basic := verr.BasicOutput()
 	var out []ValidationError
+	seenLeaf := false
 	for _, unit := range basic.Errors {
 		if unit.Error == nil {
 			continue
 		}
+		seenLeaf = true
 		out = append(out, ValidationError{
 			Path: unit.InstanceLocation,
 			Msg:  unit.Error.String(),
 		})
 	}
-	if len(out) == 0 {
-		out = append(out, ValidationError{Msg: err.Error()})
+	if len(out) == 0 && !seenLeaf {
+		out = append(out, ValidationError{Msg: verr.Error()})
 	}
 	return out
+}
+
+func pruneSkippedAbsentRequired(err *jsonschema.ValidationError, matchers []skipPathMatcher,
+	apiVersion, kind string, baseSegments []string,
+) *jsonschema.ValidationError {
+	if err == nil {
+		return nil
+	}
+	clone := *err
+	clone.InstanceLocation = appendInstanceLocation(baseSegments, err.InstanceLocation)
+	if len(err.Causes) > 0 {
+		prunedCauses := 0
+		prunedIndexes := make([]int, 0, len(err.Causes))
+		clone.Causes = make([]*jsonschema.ValidationError, 0, len(err.Causes))
+		for i, cause := range err.Causes {
+			pruned := pruneSkippedAbsentRequired(cause, matchers, apiVersion, kind, baseSegments)
+			if pruned != nil {
+				clone.Causes = append(clone.Causes, pruned)
+			} else {
+				prunedCauses++
+				prunedIndexes = append(prunedIndexes, i)
+			}
+		}
+		switch err.ErrorKind.(type) {
+		case *jsonschemakind.AnyOf:
+			if prunedCauses > 0 {
+				return nil
+			}
+		case *jsonschemakind.OneOf:
+			if prunedCauses == 1 {
+				return nil
+			}
+			if prunedCauses > 1 {
+				clone.Causes = nil
+				clone.ErrorKind = &jsonschemakind.OneOf{Subschemas: prunedIndexes[:2]}
+				return &clone
+			}
+		}
+		if len(clone.Causes) == 0 {
+			return nil
+		}
+	}
+	required, ok := err.ErrorKind.(*jsonschemakind.Required)
+	if !ok || len(required.Missing) == 0 {
+		return &clone
+	}
+	kept := keepRequiredFields(clone.InstanceLocation, required.Missing, matchers, apiVersion, kind)
+	if len(kept) == 0 {
+		return nil
+	}
+	if len(kept) < len(required.Missing) {
+		copied := *required
+		copied.Missing = kept
+		clone.ErrorKind = &copied
+	}
+	return &clone
+}
+
+func cloneValidationErrorAtBase(err *jsonschema.ValidationError, baseSegments []string) *jsonschema.ValidationError {
+	if err == nil {
+		return nil
+	}
+	clone := *err
+	clone.InstanceLocation = appendInstanceLocation(baseSegments, err.InstanceLocation)
+	if len(err.Causes) > 0 {
+		clone.Causes = make([]*jsonschema.ValidationError, 0, len(err.Causes))
+		for _, cause := range err.Causes {
+			clone.Causes = append(clone.Causes, cloneValidationErrorAtBase(cause, baseSegments))
+		}
+	}
+	return &clone
+}
+
+func keepRequiredFields(parentSegments []string, missing []string,
+	matchers []skipPathMatcher, apiVersion, kind string,
+) []string {
+	kept := make([]string, 0, len(missing))
+	for _, prop := range missing {
+		fieldSegments := make([]string, len(parentSegments), len(parentSegments)+1)
+		copy(fieldSegments, parentSegments)
+		fieldSegments = append(fieldSegments, prop)
+		if !matchesSkippedAbsentPath(matchers, apiVersion, kind, fieldSegments) {
+			kept = append(kept, prop)
+		}
+	}
+	return kept
+}
+
+func skippedAbsentOneOfErrors(schema *jsonschema.Schema, value any, segments []string,
+	matchers []skipPathMatcher, apiVersion, kind string,
+) []ValidationError {
+	return collectSkippedAbsentOneOfErrors(schema, value, segments, matchers, apiVersion, kind, map[schemaVisit]bool{})
+}
+
+type schemaVisit struct {
+	schema *jsonschema.Schema
+	path   string
+}
+
+func collectSkippedAbsentOneOfErrors(schema *jsonschema.Schema, value any, segments []string,
+	matchers []skipPathMatcher, apiVersion, kind string, visits map[schemaVisit]bool,
+) []ValidationError {
+	if schema == nil {
+		return nil
+	}
+	key := schemaVisit{schema: schema, path: jsonPointerFromSegments(segments)}
+	if visits[key] {
+		return nil
+	}
+	visits[key] = true
+	defer delete(visits, key)
+
+	var out []ValidationError
+	if schema.Ref != nil && schemaMatchesWithSkippedAbsentRequired(schema.Ref, value, segments, matchers, apiVersion, kind) {
+		out = append(out, collectSkippedAbsentOneOfErrors(schema.Ref, value, segments, matchers, apiVersion, kind, visits)...)
+	}
+	for _, branch := range schema.AllOf {
+		if schemaMatchesWithSkippedAbsentRequired(branch, value, segments, matchers, apiVersion, kind) {
+			out = append(out, collectSkippedAbsentOneOfErrors(branch, value, segments, matchers, apiVersion, kind, visits)...)
+		}
+	}
+	for _, branch := range schema.AnyOf {
+		if schemaMatchesWithSkippedAbsentRequired(branch, value, segments, matchers, apiVersion, kind) {
+			out = append(out, collectSkippedAbsentOneOfErrors(branch, value, segments, matchers, apiVersion, kind, visits)...)
+		}
+	}
+	if len(schema.OneOf) > 0 {
+		var matched []int
+		for i, branch := range schema.OneOf {
+			if schemaMatchesWithSkippedAbsentRequired(branch, value, segments, matchers, apiVersion, kind) {
+				matched = append(matched, i)
+				if len(matched) == 2 {
+					out = append(out, validationErrorFromKind(segments, &jsonschemakind.OneOf{Subschemas: matched}))
+					break
+				}
+			}
+		}
+		if len(matched) == 1 {
+			branch := schema.OneOf[matched[0]]
+			out = append(out, collectSkippedAbsentOneOfErrors(branch, value, segments, matchers, apiVersion, kind, visits)...)
+		}
+	}
+	if schema.If != nil {
+		switch {
+		case schemaMatchesWithSkippedAbsentRequired(schema.If, value, segments, matchers, apiVersion, kind) && schema.Then != nil:
+			out = append(out, collectSkippedAbsentOneOfErrors(schema.Then, value, segments, matchers, apiVersion, kind, visits)...)
+		case schema.Else != nil:
+			out = append(out, collectSkippedAbsentOneOfErrors(schema.Else, value, segments, matchers, apiVersion, kind, visits)...)
+		}
+	}
+
+	switch typed := value.(type) {
+	case map[string]any:
+		out = append(out, collectObjectSkippedAbsentOneOfErrors(schema, typed, segments, matchers, apiVersion, kind, visits)...)
+	case []any:
+		out = append(out, collectArraySkippedAbsentOneOfErrors(schema, typed, segments, matchers, apiVersion, kind, visits)...)
+	}
+	return out
+}
+
+func collectObjectSkippedAbsentOneOfErrors(schema *jsonschema.Schema, object map[string]any, segments []string,
+	matchers []skipPathMatcher, apiVersion, kind string, visits map[schemaVisit]bool,
+) []ValidationError {
+	var out []ValidationError
+	for prop, value := range object {
+		evaluated := false
+		propSegments := appendInstanceLocation(segments, []string{prop})
+		if propSchema, ok := schema.Properties[prop]; ok {
+			evaluated = true
+			out = append(out, collectSkippedAbsentOneOfErrors(propSchema, value, propSegments, matchers, apiVersion, kind, visits)...)
+		}
+		for regex, propSchema := range schema.PatternProperties {
+			if regex.MatchString(prop) {
+				evaluated = true
+				out = append(out, collectSkippedAbsentOneOfErrors(propSchema, value, propSegments, matchers, apiVersion, kind, visits)...)
+			}
+		}
+		if !evaluated {
+			if propSchema, ok := schema.AdditionalProperties.(*jsonschema.Schema); ok {
+				out = append(out, collectSkippedAbsentOneOfErrors(propSchema, value, propSegments, matchers, apiVersion, kind, visits)...)
+			}
+		}
+	}
+	return out
+}
+
+func collectArraySkippedAbsentOneOfErrors(schema *jsonschema.Schema, array []any, segments []string,
+	matchers []skipPathMatcher, apiVersion, kind string, visits map[schemaVisit]bool,
+) []ValidationError {
+	var out []ValidationError
+	for i, value := range array {
+		itemSegments := appendInstanceLocation(segments, []string{strconv.Itoa(i)})
+		switch items := schema.Items.(type) {
+		case *jsonschema.Schema:
+			out = append(out, collectSkippedAbsentOneOfErrors(items, value, itemSegments, matchers, apiVersion, kind, visits)...)
+		case []*jsonschema.Schema:
+			if i < len(items) {
+				out = append(out, collectSkippedAbsentOneOfErrors(items[i], value, itemSegments, matchers, apiVersion, kind, visits)...)
+			} else if propSchema, ok := schema.AdditionalItems.(*jsonschema.Schema); ok {
+				out = append(out, collectSkippedAbsentOneOfErrors(propSchema, value, itemSegments, matchers, apiVersion, kind, visits)...)
+			}
+		}
+		if i < len(schema.PrefixItems) {
+			out = append(out, collectSkippedAbsentOneOfErrors(schema.PrefixItems[i], value, itemSegments, matchers, apiVersion, kind, visits)...)
+		} else if schema.Items2020 != nil {
+			out = append(out, collectSkippedAbsentOneOfErrors(schema.Items2020, value, itemSegments, matchers, apiVersion, kind, visits)...)
+		}
+		if schema.Contains != nil && schemaMatchesWithSkippedAbsentRequired(schema.Contains, value, itemSegments, matchers, apiVersion, kind) {
+			out = append(out, collectSkippedAbsentOneOfErrors(schema.Contains, value, itemSegments, matchers, apiVersion, kind, visits)...)
+		}
+	}
+	return out
+}
+
+func schemaMatchesWithSkippedAbsentRequired(schema *jsonschema.Schema, value any, segments []string,
+	matchers []skipPathMatcher, apiVersion, kind string,
+) bool {
+	if schema == nil {
+		return true
+	}
+	err := schema.Validate(value)
+	if err == nil {
+		return true
+	}
+	return len(flattenErrorsAt(err, matchers, apiVersion, kind, segments)) == 0
+}
+
+func validationErrorFromKind(segments []string, errorKind jsonschema.ErrorKind) ValidationError {
+	verr := &jsonschema.ValidationError{
+		InstanceLocation: segments,
+		ErrorKind:        errorKind,
+	}
+	out := verr.BasicOutput()
+	return ValidationError{
+		Path: out.InstanceLocation,
+		Msg:  out.Error.String(),
+	}
+}
+
+func appendInstanceLocation(base, path []string) []string {
+	if len(base) == 0 {
+		return slices.Clone(path)
+	}
+	out := make([]string, 0, len(base)+len(path))
+	out = append(out, base...)
+	out = append(out, path...)
+	return out
+}
+
+func jsonPointerFromSegments(segments []string) string {
+	if len(segments) == 0 {
+		return ""
+	}
+	var out strings.Builder
+	for _, segment := range segments {
+		out.WriteByte('/')
+		out.WriteString(escapeJSONPointer(segment))
+	}
+	return out.String()
+}
+
+func matchesSkippedAbsentPath(matchers []skipPathMatcher, apiVersion, kind string, segments []string) bool {
+	for _, m := range matchers {
+		if m.matchesPath(apiVersion, kind, segments) {
+			return true
+		}
+	}
+	return false
+}
+
+func hasSkippedAbsentPath(matchers []skipPathMatcher, apiVersion, kind string, doc map[string]any) bool {
+	for _, m := range matchers {
+		if m.matches(apiVersion, kind) && !m.pathExists(doc) {
+			return true
+		}
+	}
+	return false
 }

@@ -96,6 +96,13 @@
           },
           "type": "array"
         },
+        "skipJSONPathIfAbsent": {
+          "description": "SkipJSONPathIfAbsent contains JSON Pointers whose required-property errors\nare skipped when the field is absent; CEL is skipped for matching documents.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "skipKind": {
           "description": "SkipKinds contains kind or apiVersion/kind patterns excluded from validation.",
           "items": {
