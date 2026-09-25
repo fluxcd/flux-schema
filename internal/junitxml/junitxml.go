@@ -95,6 +95,9 @@ func testCaseFromResult(result apiv1.ReportResult) TestCase {
 		Name:      result.Source,
 		File:      result.Source,
 	}
+	if result.Origin != "" {
+		tc.File = result.Origin
+	}
 
 	if result.Resource != nil {
 		tc.Classname = result.Resource.APIVersion + "/" + result.Resource.Kind

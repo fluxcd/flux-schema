@@ -17,6 +17,7 @@ import (
 func NewReportResult(r Result) apiv1.ReportResult {
 	out := apiv1.ReportResult{
 		Source: r.Source,
+		Origin: r.Origin,
 		Idx:    r.DocIndex,
 		Status: r.Status.String(),
 		Reason: apiv1.ReportReason(r.Reason),

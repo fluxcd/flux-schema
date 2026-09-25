@@ -42,3 +42,31 @@ func TestFromReport(t *testing.T) {
 	g.Expect(gotTS.Write(&buf)).To(Succeed())
 	g.Expect(cmp.Diff(wantBytes, buf.Bytes())).To(BeEmpty())
 }
+
+func TestTestCaseOrigin(t *testing.T) {
+	for _, tt := range []struct {
+		name   string
+		origin string
+		file   string
+	}{
+		{name: "plain or generated resource", file: "apps/kustomization.yaml"},
+		{name: "local origin", origin: "base/deployment.yaml", file: "base/deployment.yaml"},
+		{
+			name:   "remote origin",
+			origin: "https://example.com/org/repo//deployment.yaml?ref=v1",
+			file:   "https://example.com/org/repo//deployment.yaml?ref=v1",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			tc := testCaseFromResult(apiv1.ReportResult{
+				Source: "apps/kustomization.yaml", Origin: tt.origin,
+				Resource: &apiv1.ReportResource{APIVersion: "apps/v1", Kind: "Deployment", Namespace: "apps", Name: "web"},
+				Status:   "valid",
+			})
+			g.Expect(tc.File).To(Equal(tt.file))
+			g.Expect(tc.Classname).To(Equal("apps/v1/Deployment"))
+			g.Expect(tc.Name).To(Equal("apps/web"))
+		})
+	}
+}

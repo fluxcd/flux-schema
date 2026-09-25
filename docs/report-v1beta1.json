@@ -35,11 +35,16 @@
                 "minimum": 0,
                 "type": "integer"
               },
+              "origin": {
+                "description": "Origin identifies the original resource file in a kustomize build.\nRemote origins include the repository and ref.",
+                "type": "string"
+              },
               "reason": {
                 "description": "Reason is a stable machine-readable code for non-valid results.",
                 "enum": [
                   "cel-violation",
                   "kind-skipped",
+                  "kustomize-build-error",
                   "schema-load-error",
                   "schema-not-found",
                   "schema-violation",

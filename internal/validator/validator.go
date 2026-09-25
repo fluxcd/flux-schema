@@ -24,8 +24,10 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	jsonschemakind "github.com/santhosh-tekuri/jsonschema/v6/kind"
 	utiljson "k8s.io/apimachinery/pkg/util/json"
+	"sigs.k8s.io/kustomize/api/konfig"
 	"sigs.k8s.io/yaml"
 
+	"github.com/fluxcd/flux-schema/internal/kustomize"
 	"github.com/fluxcd/flux-schema/internal/tmpl"
 	"github.com/fluxcd/flux-schema/internal/useragent"
 	"github.com/fluxcd/flux-schema/internal/yamldoc"
@@ -62,11 +64,20 @@ func (s Status) String() string {
 //
 // When Final is true the result is a synthetic source-complete sentinel
 // emitted by ValidateSources after every document for Source has been
-// processed. Sentinels carry only Source; consumers should ignore them
+// processed. Sentinels carry Source and SourceIndex; consumers should ignore them
 // for counting and printing and use them solely to advance per-source
 // streaming state.
 type Result struct {
-	Source     string
+	Source string
+
+	// SourceIndex is the discovery order of Source within a
+	// ValidateSources call, used to emit sources deterministically.
+	SourceIndex int
+
+	// Origin is the original file of a resource rendered by a kustomize
+	// build; empty for plain files, stdin, and generated resources.
+	Origin string
+
 	DocIndex   int
 	APIVersion string
 	Kind       string
@@ -427,17 +438,25 @@ func (v *Validator) matchSkipFile(name string) bool {
 
 type job struct {
 	source   string
+	origin   string
 	docIndex int
 	raw      []byte
 	// loadErr surfaces a source-level read/open failure so the worker
 	// pool reports one Result per failed source instead of silently
 	// dropping it.
 	loadErr error
+	// loadReason overrides the default source-load-error for build failures.
+	loadReason Reason
 	// sourceWG counts in-flight jobs for source. Workers Done it when the
 	// job is processed; the per-source waiter goroutine waits on it then
 	// emits a Final sentinel so the consumer can advance its streaming
 	// pointer past this source.
-	sourceWG *sync.WaitGroup
+	sourceWG *sourceState
+}
+
+type sourceState struct {
+	sync.WaitGroup
+	index int
 }
 
 // ValidateSources streams validation results for every document found in
@@ -478,26 +497,27 @@ func (v *Validator) ValidateSources(ctx context.Context, paths []string) <-chan 
 
 	go func() {
 		var waiterWG sync.WaitGroup
-		spawnWaiter := func(src string, wg *sync.WaitGroup) {
+		sourceIndex := 0
+		newSource := func() *sourceState {
+			state := &sourceState{index: sourceIndex}
+			sourceIndex++
+			return state
+		}
+		spawnWaiter := func(src string, wg *sourceState) {
 			waiterWG.Go(func() {
 				wg.Wait()
 				select {
-				case results <- Result{Source: src, Final: true}:
+				case results <- Result{Source: src, SourceIndex: wg.index, Final: true}:
 				case <-ctx.Done():
 				}
 			})
 		}
 
 		for _, path := range paths {
-			if err := v.produceFromPath(ctx, path, jobs, spawnWaiter); err != nil {
-				wg := &sync.WaitGroup{}
-				wg.Add(1)
-				select {
-				case jobs <- job{source: path, loadErr: err, sourceWG: wg}:
-					spawnWaiter(path, wg)
-				case <-ctx.Done():
-					wg.Done()
-				}
+			if err := v.produceFromPath(ctx, path, jobs, newSource, spawnWaiter); err != nil && ctx.Err() == nil {
+				wg := newSource()
+				_ = enqueueJob(ctx, jobs, job{source: path, loadErr: err, sourceWG: wg})
+				spawnWaiter(path, wg)
 			}
 			if ctx.Err() != nil {
 				break
@@ -536,9 +556,14 @@ func (v *Validator) runJob(ctx context.Context, j job, results chan<- Result) {
 			Reason:   ReasonSourceLoadError,
 			Errors:   []ValidationError{{Msg: j.loadErr.Error()}},
 		}
+		if j.loadReason != ReasonNone {
+			r.Reason = j.loadReason
+		}
 	} else {
 		r, emit = v.validateDoc(ctx, j.source, j.docIndex, j.raw)
 	}
+	r.Origin = j.origin
+	r.SourceIndex = j.sourceWG.index
 	if !emit {
 		return
 	}
@@ -570,19 +595,26 @@ func (v *Validator) ValidateBytes(ctx context.Context, source string, data []byt
 }
 
 // produceFromPath opens path (or walks it, if a directory) and streams each
-// YAML document into jobs. spawnWaiter is invoked once per discovered file
-// with a per-file WaitGroup the worker pool decrements; the validator then
-// emits a Final sentinel once that file is fully drained.
+// YAML document into jobs. A directory containing a kustomization file is
+// built instead of walked, and a kustomization file argument builds its
+// directory; the rendered resources stream as one source named after the
+// kustomization file. spawnWaiter is invoked once per source with a
+// per-source WaitGroup the worker pool decrements; the validator then
+// emits a Final sentinel once that source is fully drained.
 //
-// Returns a source-level error only for paths that cannot be stat'd or
-// opened; per-document failures are reported via validateDoc inside the
-// worker pool.
-func (v *Validator) produceFromPath(ctx context.Context, path string, jobs chan<- job, spawnWaiter func(string, *sync.WaitGroup)) error {
+// Returns traversal errors or cancellation; read and build failures are
+// reported as jobs for their source.
+func (v *Validator) produceFromPath(ctx context.Context, path string, jobs chan<- job,
+	newSource func() *sourceState, spawnWaiter func(string, *sourceState),
+) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	if path == StdinSource {
 		if v.opts.Stdin == nil {
 			return fmt.Errorf("source %q requires Options.Stdin to be set", StdinSource)
 		}
-		wg := &sync.WaitGroup{}
+		wg := newSource()
 		err := v.streamReader(ctx, StdinSource, v.opts.Stdin, jobs, wg)
 		spawnWaiter(StdinSource, wg)
 		return err
@@ -596,8 +628,17 @@ func (v *Validator) produceFromPath(ctx context.Context, path string, jobs chan<
 			if werr != nil {
 				return werr
 			}
+			if err := ctx.Err(); err != nil {
+				return err
+			}
 			if d.IsDir() {
 				if p != path && v.matchSkipFile(d.Name()) {
+					return filepath.SkipDir
+				}
+				if file, ok := kustomize.Detect(p); ok && !v.matchSkipFile(filepath.Base(file)) {
+					if err := v.streamBuild(ctx, p, file, jobs, newSource, spawnWaiter); err != nil {
+						return err
+					}
 					return filepath.SkipDir
 				}
 				return nil
@@ -609,22 +650,57 @@ func (v *Validator) produceFromPath(ctx context.Context, path string, jobs chan<
 			if v.matchSkipFile(d.Name()) {
 				return nil
 			}
-			wg := &sync.WaitGroup{}
+			wg := newSource()
 			err := v.streamFile(ctx, p, jobs, wg)
 			spawnWaiter(p, wg)
 			return err
 		})
 	}
-	wg := &sync.WaitGroup{}
+	if slices.Contains(konfig.RecognizedKustomizationFileNames(), filepath.Base(path)) {
+		return v.streamBuild(ctx, filepath.Dir(path), path, jobs, newSource, spawnWaiter)
+	}
+	wg := newSource()
 	err = v.streamFile(ctx, path, jobs, wg)
 	spawnWaiter(path, wg)
 	return err
 }
 
-func (v *Validator) streamFile(ctx context.Context, path string, jobs chan<- job, sourceWG *sync.WaitGroup) error {
+// streamBuild runs a kustomize build of dir and streams the rendered
+// resources under source. A build failure is reported as a single
+// kustomize-build-error job for source.
+func (v *Validator) streamBuild(ctx context.Context, dir, source string, jobs chan<- job,
+	newSource func() *sourceState, spawnWaiter func(string, *sourceState),
+) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	wg := newSource()
+	defer spawnWaiter(source, wg)
+	docs, err := kustomize.Build(dir)
+	if err != nil {
+		return enqueueJob(ctx, jobs, job{
+			source: source, loadErr: err, loadReason: ReasonKustomizeBuildError, sourceWG: wg,
+		})
+	}
+	return v.streamDocs(ctx, source, docs, jobs, wg)
+}
+
+// streamDocs pushes pre-split documents into jobs, keeping their origin.
+func (v *Validator) streamDocs(ctx context.Context, source string, docs []kustomize.Doc, jobs chan<- job, sourceWG *sourceState) error {
+	for i, doc := range docs {
+		if err := enqueueJob(ctx, jobs, job{
+			source: source, origin: doc.Origin, docIndex: i + 1, raw: doc.Raw, sourceWG: sourceWG,
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (v *Validator) streamFile(ctx context.Context, path string, jobs chan<- job, sourceWG *sourceState) error {
 	f, err := os.Open(path)
 	if err != nil {
-		return err
+		return enqueueJob(ctx, jobs, job{source: path, loadErr: err, sourceWG: sourceWG})
 	}
 	defer f.Close()
 	return v.streamReader(ctx, path, f, jobs, sourceWG)
@@ -634,7 +710,7 @@ func (v *Validator) streamFile(ctx context.Context, path string, jobs chan<- job
 // channel under the given source label. Used by streamFile for on-disk
 // inputs and by produceFromPath directly for the StdinSource sentinel so
 // stdin doesn't go through a platform-specific path like "/dev/stdin".
-func (v *Validator) streamReader(ctx context.Context, source string, r io.Reader, jobs chan<- job, sourceWG *sync.WaitGroup) error {
+func (v *Validator) streamReader(ctx context.Context, source string, r io.Reader, jobs chan<- job, sourceWG *sourceState) error {
 	scanner := yamldoc.NewScanner(r)
 	idx := 0
 	for scanner.Scan() {
@@ -645,18 +721,29 @@ func (v *Validator) streamReader(ctx context.Context, source string, r io.Reader
 		idx++
 		buf := make([]byte, len(raw))
 		copy(buf, raw)
-		sourceWG.Add(1)
-		select {
-		case <-ctx.Done():
-			sourceWG.Done()
-			return ctx.Err()
-		case jobs <- job{source: source, docIndex: idx, raw: buf, sourceWG: sourceWG}:
+		if err := enqueueJob(ctx, jobs, job{source: source, docIndex: idx, raw: buf, sourceWG: sourceWG}); err != nil {
+			return err
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("scan %s: %w", source, err)
+		return enqueueJob(ctx, jobs, job{
+			source: source, loadErr: fmt.Errorf("scan %s: %w", source, err), sourceWG: sourceWG,
+		})
 	}
 	return nil
+}
+
+// enqueueJob registers j with its source WaitGroup and sends it, undoing
+// the registration if ctx is cancelled first.
+func enqueueJob(ctx context.Context, jobs chan<- job, j job) error {
+	j.sourceWG.Add(1)
+	select {
+	case <-ctx.Done():
+		j.sourceWG.Done()
+		return ctx.Err()
+	case jobs <- j:
+		return nil
+	}
 }
 
 // validateDoc runs the full per-document pipeline: strict YAML decode,

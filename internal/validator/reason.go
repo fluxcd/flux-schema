@@ -22,6 +22,10 @@ const (
 	// text lands in Errors[0].Msg.
 	ReasonSourceLoadError Reason = "source-load-error"
 
+	// ReasonKustomizeBuildError indicates a kustomization could not be built.
+	// The build error text is in Errors[0].Msg.
+	ReasonKustomizeBuildError Reason = "kustomize-build-error"
+
 	// ReasonYAMLParseError indicates strict YAML decoding failed — malformed
 	// document, duplicate keys, or other structural issues. Per-violation
 	// detail is in Errors.
