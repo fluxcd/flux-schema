@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: settings
+  annotations:
+    example.com/keep: "true"
+data:
+  mode: original
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: apps
