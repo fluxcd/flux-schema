@@ -11,7 +11,7 @@ document's `apiVersion` and `kind`.
 Examples:
 
 ```shell
-# Validate all YAML files in a directory tree
+# Validate plain YAML files and build kustomize directories in a tree
 flux schema validate ./manifests --skip-missing-schemas
 
 # Validate a Helm chart by piping the rendered output
@@ -19,6 +19,32 @@ helm template ./charts/app | flux schema validate --verbose
 ```
 
 A non-zero exit code is returned when any document is invalid or errored.
+
+## Kustomize build
+
+A directory that contains `kustomization.yaml`, `kustomization.yml`, or
+`Kustomization` is built with kustomize, like kustomize-controller does, and
+the rendered resources are validated instead of the individual files.
+A kustomization file passed as an argument builds its directory:
+
+```shell
+flux schema validate ./clusters/production --verbose
+```
+
+A failed build produces one invalid result with the reason `kustomize-build-error`.
+This includes a `kind: Component` directory, because kustomize can't build a component
+on its own. Exclude such directories with `--skip-file`.
+
+The build uses the same options as
+`kustomize build --load-restrictor=LoadRestrictionsNone`:
+
+- Files outside the built directory can be referenced e.g. `../base`.
+- Remote bases are fetched. Git-backed references need `git` in `PATH`.
+- Builtin generators and transformers run. Exec and KRM function plugins are disabled.
+
+Results of a build use the root kustomization file as `source`. When a
+resource comes from a file, `origin` holds its path, joined with the built
+directory. Remote files use the form `<repo>//<path>?ref=<ref>`.
 
 ## Flags
 
@@ -29,7 +55,7 @@ A non-zero exit code is returned when any document is invalid or errored.
 | `--skip-kind`                | Skip documents matching `kind` or `apiVersion/kind` (repeatable).                                                                               |
 | `--skip-json-path`           | Strip a JSON Pointer field before validation, optionally scoped: `[apiVersion/kind:]/path` (repeatable).                                        |
 | `--skip-json-path-if-absent` | Skip missing required-field errors for a JSON Pointer field, optionally scoped: `[apiVersion/kind:]/path` (repeatable).                         |
-| `--skip-file`                | Glob pattern matched against files and dirs; defaults to skipping dotfiles and dot-dirs (repeatable).                                           |
+| `--skip-file`                | Basename glob for files and dirs in the walk; skipping a kustomization file restores per-file validation (repeatable, default: `.*`).           |
 | `--skip-cel-rules`           | Skip evaluation of `x-kubernetes-validations` CEL rules.                                                                                        |
 | `--fail-fast`                | Exit after the first invalid document.                                                                                                          |
 | `--concurrent`               | Number of concurrent workers (default 8).                                                                                                       |
@@ -191,7 +217,8 @@ Example JSON output:
           "kind": "Namespace",
           "name": "apps"
         },
-        "source": "manifests/apps.yaml",
+        "source": "apps/staging/kustomization.yaml",
+        "origin": "apps/base/namespace.yaml",
         "idx": 1,
         "status": "valid"
       },
@@ -202,7 +229,8 @@ Example JSON output:
           "name": "frontend",
           "namespace": "apps"
         },
-        "source": "manifests/apps.yaml",
+        "source": "apps/staging/kustomization.yaml",
+        "origin": "apps/base/release.yaml",
         "idx": 2,
         "status": "invalid",
         "reason": "cel-violation",
@@ -220,7 +248,8 @@ Example JSON output:
           "name": "frontend",
           "namespace": "apps"
         },
-        "source": "manifests/apps.yaml",
+        "source": "apps/staging/kustomization.yaml",
+        "origin": "apps/base/repository.yaml",
         "idx": 3,
         "status": "invalid",
         "reason": "schema-violation",
