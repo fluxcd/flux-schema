@@ -42,7 +42,7 @@ The build uses the same options as
 - Remote bases are fetched. Git-backed references need `git` in `PATH`.
 - Builtin generators and transformers run. Exec and KRM function plugins are disabled.
 
-Results of a build use the root kustomization file as `source`. When a
+Results of a build use the built directory as `source`. When a
 resource comes from a file, `origin` holds its path, joined with the built
 directory. Remote files use the form `<repo>//<path>?ref=<ref>`.
 
@@ -217,7 +217,7 @@ Example JSON output:
           "kind": "Namespace",
           "name": "apps"
         },
-        "source": "apps/staging/kustomization.yaml",
+        "source": "apps/staging",
         "origin": "apps/base/namespace.yaml",
         "idx": 1,
         "status": "valid"
@@ -229,7 +229,7 @@ Example JSON output:
           "name": "frontend",
           "namespace": "apps"
         },
-        "source": "apps/staging/kustomization.yaml",
+        "source": "apps/staging",
         "origin": "apps/base/release.yaml",
         "idx": 2,
         "status": "invalid",
@@ -248,7 +248,7 @@ Example JSON output:
           "name": "frontend",
           "namespace": "apps"
         },
-        "source": "apps/staging/kustomization.yaml",
+        "source": "apps/staging",
         "origin": "apps/base/repository.yaml",
         "idx": 3,
         "status": "invalid",

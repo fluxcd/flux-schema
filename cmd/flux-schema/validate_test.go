@@ -1798,13 +1798,13 @@ func TestValidateCmd_Kustomize(t *testing.T) {
 }
 
 func TestValidateCmd_KustomizeReports(t *testing.T) {
-	const source = "testdata/validate/kustomize/invalid/kustomization.yaml"
+	const source = "testdata/validate/kustomize/invalid"
 	const origin = "testdata/validate/kustomize/flux-repo/apps/base/podinfo/release.yaml"
 	for _, mode := range []string{"text", "json", "yaml", "junit"} {
 		t.Run(mode, func(t *testing.T) {
 			g := NewWithT(t)
 			out, err := executeCommand([]string{
-				"validate", source, "--schema-location", "../../catalog/latest", "-o", mode,
+				"validate", source + "/kustomization.yaml", "--schema-location", "../../catalog/latest", "-o", mode,
 			})
 			g.Expect(err).To(HaveOccurred())
 			switch mode {
@@ -1840,9 +1840,9 @@ func TestValidateCmd_KustomizeReports(t *testing.T) {
 
 func TestValidateCmd_KustomizeBuildErrorText(t *testing.T) {
 	g := NewWithT(t)
-	const source = "testdata/validate/kustomize/broken/kustomization.yaml"
+	const source = "testdata/validate/kustomize/broken"
 	out, err := executeCommand([]string{
-		"validate", filepath.Dir(source), "--schema-location", "../../catalog/latest",
+		"validate", source, "--schema-location", "../../catalog/latest",
 	})
 	g.Expect(err).To(HaveOccurred())
 	g.Expect(out).To(ContainSubstring(source + " is invalid: kustomize build error\n"))
@@ -1851,9 +1851,9 @@ func TestValidateCmd_KustomizeBuildErrorText(t *testing.T) {
 
 func TestValidateCmd_KustomizeBuildError(t *testing.T) {
 	g := NewWithT(t)
-	const source = "testdata/validate/kustomize/broken/kustomization.yaml"
+	const source = "testdata/validate/kustomize/broken"
 	out, err := executeCommand([]string{
-		"validate", filepath.Dir(source), "--schema-location", "../../catalog/latest", "-o", "json",
+		"validate", source, "--schema-location", "../../catalog/latest", "-o", "json",
 	})
 	g.Expect(err).To(HaveOccurred())
 	validateReportSchema(t, out)
@@ -1917,9 +1917,9 @@ func TestValidateCmd_KustomizeDeterministicOrder(t *testing.T) {
 		}
 		g.Expect(results).To(Equal(want))
 	}
-	g.Expect(want[0].Source).To(Equal(dir + "/apps/base/podinfo/kustomization.yaml"))
-	g.Expect(want[2].Source).To(Equal(dir + "/apps/production/kustomization.yaml"))
-	g.Expect(want[4].Source).To(Equal(dir + "/apps/staging/kustomization.yaml"))
+	g.Expect(want[0].Source).To(Equal(dir + "/apps/base/podinfo"))
+	g.Expect(want[2].Source).To(Equal(dir + "/apps/production"))
+	g.Expect(want[4].Source).To(Equal(dir + "/apps/staging"))
 	g.Expect(want[6].Source).To(Equal(dir + "/clusters/staging/apps.yaml"))
 }
 
@@ -1928,9 +1928,9 @@ func TestResultCollectorSourceOrder(t *testing.T) {
 	writer := &reportWriter{}
 	collector := newResultCollector(writer)
 	later := validator.Result{Source: "later.yaml", SourceIndex: 2, DocIndex: 1}
-	first := validator.Result{Source: "first/kustomization.yaml", SourceIndex: 1, DocIndex: 1}
+	first := validator.Result{Source: "first", SourceIndex: 1, DocIndex: 1}
 	buildError := validator.Result{
-		Source: "broken/kustomization.yaml", SourceIndex: 3,
+		Source: "broken", SourceIndex: 3,
 		Status: validator.StatusInvalid, Reason: validator.ReasonKustomizeBuildError,
 	}
 	collector.add(later)
@@ -1939,7 +1939,7 @@ func TestResultCollectorSourceOrder(t *testing.T) {
 	collector.add(validator.Result{Source: buildError.Source, SourceIndex: 3, Final: true})
 	collector.add(first)
 	g.Expect(writer.collected).To(BeEmpty())
-	collector.add(validator.Result{Source: "empty/kustomization.yml", SourceIndex: 0, Final: true})
+	collector.add(validator.Result{Source: "empty", SourceIndex: 0, Final: true})
 	g.Expect(writer.collected).To(Equal([]validator.Result{first}))
 	collector.add(validator.Result{Source: first.Source, SourceIndex: 1, Final: true})
 	collector.flushRemainingSources()

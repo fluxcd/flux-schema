@@ -598,7 +598,7 @@ func (v *Validator) ValidateBytes(ctx context.Context, source string, data []byt
 // YAML document into jobs. A directory containing a kustomization file is
 // built instead of walked, and a kustomization file argument builds its
 // directory; the rendered resources stream as one source named after the
-// kustomization file. spawnWaiter is invoked once per source with a
+// kustomization directory. spawnWaiter is invoked once per source with a
 // per-source WaitGroup the worker pool decrements; the validator then
 // emits a Final sentinel once that source is fully drained.
 //
@@ -636,7 +636,7 @@ func (v *Validator) produceFromPath(ctx context.Context, path string, jobs chan<
 					return filepath.SkipDir
 				}
 				if file, ok := kustomize.Detect(p); ok && !v.matchSkipFile(filepath.Base(file)) {
-					if err := v.streamBuild(ctx, p, file, jobs, newSource, spawnWaiter); err != nil {
+					if err := v.streamBuild(ctx, p, jobs, newSource, spawnWaiter); err != nil {
 						return err
 					}
 					return filepath.SkipDir
@@ -657,7 +657,7 @@ func (v *Validator) produceFromPath(ctx context.Context, path string, jobs chan<
 		})
 	}
 	if slices.Contains(konfig.RecognizedKustomizationFileNames(), filepath.Base(path)) {
-		return v.streamBuild(ctx, filepath.Dir(path), path, jobs, newSource, spawnWaiter)
+		return v.streamBuild(ctx, filepath.Dir(path), jobs, newSource, spawnWaiter)
 	}
 	wg := newSource()
 	err = v.streamFile(ctx, path, jobs, wg)
@@ -666,23 +666,24 @@ func (v *Validator) produceFromPath(ctx context.Context, path string, jobs chan<
 }
 
 // streamBuild runs a kustomize build of dir and streams the rendered
-// resources under source. A build failure is reported as a single
-// kustomize-build-error job for source.
-func (v *Validator) streamBuild(ctx context.Context, dir, source string, jobs chan<- job,
+// resources with dir as their source. A build failure is reported as a
+// single kustomize-build-error job for dir.
+func (v *Validator) streamBuild(ctx context.Context, dir string, jobs chan<- job,
 	newSource func() *sourceState, spawnWaiter func(string, *sourceState),
 ) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
+	dir = filepath.Clean(dir)
 	wg := newSource()
-	defer spawnWaiter(source, wg)
+	defer spawnWaiter(dir, wg)
 	docs, err := kustomize.Build(dir)
 	if err != nil {
 		return enqueueJob(ctx, jobs, job{
-			source: source, loadErr: err, loadReason: ReasonKustomizeBuildError, sourceWG: wg,
+			source: dir, loadErr: err, loadReason: ReasonKustomizeBuildError, sourceWG: wg,
 		})
 	}
-	return v.streamDocs(ctx, source, docs, jobs, wg)
+	return v.streamDocs(ctx, dir, docs, jobs, wg)
 }
 
 // streamDocs pushes pre-split documents into jobs, keeping their origin.

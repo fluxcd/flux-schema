@@ -18,6 +18,7 @@ func TestValidateSourcesKustomize(t *testing.T) {
 	const root = "testdata/kustomize/"
 	const overlay = root + "mixed/overlay/"
 	const origin = overlay + "base/nested/widgets.yaml"
+	const overlayDir = root + "mixed/overlay"
 	for _, tt := range []struct {
 		name      string
 		path      string
@@ -29,9 +30,9 @@ func TestValidateSourcesKustomize(t *testing.T) {
 			name: "mixed tree builds nested directories once",
 			path: root + "mixed",
 			want: []Result{
-				{Source: overlay + "kustomization.yaml", Origin: origin, DocIndex: 1, Name: "rendered-first", Status: StatusValid},
-				{Source: overlay + "kustomization.yaml", Origin: origin, DocIndex: 2, Name: "rendered-second", Status: StatusInvalid},
-				{Source: overlay + "kustomization.yaml", DocIndex: 3, Name: "rendered-generated", Status: StatusValid},
+				{Source: overlayDir, Origin: origin, DocIndex: 1, Name: "rendered-first", Status: StatusValid},
+				{Source: overlayDir, Origin: origin, DocIndex: 2, Name: "rendered-second", Status: StatusInvalid},
+				{Source: overlayDir, DocIndex: 3, Name: "rendered-generated", Status: StatusValid},
 				{Source: root + "mixed/plain.yaml", DocIndex: 1, Name: "plain", Status: StatusValid},
 			},
 			finals: 2,
@@ -40,9 +41,9 @@ func TestValidateSourcesKustomize(t *testing.T) {
 			name: "explicit directory",
 			path: overlay,
 			want: []Result{
-				{Source: overlay + "kustomization.yaml", Origin: origin, DocIndex: 1, Name: "rendered-first", Status: StatusValid},
-				{Source: overlay + "kustomization.yaml", Origin: origin, DocIndex: 2, Name: "rendered-second", Status: StatusInvalid},
-				{Source: overlay + "kustomization.yaml", DocIndex: 3, Name: "rendered-generated", Status: StatusValid},
+				{Source: overlayDir, Origin: origin, DocIndex: 1, Name: "rendered-first", Status: StatusValid},
+				{Source: overlayDir, Origin: origin, DocIndex: 2, Name: "rendered-second", Status: StatusInvalid},
+				{Source: overlayDir, DocIndex: 3, Name: "rendered-generated", Status: StatusValid},
 			},
 			finals: 1,
 		},
@@ -50,9 +51,9 @@ func TestValidateSourcesKustomize(t *testing.T) {
 			name: "explicit kustomization file",
 			path: overlay + "kustomization.yaml",
 			want: []Result{
-				{Source: overlay + "kustomization.yaml", Origin: origin, DocIndex: 1, Name: "rendered-first", Status: StatusValid},
-				{Source: overlay + "kustomization.yaml", Origin: origin, DocIndex: 2, Name: "rendered-second", Status: StatusInvalid},
-				{Source: overlay + "kustomization.yaml", DocIndex: 3, Name: "rendered-generated", Status: StatusValid},
+				{Source: overlayDir, Origin: origin, DocIndex: 1, Name: "rendered-first", Status: StatusValid},
+				{Source: overlayDir, Origin: origin, DocIndex: 2, Name: "rendered-second", Status: StatusInvalid},
+				{Source: overlayDir, DocIndex: 3, Name: "rendered-generated", Status: StatusValid},
 			},
 			finals: 1,
 		},
@@ -90,7 +91,7 @@ func TestValidateSourcesKustomize(t *testing.T) {
 			name: "outside scanned directory",
 			path: root + "external",
 			want: []Result{
-				{Source: root + "external/Kustomization", Origin: root + "shared.yaml", DocIndex: 1, Name: "external", Status: StatusValid},
+				{Source: root + "external", Origin: root + "shared.yaml", DocIndex: 1, Name: "external", Status: StatusValid},
 			},
 			finals: 1,
 		},
@@ -98,7 +99,7 @@ func TestValidateSourcesKustomize(t *testing.T) {
 			name: "explicit extensionless kustomization",
 			path: root + "external/Kustomization",
 			want: []Result{
-				{Source: root + "external/Kustomization", Origin: root + "shared.yaml", DocIndex: 1, Name: "external", Status: StatusValid},
+				{Source: root + "external", Origin: root + "shared.yaml", DocIndex: 1, Name: "external", Status: StatusValid},
 			},
 			finals: 1,
 		},
@@ -144,7 +145,7 @@ func TestValidateSourcesKustomizeBuildError(t *testing.T) {
 	}
 	g.Expect(results).To(HaveLen(2))
 	g.Expect(results[0]).To(Equal(Result{
-		Source: "testdata/kustomize/component/kustomization.yaml",
+		Source: "testdata/kustomize/component",
 		Status: StatusInvalid, Reason: ReasonKustomizeBuildError, Errors: results[0].Errors,
 	}))
 	g.Expect(results[0].Errors).To(HaveLen(1))
@@ -174,7 +175,7 @@ func TestKustomizeProducerOrder(t *testing.T) {
 			got = append(got, j)
 		}
 		g.Expect(sources).To(Equal([]string{
-			"testdata/kustomize/mixed/overlay/kustomization.yaml",
+			"testdata/kustomize/mixed/overlay",
 			"testdata/kustomize/mixed/plain.yaml",
 		}))
 		g.Expect(got).To(HaveLen(4))

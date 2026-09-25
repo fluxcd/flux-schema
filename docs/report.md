@@ -41,7 +41,7 @@ Every report is wrapped in a top-level envelope:
 | Key            | Description                                                                                                                                                               |
 |----------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `resource`     | `{apiVersion, kind, namespace?, name?}` or `null` when no Kubernetes identity could be recovered (e.g. a file that fails to open, or stdin that is not YAML).             |
-| `source`       | File path or `stdin`. For a kustomize build, the root kustomization file path.                                                                                            |
+| `source`       | File path or `stdin`. For a kustomize build, the built directory path.                                                                                                    |
 | `origin`       | For a kustomize build, the file the resource came from; remote files include the repository and ref. Omitted for generated resources.                                     |
 | `idx`          | 1-based position of the document within its source. `0` for source-level failures that have no document.                                                                  |
 | `status`       | `"valid"`, `"invalid"`, or `"skipped"`.                                                                                                                                   |
@@ -85,7 +85,7 @@ Every report is wrapped in a top-level envelope:
           "namespace": "default",
           "name": "web"
         },
-        "source": "apps/staging/kustomization.yaml",
+        "source": "apps/staging",
         "origin": "apps/base/deployment.yaml",
         "idx": 1,
         "status": "valid"
@@ -193,7 +193,7 @@ Every report is wrapped in a top-level envelope:
       },
       {
         "resource": null,
-        "source": "apps/broken/kustomization.yaml",
+        "source": "apps/broken",
         "idx": 0,
         "status": "invalid",
         "reason": "kustomize-build-error",

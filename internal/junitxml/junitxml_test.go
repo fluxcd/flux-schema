@@ -49,7 +49,7 @@ func TestTestCaseOrigin(t *testing.T) {
 		origin string
 		file   string
 	}{
-		{name: "plain or generated resource", file: "apps/kustomization.yaml"},
+		{name: "plain or generated resource", file: "apps"},
 		{name: "local origin", origin: "base/deployment.yaml", file: "base/deployment.yaml"},
 		{
 			name:   "remote origin",
@@ -60,7 +60,7 @@ func TestTestCaseOrigin(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
 			tc := testCaseFromResult(apiv1.ReportResult{
-				Source: "apps/kustomization.yaml", Origin: tt.origin,
+				Source: "apps", Origin: tt.origin,
 				Resource: &apiv1.ReportResource{APIVersion: "apps/v1", Kind: "Deployment", Namespace: "apps", Name: "web"},
 				Status:   "valid",
 			})
