@@ -1527,13 +1527,15 @@ func TestValidateCmd_OutputDirectory(t *testing.T) {
 	writeManifest(t, manifestDir, "ok.yaml", validWidget)
 
 	reportDir := t.TempDir()
-	_, err := executeCommand([]string{
+	out, err := executeCommand([]string{
 		"validate", manifestDir,
 		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
 		"-o", "json",
 		"-d", reportDir,
 	})
 	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(out).ToNot(ContainSubstring("is valid"))
+	g.Expect(out).To(ContainSubstring("Summary: 1 resource found in 1 file - Valid: 1, Invalid: 0, Skipped: 0"))
 
 	reportFiles, err := os.ReadDir(reportDir)
 	g.Expect(err).ToNot(HaveOccurred())
@@ -1562,12 +1564,14 @@ validate:
   outputDirectory: %s
 `, reportDir))
 
-	_, err := executeCommand([]string{
+	out, err := executeCommand([]string{
 		"validate", manifestDir,
 		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
 		"--config", cfg,
 	})
 	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(out).ToNot(ContainSubstring("is valid"))
+	g.Expect(out).To(ContainSubstring("Summary: 1 resource found in 1 file - Valid: 1, Invalid: 0, Skipped: 0"))
 
 	reportFiles, err := os.ReadDir(reportDir)
 	g.Expect(err).ToNot(HaveOccurred())

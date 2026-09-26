@@ -322,7 +322,12 @@ func validateCmdRun(cmd *cobra.Command, args []string) error {
 				return fmt.Errorf("change report file mode: %w", err)
 			}
 
-			writer = &reportWriter{writer: f, mode: mode}
+			writer = &multiOutputWriter{
+				writers: []outputWriter{
+					&reportWriter{writer: f, mode: mode},
+					&textWriter{cmd: cmd, verbose: validateArgs.verbose},
+				},
+			}
 		} else {
 			writer = &reportWriter{writer: cmd.OutOrStdout(), mode: mode}
 		}
@@ -582,4 +587,23 @@ func (w *reportWriter) WriteSummary(s apiv1.ReportSummary, _ int, _ bool) error 
 	default:
 		return fmt.Errorf("unsupported output format %q", w.mode)
 	}
+}
+
+type multiOutputWriter struct {
+	writers []outputWriter
+}
+
+func (mw multiOutputWriter) WriteResult(r validator.Result) {
+	for _, w := range mw.writers {
+		w.WriteResult(r)
+	}
+}
+
+func (mw multiOutputWriter) WriteSummary(summary apiv1.ReportSummary, nFiles int, stdinOnly bool) error {
+	for _, w := range mw.writers {
+		if err := w.WriteSummary(summary, nFiles, stdinOnly); err != nil {
+			return err
+		}
+	}
+	return nil
 }
