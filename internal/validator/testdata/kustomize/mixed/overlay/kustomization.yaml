@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namePrefix: rendered-
+resources:
+  - base
+patches:
+  - path: patch.yaml
+    target:
+      kind: Widget
+      name: second
+configMapGenerator:
+  - name: generated
+    literals:
+      - setting=value
+generatorOptions:
+  disableNameSuffixHash: true

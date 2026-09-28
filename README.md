@@ -27,6 +27,8 @@ refreshed automatically from upstream stable releases.
 - **Strict YAML decoding** — duplicate keys are rejected matching Flux
   behavior. Metadata name, namespace, labels, and annotations are
   checked against API server rules (DNS-1123, qualified names).
+- **Kustomize builds** — automatically build kustomize directories and validate
+  rendered resources, with original file paths in validation reports.
 - **Built-in catalog** — JSON Schemas with CEL rules for Kubernetes, OpenShift,
   Gateway API, Flux, Flagger, and Flux Operator CRDs, refreshed automatically against upstream.
 - **Ecosystem catalog** — the `ecosystem` schema location resolves to
@@ -68,7 +70,7 @@ flux schema validate ./manifests \
 Build a kustomize overlay and validate the generated manifests:
 
 ```shell
-kustomize build ./clusters/production | flux schema validate -s ecosystem -v
+flux schema validate ./clusters/production -s ecosystem -v
 ```
 
 Render a Helm chart and validate the generated manifests:

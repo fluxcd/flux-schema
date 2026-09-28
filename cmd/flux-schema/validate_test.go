@@ -1758,3 +1758,204 @@ func TestValidateCmd_CELRule_SkipJSONPath(t *testing.T) {
 	g.Expect(res.Reason).To(Equal(apiv1.ReportReason(validator.ReasonCELViolation)))
 	g.Expect(res.Violations[0].Message).ToNot(BeEmpty())
 }
+
+func TestValidateCmd_Kustomize(t *testing.T) {
+	for _, tt := range []struct {
+		name      string
+		path      string
+		resources int
+		files     int
+	}{
+		{
+			name: "kubebuilder kindless kustomization",
+			path: "kubebuilder/config/rbac", resources: 2, files: 1,
+		},
+		{
+			name: "explicit kustomization file",
+			path: "kubebuilder/config/rbac/kustomization.yaml", resources: 2, files: 1,
+		},
+		{
+			name: "Flux repository with partial patches",
+			path: "flux-repo", resources: 7, files: 4,
+		},
+		{
+			name: "Flux overlay outside scanned directory",
+			path: "flux-repo/apps/staging", resources: 2, files: 1,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			out, err := executeCommand([]string{
+				"validate", filepath.Join("testdata/validate/kustomize", tt.path),
+				"--schema-location", "../../catalog/latest",
+				"--verbose",
+			})
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(out).To(ContainSubstring(fmt.Sprintf(
+				"Summary: %d resources found in %d %s - Valid: %d, Invalid: 0, Skipped: 0",
+				tt.resources, tt.files, pluralize("file", tt.files), tt.resources,
+			)))
+			g.Expect(out).To(ContainSubstring("(origin: "))
+			g.Expect(out).NotTo(ContainSubstring("podinfo-values.yaml"))
+		})
+	}
+}
+
+func TestValidateCmd_KustomizeReports(t *testing.T) {
+	const source = "testdata/validate/kustomize/invalid"
+	const origin = "testdata/validate/kustomize/flux-repo/apps/base/podinfo/release.yaml"
+	for _, mode := range []string{"text", "json", "yaml", "junit"} {
+		t.Run(mode, func(t *testing.T) {
+			g := NewWithT(t)
+			out, err := executeCommand([]string{
+				"validate", source + "/kustomization.yaml", "--schema-location", "../../catalog/latest", "-o", mode,
+			})
+			g.Expect(err).To(HaveOccurred())
+			switch mode {
+			case "text":
+				g.Expect(out).To(ContainSubstring(source +
+					" - helm.toolkit.fluxcd.io/v2/HelmRelease/podinfo/podinfo is invalid: schema violation (origin: " + origin + ")"))
+				g.Expect(out).To(ContainSubstring("/spec/interval: got number, want string"))
+			case "json", "yaml":
+				if mode == "yaml" {
+					data, err := k8syaml.YAMLToJSON([]byte(out))
+					g.Expect(err).NotTo(HaveOccurred())
+					out = string(data)
+				}
+				validateReportSchema(t, out)
+				report := decodeReport(t, out)
+				g.Expect(report.Report.Summary).To(Equal(apiv1.ReportSummary{Total: 2, Valid: 1, Invalid: 1}))
+				result := report.Report.Results[0]
+				g.Expect(result.Source).To(Equal(source))
+				g.Expect(result.Origin).To(Equal(origin))
+				g.Expect(result.Idx).To(Equal(1))
+				g.Expect(result.Reason).To(Equal(apiv1.ReportReasonSchemaViolation))
+			case "junit":
+				var suites junitxml.TestSuites
+				g.Expect(xml.Unmarshal([]byte(out), &suites)).To(Succeed())
+				g.Expect(suites.Suites).To(HaveLen(1))
+				g.Expect(suites.Suites[0].TestCases).To(HaveLen(2))
+				g.Expect(suites.Suites[0].TestCases[0].File).To(Equal(origin))
+				g.Expect(suites.Suites[0].TestCases[0].Failure.Type).To(Equal(string(apiv1.ReportReasonSchemaViolation)))
+			}
+		})
+	}
+}
+
+func TestValidateCmd_KustomizeBuildErrorText(t *testing.T) {
+	g := NewWithT(t)
+	const source = "testdata/validate/kustomize/broken"
+	out, err := executeCommand([]string{
+		"validate", source, "--schema-location", "../../catalog/latest",
+	})
+	g.Expect(err).To(HaveOccurred())
+	g.Expect(out).To(ContainSubstring(source + " is invalid: kustomize build error\n"))
+	g.Expect(out).To(ContainSubstring("missing.yaml"))
+}
+
+func TestValidateCmd_KustomizeEmptyBuildCountsSource(t *testing.T) {
+	g := NewWithT(t)
+	out, err := executeCommand([]string{
+		"validate", "testdata/validate/kustomize/empty", "--schema-location", "../../catalog/latest",
+	})
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("Summary: 0 resources found in 1 file - Valid: 0, Invalid: 0, Skipped: 0"))
+}
+
+func TestValidateCmd_KustomizeBuildError(t *testing.T) {
+	g := NewWithT(t)
+	const source = "testdata/validate/kustomize/broken"
+	out, err := executeCommand([]string{
+		"validate", source, "--schema-location", "../../catalog/latest", "-o", "json",
+	})
+	g.Expect(err).To(HaveOccurred())
+	validateReportSchema(t, out)
+	report := decodeReport(t, out)
+	g.Expect(report.Report.Summary).To(Equal(apiv1.ReportSummary{Total: 1, Invalid: 1}))
+	g.Expect(report.Report.Results).To(HaveLen(1))
+	result := report.Report.Results[0]
+	g.Expect(result.Source).To(Equal(source))
+	g.Expect(result.Resource).To(BeNil())
+	g.Expect(result.Origin).To(BeEmpty())
+	g.Expect(result.Idx).To(BeZero())
+	g.Expect(result.Reason).To(Equal(apiv1.ReportReasonKustomizeBuildError))
+	g.Expect(result.Violations).To(HaveLen(1))
+	g.Expect(result.Violations[0].Message).To(ContainSubstring("missing.yaml"))
+	g.Expect(out).NotTo(ContainSubstring(`"origin"`))
+}
+
+func TestValidateCmd_KustomizeSkipFile(t *testing.T) {
+	const dir = "testdata/validate/kustomize/kubebuilder/config/rbac"
+	for _, config := range []bool{false, true} {
+		t.Run(fmt.Sprintf("config=%t", config), func(t *testing.T) {
+			g := NewWithT(t)
+			args := []string{"validate", dir, "--schema-location", "../../catalog/latest", "-o", "json"}
+			if config {
+				file := writeManifest(t, t.TempDir(), "config.yaml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
+validate:
+  skipFile:
+    - kustomization.yaml
+`)
+				args = append(args, "--config", file)
+			} else {
+				args = append(args, "--skip-file", "kustomization.yaml")
+			}
+			out, err := executeCommand(args)
+			g.Expect(err).NotTo(HaveOccurred())
+			report := decodeReport(t, out)
+			g.Expect(report.Report.Summary).To(Equal(apiv1.ReportSummary{Total: 2, Valid: 2}))
+			g.Expect(report.Report.Results).To(HaveLen(2))
+			for _, result := range report.Report.Results {
+				g.Expect(result.Origin).To(BeEmpty())
+				g.Expect(filepath.Base(result.Source)).To(BeElementOf("role.yaml", "role_binding.yaml"))
+			}
+		})
+	}
+}
+
+func TestValidateCmd_KustomizeDeterministicOrder(t *testing.T) {
+	g := NewWithT(t)
+	const dir = "testdata/validate/kustomize/flux-repo"
+	var want []apiv1.ReportResult
+	for _, workers := range []string{"1", "8", "8", "16", "16"} {
+		out, err := executeCommand([]string{
+			"validate", dir, "--schema-location", "../../catalog/latest", "-o", "json", "--concurrent", workers,
+		})
+		g.Expect(err).NotTo(HaveOccurred())
+		results := decodeReport(t, out).Report.Results
+		g.Expect(results).To(HaveLen(7))
+		if want == nil {
+			want = results
+		}
+		g.Expect(results).To(Equal(want))
+	}
+	g.Expect(want[0].Source).To(Equal(dir + "/apps/base/podinfo"))
+	g.Expect(want[2].Source).To(Equal(dir + "/apps/production"))
+	g.Expect(want[4].Source).To(Equal(dir + "/apps/staging"))
+	g.Expect(want[6].Source).To(Equal(dir + "/clusters/staging/apps.yaml"))
+}
+
+func TestResultCollectorSourceOrder(t *testing.T) {
+	g := NewWithT(t)
+	writer := &reportWriter{}
+	collector := newResultCollector(writer)
+	later := validator.Result{Source: "later.yaml", SourceIndex: 2, DocIndex: 1}
+	first := validator.Result{Source: "first", SourceIndex: 1, DocIndex: 1}
+	buildError := validator.Result{
+		Source: "broken", SourceIndex: 3,
+		Status: validator.StatusInvalid, Reason: validator.ReasonKustomizeBuildError,
+	}
+	collector.add(later)
+	collector.add(validator.Result{Source: later.Source, SourceIndex: 2, Final: true})
+	collector.add(buildError)
+	collector.add(validator.Result{Source: buildError.Source, SourceIndex: 3, Final: true})
+	collector.add(first)
+	g.Expect(writer.collected).To(BeEmpty())
+	collector.add(validator.Result{Source: "empty", SourceIndex: 0, Final: true})
+	g.Expect(writer.collected).To(Equal([]validator.Result{first}))
+	collector.add(validator.Result{Source: first.Source, SourceIndex: 1, Final: true})
+	collector.flushRemainingSources()
+	g.Expect(writer.collected).To(Equal([]validator.Result{first, later, buildError}))
+	g.Expect(collector.nInvalid).To(Equal(1))
+}

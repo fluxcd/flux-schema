@@ -75,6 +75,11 @@ type ReportResult struct {
 	// Source identifies the input source for the document.
 	Source string `json:"source"`
 
+	// Origin identifies the original resource file in a kustomize build.
+	// Remote origins include the repository and ref.
+	// +optional
+	Origin string `json:"origin,omitempty"`
+
 	// Idx is the zero-based document index within the source.
 	// +kubebuilder:validation:Minimum=0
 	Idx int `json:"idx"`
@@ -100,6 +105,9 @@ type ReportReason string
 const (
 	// ReportReasonSourceLoadError means the input source could not be loaded.
 	ReportReasonSourceLoadError ReportReason = "source-load-error"
+
+	// ReportReasonKustomizeBuildError means the kustomization could not be built.
+	ReportReasonKustomizeBuildError ReportReason = "kustomize-build-error"
 
 	// ReportReasonYAMLParseError means the document could not be parsed as YAML.
 	ReportReasonYAMLParseError ReportReason = "yaml-parse-error"

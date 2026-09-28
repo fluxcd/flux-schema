@@ -1,0 +1,10 @@
+resources:
+  - ../flux-repo/apps/base/podinfo
+namespace: podinfo
+patches:
+  - patch: |
+      - op: replace
+        path: /spec/interval
+        value: 42
+    target:
+      kind: HelmRelease

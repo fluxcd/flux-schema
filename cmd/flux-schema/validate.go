@@ -30,6 +30,9 @@ var validateCmd = &cobra.Command{
   # https://github.com/fluxcd/flux-schema/blob/main/catalog/README.md
   flux-schema validate ./manifests --verbose
 
+  # Build a kustomize directory and validate its rendered resources
+  flux-schema validate ./clusters/production --verbose
+
   # Validate against a local schema directory written by 'flux-schema extract'
   # (bare paths/URLs get '{{.Group}}/{{.Kind}}_{{.Version}}.json' appended)
   flux-schema validate ./manifests --schema-location ./my-schemas
@@ -136,7 +139,7 @@ func init() {
 // sourceOrder[currentIdx] flush as soon as their docIndex matches
 // nextIdx. The validator emits a Final sentinel once a source is fully
 // drained, which lets currentIdx advance mid-stream — so all sources
-// stream output in arrival order rather than only the first one.
+// stream output in discovery order rather than worker completion order.
 type sourceBuf struct {
 	nextIdx int
 	pending map[int]validator.Result
@@ -164,6 +167,10 @@ func newResultCollector(w outputWriter) *resultCollector {
 }
 
 func (c *resultCollector) add(r validator.Result) {
+	if r.SourceIndex >= len(c.sourceOrder) {
+		c.sourceOrder = append(c.sourceOrder, make([]string, r.SourceIndex-len(c.sourceOrder)+1)...)
+	}
+	c.sourceOrder[r.SourceIndex] = r.Source
 	if r.Final {
 		c.completed[r.Source] = true
 		c.tryAdvance()
@@ -186,7 +193,6 @@ func (c *resultCollector) add(r validator.Result) {
 			pending: map[int]validator.Result{},
 		}
 		c.bufs[r.Source] = buf
-		c.sourceOrder = append(c.sourceOrder, r.Source)
 	}
 
 	buf.pending[r.DocIndex] = r
@@ -195,6 +201,18 @@ func (c *resultCollector) add(r validator.Result) {
 		c.sourceOrder[c.currentIdx] == r.Source {
 		c.flushContiguous(r.Source)
 	}
+}
+
+// nSources counts the sources that reported, including those with no
+// resources such as an empty build.
+func (c *resultCollector) nSources() int {
+	n := 0
+	for _, src := range c.sourceOrder {
+		if src != "" {
+			n++
+		}
+	}
+	return n
 }
 
 func (c *resultCollector) flushContiguous(src string) {
@@ -240,6 +258,9 @@ func (c *resultCollector) flushRemaining(src string) {
 func (c *resultCollector) tryAdvance() {
 	for c.currentIdx < len(c.sourceOrder) {
 		src := c.sourceOrder[c.currentIdx]
+		if src == "" {
+			return
+		}
 
 		c.flushContiguous(src)
 		if !c.completed[src] {
@@ -353,7 +374,7 @@ func validateCmdRun(cmd *cobra.Command, args []string) error {
 		Invalid: collector.nInvalid,
 		Skipped: collector.nSkipped,
 	}
-	err = writer.WriteSummary(summary, len(collector.bufs), stdinOnly)
+	err = writer.WriteSummary(summary, collector.nSources(), stdinOnly)
 	if err != nil {
 		return err
 	}
@@ -510,11 +531,19 @@ func (w *textWriter) WriteResult(r validator.Result) {
 	case validator.StatusSkipped:
 		verb = "is skipped"
 	}
-	if r.Reason != validator.ReasonNone {
-		w.cmd.Printf("%s - %s %s: %s\n", r.Source, r.Identifier(), verb, r.Reason)
+	// Source-level failures (load or build errors) carry no resource identity.
+	if id := r.Identifier(); id != "" {
+		w.cmd.Printf("%s - %s %s", r.Source, id, verb)
 	} else {
-		w.cmd.Printf("%s - %s %s\n", r.Source, r.Identifier(), verb)
+		w.cmd.Printf("%s %s", r.Source, verb)
 	}
+	if r.Reason != validator.ReasonNone {
+		w.cmd.Printf(": %s", r.Reason)
+	}
+	if r.Origin != "" {
+		w.cmd.Printf(" (origin: %s)", r.Origin)
+	}
+	w.cmd.Println()
 	for _, e := range r.Errors {
 		if e.Path == "" {
 			w.cmd.Printf("  - %s\n", e.Msg)

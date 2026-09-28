@@ -1,0 +1,13 @@
+apiVersion: example.com/v1
+kind: Widget
+metadata:
+  name: first
+spec:
+  name: valid
+---
+apiVersion: example.com/v1
+kind: Widget
+metadata:
+  name: second
+spec:
+  name: valid

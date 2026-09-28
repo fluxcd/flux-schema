@@ -41,7 +41,8 @@ Every report is wrapped in a top-level envelope:
 | Key            | Description                                                                                                                                                               |
 |----------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `resource`     | `{apiVersion, kind, namespace?, name?}` or `null` when no Kubernetes identity could be recovered (e.g. a file that fails to open, or stdin that is not YAML).             |
-| `source`       | File path or `stdin`.                                                                                                                                                     |
+| `source`       | File path or `stdin`. For a kustomize build, the built directory path.                                                                                                    |
+| `origin`       | For a kustomize build, the file the resource came from; remote files include the repository and ref. Omitted for generated resources.                                     |
 | `idx`          | 1-based position of the document within its source. `0` for source-level failures that have no document.                                                                  |
 | `status`       | `"valid"`, `"invalid"`, or `"skipped"`.                                                                                                                                   |
 | `reason`       | Stable kebab-case code (see below). Omitted when `status` is `"valid"`.                                                                                                   |
@@ -49,15 +50,16 @@ Every report is wrapped in a top-level envelope:
 
 ## Reasons
 
-| Reason              | Triggered by                                                                                                                                           |
-|---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `source-load-error` | Source-level open/read failure.                                                                                                                        |
-| `yaml-parse-error`  | Strict YAML decode fails (duplicate keys, malformed doc).                                                                                              |
-| `schema-load-error` | Schema loader failure (HTTP fetch, file read, or JSON Schema compile).                                                                                 |
-| `schema-not-found`  | No schema applicable — either no schema file matches the GVK, or the document has no GVK to look up.                                                   |
-| `schema-violation`  | Document fails one or more schema constraints. `violations[]` carries a JSON Pointer `path` per entry.                                                 |
-| `cel-violation`     | Document fails one or more `x-kubernetes-validations` CEL rules, or the schema's CEL evaluator could not be built. JSON Schema constraints all passed. |
-| `kind-skipped`      | Matched a `--skip-kind` pattern.                                                                                                                       |
+| Reason                  | Triggered by                                                                                                                                           |
+|-------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `source-load-error`     | Source-level open/read failure.                                                                                                                        |
+| `kustomize-build-error` | Kustomize build failure. One result per kustomization with `resource: null`, `idx: 0`, and the build error as its violation.                           |
+| `yaml-parse-error`      | Strict YAML decode fails (duplicate keys, malformed doc).                                                                                              |
+| `schema-load-error`     | Schema loader failure (HTTP fetch, file read, or JSON Schema compile).                                                                                 |
+| `schema-not-found`      | No schema applicable — either no schema file matches the GVK, or the document has no GVK to look up.                                                   |
+| `schema-violation`      | Document fails one or more schema constraints. `violations[]` carries a JSON Pointer `path` per entry.                                                 |
+| `cel-violation`         | Document fails one or more `x-kubernetes-validations` CEL rules, or the schema's CEL evaluator could not be built. JSON Schema constraints all passed. |
+| `kind-skipped`          | Matched a `--skip-kind` pattern.                                                                                                                       |
 
 ## Example
 
@@ -70,9 +72,9 @@ Every report is wrapped in a top-level envelope:
     "reporter": "flux-schema/v0.1.0",
     "timestamp": "2026-06-01T12:00:00Z",
     "summary": {
-      "total": 7,
+      "total": 8,
       "valid": 1,
-      "invalid": 5,
+      "invalid": 6,
       "skipped": 1
     },
     "results": [
@@ -83,7 +85,8 @@ Every report is wrapped in a top-level envelope:
           "namespace": "default",
           "name": "web"
         },
-        "source": "manifests/app.yaml",
+        "source": "apps/staging",
+        "origin": "apps/base/deployment.yaml",
         "idx": 1,
         "status": "valid"
       },
@@ -187,6 +190,18 @@ Every report is wrapped in a top-level envelope:
         "idx": 1,
         "status": "skipped",
         "reason": "kind-skipped"
+      },
+      {
+        "resource": null,
+        "source": "apps/broken",
+        "idx": 0,
+        "status": "invalid",
+        "reason": "kustomize-build-error",
+        "violations": [
+          {
+            "message": "accumulating resources: missing.yaml: no such file or directory"
+          }
+        ]
       }
     ]
   }

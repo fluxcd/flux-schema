@@ -15,6 +15,9 @@ JUnit report as a test report.
 Validation errors then appear alongside other test failures, typically with the
 failed resource and validation message available for inspection.
 
+For resources rendered by a kustomize build, the testcase `file` is the
+resource's `origin` when it has one, otherwise the built directory.
+
 **Warning:** The JUnit XML format is not standardized. There is no single
 formal standard for the JUnit XML format, and CI systems
 may interpret the format differently. The `flux schema validate` JUnit output

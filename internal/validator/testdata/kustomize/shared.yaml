@@ -1,0 +1,6 @@
+apiVersion: example.com/v1
+kind: Widget
+metadata:
+  name: external
+spec:
+  name: valid
