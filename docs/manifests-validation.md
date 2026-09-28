@@ -56,7 +56,11 @@ flux schema validate ./clusters/production --envsubst .env
 ```
 
 - Variables come only from the dotenv file, not the process environment.
-  Newlines are removed from values. An empty file still enables substitution.
+  Each line is `NAME=value` and the value is used as written: quotes are kept
+  and `$` references are not expanded, the same way Flux uses `postBuild.substitute` values.
+  Blank lines and `#` comments are skipped, leading spaces and tabs are ignored;
+  any other line is an error.
+  An empty file still enables substitution.
 - Undefined variables become empty strings; `${VAR:=default}` sets a default.
   With `--envsubst-strict`, an undefined variable without a default is an error.
 - Each resource is re-serialized before substitution, so comments are not substituted

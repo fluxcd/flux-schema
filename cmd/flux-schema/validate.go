@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fluxcd/flux-schema/internal/dotenv"
 	"github.com/fluxcd/flux-schema/internal/junitxml"
-	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
 
@@ -512,7 +512,7 @@ func buildValidatorOptions(inputs []string) (validator.Options, error) {
 		InsecureSkipTLSVerify: validateArgs.insecureSkipTLSVerify,
 	}
 	if validateArgs.envsubst != "" {
-		vars, err := godotenv.Read(validateArgs.envsubst)
+		vars, err := dotenv.Read(validateArgs.envsubst)
 		if err != nil {
 			return validator.Options{}, fmt.Errorf("envsubst: read dotenv file %s: %w", validateArgs.envsubst, err)
 		}

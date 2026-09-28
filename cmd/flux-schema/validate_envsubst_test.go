@@ -31,7 +31,7 @@ func TestValidateCmd_Envsubst(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
 			dir := t.TempDir()
-			vars := "# Post-build values\nexport REPLICAS=\"2\" # replicas\n"
+			vars := "# Post-build values\nREPLICAS=2\n"
 			path := "../../internal/validator/testdata/envsubst/deployment.yaml"
 			if tt.defaulted {
 				raw, err := os.ReadFile(path)
@@ -92,7 +92,7 @@ validate:
 `, dotenv))
 			workingDir := t.TempDir()
 			writeManifest(t, workingDir, "deployment.yaml", string(raw))
-			writeManifest(t, workingDir, ".env", "export REPLICAS='3'\n")
+			writeManifest(t, workingDir, ".env", "REPLICAS=3\n")
 			t.Chdir(workingDir)
 			args := []string{"validate", "deployment.yaml", "-s", catalog, "-v"}
 			if tt.configEnv {
@@ -126,8 +126,8 @@ func TestValidateCmd_EnvsubstStartupErrors(t *testing.T) {
 		want    string
 	}{
 		{name: "missing file", missing: true, want: "envsubst: read dotenv file"},
-		{name: "parse error", content: "VAR=\"unterminated", want: "envsubst: read dotenv file"},
-		{name: "invalid variable name", content: "VAR.NAME=value\n", want: "var name is invalid"},
+		{name: "parse error", content: "export VAR=1\n", want: "envsubst: read dotenv file"},
+		{name: "invalid variable name", content: "VAR.NAME=value\n", want: `line 1: invalid variable name "VAR.NAME"`},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
