@@ -13,13 +13,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fluxcd/flux-schema/internal/dotenv"
 	"github.com/fluxcd/flux-schema/internal/junitxml"
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
 
 	apiv1 "github.com/fluxcd/flux-schema/api/v1beta1"
 	"github.com/fluxcd/flux-schema/internal/flag"
+	"github.com/fluxcd/flux-schema/internal/substitute"
 	"github.com/fluxcd/flux-schema/internal/validator"
 )
 
@@ -512,9 +512,9 @@ func buildValidatorOptions(inputs []string) (validator.Options, error) {
 		InsecureSkipTLSVerify: validateArgs.insecureSkipTLSVerify,
 	}
 	if validateArgs.envsubstFile != "" {
-		vars, err := dotenv.Read(validateArgs.envsubstFile)
+		vars, err := substitute.ReadFile(validateArgs.envsubstFile)
 		if err != nil {
-			return validator.Options{}, fmt.Errorf("envsubst: read dotenv file %s: %w", validateArgs.envsubstFile, err)
+			return validator.Options{}, err
 		}
 		opts.Envsubst = vars
 		opts.EnvsubstStrict = validateArgs.envsubstStrict

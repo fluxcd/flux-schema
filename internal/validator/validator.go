@@ -7,14 +7,10 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
-	"os"
-	"path/filepath"
-	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -22,23 +18,15 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/fluxcd/pkg/envsubst"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	jsonschemakind "github.com/santhosh-tekuri/jsonschema/v6/kind"
-	utiljson "k8s.io/apimachinery/pkg/util/json"
-	"sigs.k8s.io/kustomize/api/konfig"
-	"sigs.k8s.io/yaml"
 
-	"github.com/fluxcd/flux-schema/internal/kustomize"
+	"github.com/fluxcd/flux-schema/internal/source"
+	"github.com/fluxcd/flux-schema/internal/substitute"
 	"github.com/fluxcd/flux-schema/internal/tmpl"
 	"github.com/fluxcd/flux-schema/internal/useragent"
 	"github.com/fluxcd/flux-schema/internal/yamldoc"
-)
-
-const (
-	extYAML = ".yaml"
-	extYML  = ".yml"
 )
 
 // Status is the per-document validation outcome.
@@ -155,7 +143,7 @@ type Options struct {
 // DefaultSkipFiles is applied when Options.SkipFiles is nil. It hides
 // dotfiles and dot-directories (e.g. .github, .golangci.yml) which are commonly
 // found alongside YAML manifests but never contain Kubernetes resources.
-var DefaultSkipFiles = []string{".*"}
+var DefaultSkipFiles = slices.Clone(source.DefaultSkipFiles)
 
 // Validator resolves and applies JSON Schemas to Kubernetes manifests.
 // It is safe for concurrent use by multiple goroutines.
@@ -165,7 +153,8 @@ type Validator struct {
 	skipKinds       []skipKindMatcher
 	skipPaths       []skipPathMatcher
 	skipAbsentPaths []skipPathMatcher
-	skipFiles       []string
+	sources         *source.Reader
+	substituter     *substitute.Substituter
 }
 
 // skipKindMatcher matches a document by Kind, optionally scoped to an
@@ -348,18 +337,9 @@ func (m skipPathMatcher) pathExists(doc map[string]any) bool {
 // New returns a Validator configured from opts. Each location template is
 // parsed up-front so syntax errors surface before the first document.
 func New(opts Options) (*Validator, error) {
-	const varNamePattern = "^[_[:alpha:]][_[:alpha:][:digit:]]*$"
-	if opts.Envsubst != nil {
-		validName := regexp.MustCompile(varNamePattern)
-		vars := make(map[string]string, len(opts.Envsubst))
-		for name, value := range opts.Envsubst {
-			if !validName.MatchString(name) {
-				return nil, fmt.Errorf("envsubst: %q var name is invalid, must match %q", name, varNamePattern)
-			}
-			// Newlines are removed from values, like kustomize-controller does.
-			vars[name] = strings.ReplaceAll(value, "\n", "")
-		}
-		opts.Envsubst = vars
+	substituter, err := substitute.New(opts.Envsubst, opts.EnvsubstStrict)
+	if err != nil {
+		return nil, err
 	}
 	if len(opts.SchemaLocations) == 0 {
 		return nil, errors.New("no schema location defined")
@@ -422,17 +402,11 @@ func New(opts Options) (*Validator, error) {
 
 	skipFiles := opts.SkipFiles
 	if skipFiles == nil {
-		// Clone so DefaultSkipFiles can never be mutated through a
-		// validator's skipFiles slice.
-		skipFiles = slices.Clone(DefaultSkipFiles)
+		skipFiles = DefaultSkipFiles
 	}
-	for _, p := range skipFiles {
-		if strings.TrimSpace(p) == "" {
-			return nil, errors.New("skip file pattern must not be empty")
-		}
-		if _, err := filepath.Match(p, "probe"); err != nil {
-			return nil, fmt.Errorf("skip file pattern %q: %w", p, err)
-		}
+	sources, err := source.New(source.Options{SkipFiles: skipFiles, Stdin: opts.Stdin})
+	if err != nil {
+		return nil, err
 	}
 
 	return &Validator{
@@ -441,34 +415,13 @@ func New(opts Options) (*Validator, error) {
 		skipKinds:       skipKinds,
 		skipPaths:       skipPaths,
 		skipAbsentPaths: skipAbsentPaths,
-		skipFiles:       skipFiles,
+		sources:         sources,
+		substituter:     substituter,
 	}, nil
 }
 
-// matchSkipFile reports whether name (a directory or file basename) matches
-// any of the validator's skip-file glob patterns. Matching uses
-// filepath.Match semantics; patterns are validated up-front in New so the
-// match call here cannot return an error.
-func (v *Validator) matchSkipFile(name string) bool {
-	for _, p := range v.skipFiles {
-		if ok, _ := filepath.Match(p, name); ok {
-			return true
-		}
-	}
-	return false
-}
-
 type job struct {
-	source   string
-	origin   string
-	docIndex int
-	raw      []byte
-	// loadErr surfaces a source-level read/open failure so the worker
-	// pool reports one Result per failed source instead of silently
-	// dropping it.
-	loadErr error
-	// loadReason overrides the default source-load-error for build failures.
-	loadReason Reason
+	source.Event
 	// sourceWG counts in-flight jobs for source. Workers Done it when the
 	// job is processed; the per-source waiter goroutine waits on it then
 	// emits a Final sentinel so the consumer can advance its streaming
@@ -519,12 +472,6 @@ func (v *Validator) ValidateSources(ctx context.Context, paths []string) <-chan 
 
 	go func() {
 		var waiterWG sync.WaitGroup
-		sourceIndex := 0
-		newSource := func() *sourceState {
-			state := &sourceState{index: sourceIndex}
-			sourceIndex++
-			return state
-		}
 		spawnWaiter := func(src string, wg *sourceState) {
 			waiterWG.Go(func() {
 				wg.Wait()
@@ -535,21 +482,29 @@ func (v *Validator) ValidateSources(ctx context.Context, paths []string) <-chan 
 			})
 		}
 
-		for _, path := range paths {
-			if err := v.produceFromPath(ctx, path, jobs, newSource, spawnWaiter); err != nil && ctx.Err() == nil {
-				wg := newSource()
-				_ = enqueueJob(ctx, jobs, job{source: path, loadErr: err, sourceWG: wg})
-				spawnWaiter(path, wg)
+		var state *sourceState
+		var label string
+		_ = v.sources.Walk(ctx, paths, func(e source.Event) {
+			if state == nil {
+				state = &sourceState{index: e.SourceIndex}
+				label = e.Source
 			}
-			if ctx.Err() != nil {
-				break
+			if e.Final {
+				spawnWaiter(e.Source, state)
+				state = nil
+				return
 			}
+			_ = enqueueJob(ctx, jobs, job{Event: e, sourceWG: state})
+		})
+		if state != nil {
+			// Cancellation can suppress the producer's final event.
+			spawnWaiter(label, state)
 		}
 
 		close(jobs)
 		workerWG.Wait()
 		// Drain any jobs that workers left behind when ctx was cancelled:
-		// streamFile calls sourceWG.Add(1) before the send, and a worker's
+		// enqueueJob calls sourceWG.Add(1) before the send, and a worker's
 		// select may pick <-ctx.Done() over <-jobs even when both are ready,
 		// leaving queued jobs with unbalanced Add counts. Without this drain
 		// per-source waiters would block forever and results would never close.
@@ -570,21 +525,18 @@ func (v *Validator) runJob(ctx context.Context, j job, results chan<- Result) {
 	defer j.sourceWG.Done()
 	var r Result
 	emit := true
-	if j.loadErr != nil {
+	if j.Err != nil {
 		r = Result{
-			Source:   j.source,
-			DocIndex: j.docIndex,
+			Source:   j.Source,
+			DocIndex: j.DocIndex,
 			Status:   StatusInvalid,
-			Reason:   ReasonSourceLoadError,
-			Errors:   []ValidationError{{Msg: j.loadErr.Error()}},
-		}
-		if j.loadReason != ReasonNone {
-			r.Reason = j.loadReason
+			Reason:   Reason(j.Reason),
+			Errors:   []ValidationError{{Msg: j.Err.Error()}},
 		}
 	} else {
-		r, emit = v.validateDoc(ctx, j.source, j.docIndex, j.raw)
+		r, emit = v.validateDoc(ctx, j.Source, j.DocIndex, j.Raw)
 	}
-	r.Origin = j.origin
+	r.Origin = j.Origin
 	r.SourceIndex = j.sourceWG.index
 	if !emit {
 		return
@@ -597,163 +549,23 @@ func (v *Validator) runJob(ctx context.Context, j job, results chan<- Result) {
 
 // ValidateBytes validates an in-memory YAML payload sequentially. Primarily
 // used by tests and by callers that have already read from stdin.
-func (v *Validator) ValidateBytes(ctx context.Context, source string, data []byte) []Result {
+func (v *Validator) ValidateBytes(ctx context.Context, label string, data []byte) []Result {
 	var out []Result
 	scanner := yamldoc.NewScanner(bytes.NewReader(data))
 	idx := 0
 	for scanner.Scan() {
 		raw := bytes.TrimSpace(scanner.Bytes())
-		if isContentFree(raw) {
+		if source.IsContentFree(raw) {
 			continue
 		}
 		idx++
 		buf := make([]byte, len(raw))
 		copy(buf, raw)
-		if result, emit := v.validateDoc(ctx, source, idx, buf); emit {
+		if result, emit := v.validateDoc(ctx, label, idx, buf); emit {
 			out = append(out, result)
 		}
 	}
 	return out
-}
-
-// produceFromPath opens path (or walks it, if a directory) and streams each
-// YAML document into jobs. A directory containing a kustomization file is
-// built instead of walked, and a kustomization file argument builds its
-// directory; the rendered resources stream as one source named after the
-// kustomization directory. spawnWaiter is invoked once per source with a
-// per-source WaitGroup the worker pool decrements; the validator then
-// emits a Final sentinel once that source is fully drained.
-//
-// Returns traversal errors or cancellation; read and build failures are
-// reported as jobs for their source.
-func (v *Validator) produceFromPath(ctx context.Context, path string, jobs chan<- job,
-	newSource func() *sourceState, spawnWaiter func(string, *sourceState),
-) error {
-	if err := ctx.Err(); err != nil {
-		return err
-	}
-	if path == StdinSource {
-		if v.opts.Stdin == nil {
-			return fmt.Errorf("source %q requires Options.Stdin to be set", StdinSource)
-		}
-		wg := newSource()
-		err := v.streamReader(ctx, StdinSource, v.opts.Stdin, jobs, wg)
-		spawnWaiter(StdinSource, wg)
-		return err
-	}
-	info, err := os.Stat(path)
-	if err != nil {
-		return err
-	}
-	if info.IsDir() {
-		return filepath.WalkDir(path, func(p string, d os.DirEntry, werr error) error {
-			if werr != nil {
-				return werr
-			}
-			if err := ctx.Err(); err != nil {
-				return err
-			}
-			if d.IsDir() {
-				if p != path && v.matchSkipFile(d.Name()) {
-					return filepath.SkipDir
-				}
-				if file, ok := kustomize.Detect(p); ok && !v.matchSkipFile(filepath.Base(file)) {
-					if err := v.streamBuild(ctx, p, jobs, newSource, spawnWaiter); err != nil {
-						return err
-					}
-					return filepath.SkipDir
-				}
-				return nil
-			}
-			ext := strings.ToLower(filepath.Ext(p))
-			if ext != extYAML && ext != extYML {
-				return nil
-			}
-			if v.matchSkipFile(d.Name()) {
-				return nil
-			}
-			wg := newSource()
-			err := v.streamFile(ctx, p, jobs, wg)
-			spawnWaiter(p, wg)
-			return err
-		})
-	}
-	if base := filepath.Base(path); slices.Contains(konfig.RecognizedKustomizationFileNames(), base) && !v.matchSkipFile(base) {
-		return v.streamBuild(ctx, filepath.Dir(path), jobs, newSource, spawnWaiter)
-	}
-	wg := newSource()
-	err = v.streamFile(ctx, path, jobs, wg)
-	spawnWaiter(path, wg)
-	return err
-}
-
-// streamBuild runs a kustomize build of dir and streams the rendered
-// resources with dir as their source. A build failure is reported as a
-// single kustomize-build-error job for dir.
-func (v *Validator) streamBuild(ctx context.Context, dir string, jobs chan<- job,
-	newSource func() *sourceState, spawnWaiter func(string, *sourceState),
-) error {
-	if err := ctx.Err(); err != nil {
-		return err
-	}
-	dir = filepath.Clean(dir)
-	wg := newSource()
-	defer spawnWaiter(dir, wg)
-	docs, err := kustomize.Build(dir)
-	if err != nil {
-		return enqueueJob(ctx, jobs, job{
-			source: dir, loadErr: err, loadReason: ReasonKustomizeBuildError, sourceWG: wg,
-		})
-	}
-	return v.streamDocs(ctx, dir, docs, jobs, wg)
-}
-
-// streamDocs pushes pre-split documents into jobs, keeping their origin.
-func (v *Validator) streamDocs(ctx context.Context, source string, docs []kustomize.Doc, jobs chan<- job, sourceWG *sourceState) error {
-	for i, doc := range docs {
-		if err := enqueueJob(ctx, jobs, job{
-			source: source, origin: doc.Origin, docIndex: i + 1, raw: doc.Raw, sourceWG: sourceWG,
-		}); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (v *Validator) streamFile(ctx context.Context, path string, jobs chan<- job, sourceWG *sourceState) error {
-	f, err := os.Open(path)
-	if err != nil {
-		return enqueueJob(ctx, jobs, job{source: path, loadErr: err, sourceWG: sourceWG})
-	}
-	defer f.Close()
-	return v.streamReader(ctx, path, f, jobs, sourceWG)
-}
-
-// streamReader splits r into YAML documents and pushes them into the job
-// channel under the given source label. Used by streamFile for on-disk
-// inputs and by produceFromPath directly for the StdinSource sentinel so
-// stdin doesn't go through a platform-specific path like "/dev/stdin".
-func (v *Validator) streamReader(ctx context.Context, source string, r io.Reader, jobs chan<- job, sourceWG *sourceState) error {
-	scanner := yamldoc.NewScanner(r)
-	idx := 0
-	for scanner.Scan() {
-		raw := bytes.TrimSpace(scanner.Bytes())
-		if isContentFree(raw) {
-			continue
-		}
-		idx++
-		buf := make([]byte, len(raw))
-		copy(buf, raw)
-		if err := enqueueJob(ctx, jobs, job{source: source, docIndex: idx, raw: buf, sourceWG: sourceWG}); err != nil {
-			return err
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		return enqueueJob(ctx, jobs, job{
-			source: source, loadErr: fmt.Errorf("scan %s: %w", source, err), sourceWG: sourceWG,
-		})
-	}
-	return nil
 }
 
 // enqueueJob registers j with its source WaitGroup and sends it, undoing
@@ -778,8 +590,8 @@ func enqueueJob(ctx context.Context, jobs chan<- job, j job) error {
 // (YAML decodes to nil); such content-free documents are dropped entirely
 // rather than surfaced as skipped, because they are not "resources" the user
 // intended to validate — a file starting with `# header\n---\n...` is idiomatic.
-func (v *Validator) validateDoc(ctx context.Context, source string, idx int, raw []byte) (Result, bool) {
-	r := Result{Source: source, DocIndex: idx}
+func (v *Validator) validateDoc(ctx context.Context, label string, idx int, raw []byte) (Result, bool) {
+	r := Result{Source: label, DocIndex: idx}
 	settle := func(s Status, reason Reason) (Result, bool) {
 		r.Status = s
 		r.Reason = reason
@@ -823,15 +635,16 @@ func (v *Validator) validateDoc(ctx context.Context, source string, idx int, raw
 	name, hasIdentity := computeName(metadata, idx)
 	r.Name = name
 
-	if v.substitutes(raw, doc) {
+	if v.substituter.Applies(raw, doc) {
 		// Skipped kinds are not substituted, so a malformed expression in
 		// a resource the user excluded does not fail validation.
 		if v.kindSkipped(r.APIVersion, r.Kind) {
 			return settle(StatusSkipped, ReasonKindSkipped)
 		}
-		var reason Reason
-		if doc, reason, r.Errors = v.substituteDoc(doc); reason != ReasonNone {
-			return settle(StatusInvalid, reason)
+		var subErr *substitute.Error
+		if _, doc, subErr = v.substituter.Apply(doc); subErr != nil {
+			r.Errors = substitutionErrors(subErr)
+			return settle(StatusInvalid, Reason(subErr.Reason))
 		}
 		r.APIVersion, r.Kind, r.Namespace, _ = extractIdentity(doc)
 		metadata, _ = doc["metadata"].(map[string]any)
@@ -962,51 +775,6 @@ func (v *Validator) validateDoc(ctx context.Context, source string, idx int, raw
 	return r, true
 }
 
-// substitutes reports whether post-build substitution applies to the
-// document: substitution is enabled, the source references a variable, and
-// the document is not opted out via the substitute label or annotation.
-func (v *Validator) substitutes(raw []byte, doc map[string]any) bool {
-	if v.opts.Envsubst == nil || !bytes.Contains(raw, []byte("$")) {
-		return false
-	}
-	metadata, _ := doc["metadata"].(map[string]any)
-	for _, field := range []string{"labels", "annotations"} {
-		values, _ := metadata[field].(map[string]any)
-		if values["kustomize.toolkit.fluxcd.io/substitute"] == "disabled" {
-			return false
-		}
-	}
-	return true
-}
-
-// substituteDoc re-serializes the decoded document, substitutes the
-// variables in the result, and decodes it again, like kustomize-controller
-// does after the build. Comments are dropped and quoting is normalized, so
-// a quoted "${VAR}" takes the type of its value. A non-empty Reason reports
-// the failure.
-func (v *Validator) substituteDoc(doc map[string]any) (map[string]any, Reason, []ValidationError) {
-	jsonBytes, err := json.Marshal(doc)
-	if err != nil {
-		return nil, ReasonEnvsubstError, []ValidationError{{Msg: err.Error()}}
-	}
-	data, err := yaml.JSONToYAML(jsonBytes)
-	if err != nil {
-		return nil, ReasonEnvsubstError, []ValidationError{{Msg: err.Error()}}
-	}
-	output, err := envsubst.Eval(string(data), func(s string) (string, bool) {
-		value, ok := v.opts.Envsubst[s]
-		return value, ok || !v.opts.EnvsubstStrict
-	})
-	if err != nil {
-		return nil, ReasonEnvsubstError, []ValidationError{{Msg: "variable substitution failed: " + err.Error()}}
-	}
-	substituted, err := decodeDoc([]byte(output), true)
-	if err != nil {
-		return nil, ReasonYAMLParseError, splitYAMLError(err)
-	}
-	return substituted, ReasonNone, nil
-}
-
 // kindSkipped reports whether the document matches a --skip-kind pattern.
 func (v *Validator) kindSkipped(apiVersion, kind string) bool {
 	for _, m := range v.skipKinds {
@@ -1017,82 +785,26 @@ func (v *Validator) kindSkipped(apiVersion, kind string) bool {
 	return false
 }
 
-// decodeDoc parses one YAML document into a map[string]any while preserving
-// the int/float distinction that CEL evaluation requires.
-//
-// We deliberately avoid sigs.k8s.io/yaml's Unmarshal helpers: they finish the
-// YAML→JSON→Go round-trip with stdlib encoding/json, which decodes every JSON
-// number into float64 when the target is interface{}. apiserver's CEL
-// UnstructuredToVal then rejects integer-typed fields with "expected int, got
-// float64". apimachinery's util/json.Unmarshal preserves the int distinction
-// (kjson.UnmarshalCaseSensitivePreserveInts under the hood), matching how the
-// kube-apiserver decodes admission payloads before invoking CEL.
-//
-// strict=true triggers YAMLToJSONStrict, which surfaces duplicate YAML keys
-// as an error.
+// decodeDoc preserves the int/float distinction required by CEL evaluation.
 func decodeDoc(raw []byte, strict bool) (map[string]any, error) {
-	var (
-		jsonBytes []byte
-		err       error
-	)
-	if strict {
-		jsonBytes, err = yaml.YAMLToJSONStrict(raw)
-	} else {
-		jsonBytes, err = yaml.YAMLToJSON(raw)
-	}
-	if err != nil {
-		return nil, err
-	}
-	var doc map[string]any
-	if err := utiljson.Unmarshal(jsonBytes, &doc); err != nil {
-		return nil, err
-	}
-	return doc, nil
+	return substitute.Decode(raw, strict)
 }
 
-// splitYAMLError turns a YAML decode error into clean, per-violation details
-// the CLI can render on indented sub-lines, the same way JSON Schema
-// violations are rendered.
-//
-// YAML decode errors arrive with noisy prefixes and, for strict-mode
-// failures like duplicate keys, several violations packed into one
-// multi-line string. Printed as-is they would spill past the invalid
-// line and drown the surrounding output. splitYAMLError peels off the
-// prefixes and returns one entry per underlying `line N: ...` message,
-// so the caller sees just the parts worth showing the user. Anything
-// that doesn't match a known shape is returned verbatim rather than
-// dropped.
-func splitYAMLError(err error) []ValidationError {
-	// decodeDoc surfaces yaml errors directly from yaml.YAMLToJSONStrict (e.g.
-	// "yaml: unmarshal errors:\n  line N: ..."). The "error converting YAML
-	// to JSON: " variants are kept for back-compat in case any code path
-	// still routes through sigs.k8s.io/yaml's higher-level Unmarshal helpers.
-	const (
-		multiPrefixWrapped = "error converting YAML to JSON: yaml: unmarshal errors:"
-		multiPrefixBare    = "yaml: unmarshal errors:"
-		singlePrefix       = "error converting YAML to JSON: yaml: "
-		rawPrefix          = "yaml: "
-	)
-	msg := err.Error()
-	for _, prefix := range []string{multiPrefixWrapped, multiPrefixBare} {
-		rest, ok := strings.CutPrefix(msg, prefix)
-		if !ok {
-			continue
-		}
-		var out []ValidationError
-		for line := range strings.SplitSeq(rest, "\n") {
-			t := strings.TrimSpace(line)
-			if t != "" {
-				out = append(out, ValidationError{Msg: t})
-			}
-		}
-		if len(out) > 0 {
-			return out
-		}
+func substitutionErrors(err *substitute.Error) []ValidationError {
+	if err.Reason == substitute.ReasonYAMLParseError {
+		return splitYAMLError(err.Err)
 	}
-	msg = strings.TrimPrefix(msg, singlePrefix)
-	msg = strings.TrimPrefix(msg, rawPrefix)
-	return []ValidationError{{Msg: strings.TrimSpace(msg)}}
+	return []ValidationError{{Msg: err.Error()}}
+}
+
+// splitYAMLError adapts shared YAML diagnostics to validation violations.
+func splitYAMLError(err error) []ValidationError {
+	messages := substitute.YAMLErrors(err)
+	out := make([]ValidationError, len(messages))
+	for i, msg := range messages {
+		out[i] = ValidationError{Msg: msg}
+	}
+	return out
 }
 
 // extractIdentity returns the apiVersion/kind/namespace/name four-tuple from
@@ -1105,23 +817,6 @@ func extractIdentity(doc map[string]any) (apiVersion, kind, namespace, name stri
 		name, _ = md["name"].(string)
 	}
 	return
-}
-
-// isContentFree reports whether raw is empty or contains only YAML comment
-// lines. Dropping these before docIndex is assigned keeps user-visible
-// numbering aligned with real documents — a file with a `# header\n---\n`
-// preamble should still show its first real resource as doc #1.
-func isContentFree(raw []byte) bool {
-	for line := range bytes.SplitSeq(raw, []byte("\n")) {
-		trimmed := bytes.TrimSpace(line)
-		if len(trimmed) == 0 {
-			continue
-		}
-		if trimmed[0] != '#' {
-			return false
-		}
-	}
-	return true
 }
 
 // computeName derives the document identity per the Kubernetes admission

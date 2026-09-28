@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"path/filepath"
-	"slices"
 	"strings"
 	"testing"
 
@@ -161,59 +160,6 @@ func TestValidateSourcesKustomizeBuildError(t *testing.T) {
 	g.Expect(results[0].Errors[0].Path).To(BeEmpty())
 	g.Expect(results[0].Errors[0].Msg).To(ContainSubstring("no matches"))
 	g.Expect(results[1]).To(Equal(Result{Source: results[0].Source, Final: true}))
-}
-
-func TestKustomizeProducerOrder(t *testing.T) {
-	g := NewWithT(t)
-	v := newLocalValidator(t, t.TempDir(), true)
-	var want []job
-	for range 5 {
-		jobs := make(chan job, 10)
-		var sources []string
-		err := v.produceFromPath(context.Background(), "testdata/kustomize/mixed", jobs, func() *sourceState {
-			return &sourceState{}
-		}, func(source string, _ *sourceState) {
-			sources = append(sources, source)
-		})
-		g.Expect(err).NotTo(HaveOccurred())
-		close(jobs)
-		got := make([]job, 0, len(jobs))
-		for j := range jobs {
-			j.sourceWG.Done()
-			j.sourceWG = nil
-			got = append(got, j)
-		}
-		g.Expect(sources).To(Equal([]string{
-			"testdata/kustomize/mixed/overlay",
-			"testdata/kustomize/mixed/plain.yaml",
-		}))
-		g.Expect(got).To(HaveLen(4))
-		if want == nil {
-			want = slices.Clone(got)
-		}
-		g.Expect(got).To(Equal(want))
-	}
-}
-
-func TestKustomizeCancellation(t *testing.T) {
-	g := NewWithT(t)
-	v := newLocalValidator(t, t.TempDir(), true)
-	ctx, cancel := context.WithCancel(context.Background())
-	jobs := make(chan job, 10)
-	sources := 0
-	err := v.produceFromPath(ctx, "testdata/kustomize", jobs, func() *sourceState {
-		return &sourceState{}
-	}, func(_ string, _ *sourceState) {
-		sources++
-		cancel()
-	})
-	g.Expect(err).To(MatchError(context.Canceled))
-	g.Expect(sources).To(Equal(1))
-	close(jobs)
-	for j := range jobs {
-		j.sourceWG.Done()
-		g.Expect(j.source).To(ContainSubstring("component"))
-	}
 }
 
 func TestKustomizeStdinUnchanged(t *testing.T) {

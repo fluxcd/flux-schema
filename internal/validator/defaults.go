@@ -3,6 +3,8 @@
 
 package validator
 
+import "github.com/fluxcd/flux-schema/internal/source"
+
 // DefaultSchemaLocation points at the flux-schema catalog, covering the
 // latest stable Kubernetes and Flux APIs. It is used when no schema location
 // is configured, and is the target that the literal value "default" resolves
@@ -33,4 +35,4 @@ const DefaultWorkers = 8
 // StdinSource is the canonical source label for documents read from an
 // io.Reader rather than a file path. Options.Stdin must be non-nil when any
 // input path equals this sentinel; callers typically pass os.Stdin.
-const StdinSource = "stdin"
+const StdinSource = source.StdinSource
