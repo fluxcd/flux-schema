@@ -66,6 +66,7 @@ CI (`.github/workflows/test.yaml`) runs `make test` + `make lint` and fails if t
 User-facing changes (flags, commands, report shape, GitHub Action inputs) must be reflected in the docs. The tree is:
 
 - `README.md` — features list, install, quickstart, commands table, doc links.
+- `docs/manifests-build.md` — `build` reference: output format, flags, and errors.
 - `docs/manifests-validation.md` — `validate` reference: flag table, schema resolution, skip rules, CEL rules, config file with example `.fluxschema.yml`.
 - `docs/custom-schema-catalog.md` — `extract crd`/`extract k8s`/`extract openshift` reference and catalog hosting/refresh.
 - `docs/field-index.md` — the `.fields.txt` field index format emitted by `extract --with-field-index`: naming, line grammar, annotations.

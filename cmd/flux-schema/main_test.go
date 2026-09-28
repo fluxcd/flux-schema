@@ -53,6 +53,7 @@ func resetCmdArgs() {
 	extractK8sArgs = extractK8sFlags{ExtractOutput: flag.NewExtractOutput()}
 	extractOpenShiftArgs = extractOpenShiftFlags{ExtractOutput: flag.NewExtractOutput()}
 	validateArgs = validateFlags{concurrent: validator.DefaultWorkers, output: "text"}
+	buildArgs = buildFlags{}
 	explainArgs = explainFlags{output: flag.ExplainOutputPlaintext}
 	discoverArgs = discoverFlags{output: "text"}
 
