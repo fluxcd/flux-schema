@@ -43,6 +43,7 @@
                 "description": "Reason is a stable machine-readable code for non-valid results.",
                 "enum": [
                   "cel-violation",
+                  "envsubst-error",
                   "kind-skipped",
                   "kustomize-build-error",
                   "schema-load-error",

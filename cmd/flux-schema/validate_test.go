@@ -1213,6 +1213,9 @@ func TestValidateCmd_Config_Schema(t *testing.T) {
 	validateConfigSchema(t, `apiVersion: schema.plugin.fluxcd.io/v1beta1
 kind: Config
 validate:
+  envsubst:
+    file: .env
+    strict: true
   schemaLocation:
     - default
   skipKind:

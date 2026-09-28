@@ -109,6 +109,9 @@ const (
 	// ReportReasonKustomizeBuildError means the kustomization could not be built.
 	ReportReasonKustomizeBuildError ReportReason = "kustomize-build-error"
 
+	// ReportReasonEnvsubstError means variable substitution failed.
+	ReportReasonEnvsubstError ReportReason = "envsubst-error"
+
 	// ReportReasonYAMLParseError means the document could not be parsed as YAML.
 	ReportReasonYAMLParseError ReportReason = "yaml-parse-error"
 

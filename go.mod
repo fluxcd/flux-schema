@@ -3,6 +3,7 @@ module github.com/fluxcd/flux-schema
 go 1.26.0
 
 require (
+	github.com/fluxcd/pkg/envsubst v1.8.0
 	github.com/fluxcd/pkg/tar v1.2.0
 	github.com/google/go-cmp v0.7.0
 	github.com/hashicorp/go-retryablehttp v0.7.8

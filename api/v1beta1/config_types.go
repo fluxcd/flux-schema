@@ -28,6 +28,10 @@ type Config struct {
 
 // ValidateConfig defines defaults for validation options.
 type ValidateConfig struct {
+	// Envsubst configures Flux post-build variable substitution.
+	// +optional
+	Envsubst *EnvsubstConfig `json:"envsubst,omitempty"`
+
 	// SchemaLocations contains schema URLs, file paths, or templates to try in order.
 	// +optional
 	SchemaLocations []string `json:"schemaLocation,omitempty"`
@@ -101,6 +105,18 @@ const (
 	// ConfigOutputJUnit emits a JUnit XML report.
 	ConfigOutputJUnit ConfigOutput = "junit"
 )
+
+// EnvsubstConfig configures Flux post-build variable substitution.
+type EnvsubstConfig struct {
+	// File is the path to a dotenv file supplying the substitution variables.
+	// Relative paths are resolved from the config file's directory.
+	// +required
+	File string `json:"file"`
+
+	// Strict fails substitution on undefined variables without a default.
+	// +optional
+	Strict bool `json:"strict,omitempty"`
+}
 
 // ExplainConfig defines defaults for explain options.
 type ExplainConfig struct {

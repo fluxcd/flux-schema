@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fluxcd/flux-schema/internal/dotenv"
 	"github.com/fluxcd/flux-schema/internal/junitxml"
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
@@ -76,6 +77,8 @@ var validateCmd = &cobra.Command{
 var validateOutputs = []string{"text", "yaml", "json", "junit"}
 
 type validateFlags struct {
+	envsubstFile          string
+	envsubstStrict        bool
 	schemaLocations       []string
 	skipMissingSchemas    bool
 	skipKinds             []string
@@ -100,6 +103,11 @@ var validateArgs = validateFlags{
 func init() {
 	outputValue := flag.NewOutputValue(&validateArgs.output, validateOutputs...)
 
+	validateCmd.Flags().StringVar(&validateArgs.envsubstFile, "envsubst-file", "",
+		"path to a dotenv file supplying Flux post-build substitution variables")
+	_ = validateCmd.MarkFlagFilename("envsubst-file")
+	validateCmd.Flags().BoolVar(&validateArgs.envsubstStrict, "envsubst-strict", false,
+		"fail on undefined substitution variables that have no default")
 	validateCmd.Flags().StringArrayVarP(&validateArgs.schemaLocations, "schema-location", "s", nil,
 		"URL or file path for schemas (repeatable); 'default' points at the built-in catalog, 'ecosystem' at schemas.fluxoperator.dev")
 	validateCmd.Flags().BoolVar(&validateArgs.skipMissingSchemas, "skip-missing-schemas", false,
@@ -502,6 +510,14 @@ func buildValidatorOptions(inputs []string) (validator.Options, error) {
 		HTTPTimeout:           rootArgs.timeout,
 		Workers:               validateArgs.concurrent,
 		InsecureSkipTLSVerify: validateArgs.insecureSkipTLSVerify,
+	}
+	if validateArgs.envsubstFile != "" {
+		vars, err := dotenv.Read(validateArgs.envsubstFile)
+		if err != nil {
+			return validator.Options{}, fmt.Errorf("envsubst: read dotenv file %s: %w", validateArgs.envsubstFile, err)
+		}
+		opts.Envsubst = vars
+		opts.EnvsubstStrict = validateArgs.envsubstStrict
 	}
 	if slices.Contains(inputs, stdinLabel) {
 		opts.Stdin = stdinReader

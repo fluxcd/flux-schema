@@ -7,12 +7,14 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -20,6 +22,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/fluxcd/pkg/envsubst"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	jsonschemakind "github.com/santhosh-tekuri/jsonschema/v6/kind"
@@ -141,6 +144,12 @@ type Options struct {
 	Workers               int
 	InsecureSkipTLSVerify bool
 	Stdin                 io.Reader
+	// Envsubst supplies post-build variables. Nil disables substitution;
+	// an empty non-nil map still expands defaults and undefined variables.
+	Envsubst map[string]string
+	// EnvsubstStrict fails substitution on undefined variables that
+	// have no default.
+	EnvsubstStrict bool
 }
 
 // DefaultSkipFiles is applied when Options.SkipFiles is nil. It hides
@@ -339,6 +348,19 @@ func (m skipPathMatcher) pathExists(doc map[string]any) bool {
 // New returns a Validator configured from opts. Each location template is
 // parsed up-front so syntax errors surface before the first document.
 func New(opts Options) (*Validator, error) {
+	const varNamePattern = "^[_[:alpha:]][_[:alpha:][:digit:]]*$"
+	if opts.Envsubst != nil {
+		validName := regexp.MustCompile(varNamePattern)
+		vars := make(map[string]string, len(opts.Envsubst))
+		for name, value := range opts.Envsubst {
+			if !validName.MatchString(name) {
+				return nil, fmt.Errorf("envsubst: %q var name is invalid, must match %q", name, varNamePattern)
+			}
+			// Newlines are removed from values, like kustomize-controller does.
+			vars[name] = strings.ReplaceAll(value, "\n", "")
+		}
+		opts.Envsubst = vars
+	}
 	if len(opts.SchemaLocations) == 0 {
 		return nil, errors.New("no schema location defined")
 	}
@@ -801,13 +823,27 @@ func (v *Validator) validateDoc(ctx context.Context, source string, idx int, raw
 	name, hasIdentity := computeName(metadata, idx)
 	r.Name = name
 
+	if v.substitutes(raw, doc) {
+		// Skipped kinds are not substituted, so a malformed expression in
+		// a resource the user excluded does not fail validation.
+		if v.kindSkipped(r.APIVersion, r.Kind) {
+			return settle(StatusSkipped, ReasonKindSkipped)
+		}
+		var reason Reason
+		if doc, reason, r.Errors = v.substituteDoc(doc); reason != ReasonNone {
+			return settle(StatusInvalid, reason)
+		}
+		r.APIVersion, r.Kind, r.Namespace, _ = extractIdentity(doc)
+		metadata, _ = doc["metadata"].(map[string]any)
+		name, hasIdentity = computeName(metadata, idx)
+		r.Name = name
+	}
+
 	// SkipKinds matching runs before admission and schema checks so a
 	// kind-only entry (e.g. "Secret") also covers sealed/encrypted manifests
 	// that would otherwise fail the name/generateName rule.
-	for _, m := range v.skipKinds {
-		if m.matches(r.APIVersion, r.Kind) {
-			return settle(StatusSkipped, ReasonKindSkipped)
-		}
+	if v.kindSkipped(r.APIVersion, r.Kind) {
+		return settle(StatusSkipped, ReasonKindSkipped)
 	}
 
 	if r.APIVersion == "" || r.Kind == "" {
@@ -924,6 +960,61 @@ func (v *Validator) validateDoc(ctx context.Context, source string, idx int, raw
 
 	r.Status = StatusValid
 	return r, true
+}
+
+// substitutes reports whether post-build substitution applies to the
+// document: substitution is enabled, the source references a variable, and
+// the document is not opted out via the substitute label or annotation.
+func (v *Validator) substitutes(raw []byte, doc map[string]any) bool {
+	if v.opts.Envsubst == nil || !bytes.Contains(raw, []byte("$")) {
+		return false
+	}
+	metadata, _ := doc["metadata"].(map[string]any)
+	for _, field := range []string{"labels", "annotations"} {
+		values, _ := metadata[field].(map[string]any)
+		if values["kustomize.toolkit.fluxcd.io/substitute"] == "disabled" {
+			return false
+		}
+	}
+	return true
+}
+
+// substituteDoc re-serializes the decoded document, substitutes the
+// variables in the result, and decodes it again, like kustomize-controller
+// does after the build. Comments are dropped and quoting is normalized, so
+// a quoted "${VAR}" takes the type of its value. A non-empty Reason reports
+// the failure.
+func (v *Validator) substituteDoc(doc map[string]any) (map[string]any, Reason, []ValidationError) {
+	jsonBytes, err := json.Marshal(doc)
+	if err != nil {
+		return nil, ReasonEnvsubstError, []ValidationError{{Msg: err.Error()}}
+	}
+	data, err := yaml.JSONToYAML(jsonBytes)
+	if err != nil {
+		return nil, ReasonEnvsubstError, []ValidationError{{Msg: err.Error()}}
+	}
+	output, err := envsubst.Eval(string(data), func(s string) (string, bool) {
+		value, ok := v.opts.Envsubst[s]
+		return value, ok || !v.opts.EnvsubstStrict
+	})
+	if err != nil {
+		return nil, ReasonEnvsubstError, []ValidationError{{Msg: "variable substitution failed: " + err.Error()}}
+	}
+	substituted, err := decodeDoc([]byte(output), true)
+	if err != nil {
+		return nil, ReasonYAMLParseError, splitYAMLError(err)
+	}
+	return substituted, ReasonNone, nil
+}
+
+// kindSkipped reports whether the document matches a --skip-kind pattern.
+func (v *Validator) kindSkipped(apiVersion, kind string) bool {
+	for _, m := range v.skipKinds {
+		if m.matches(apiVersion, kind) {
+			return true
+		}
+	}
+	return false
 }
 
 // decodeDoc parses one YAML document into a map[string]any while preserving

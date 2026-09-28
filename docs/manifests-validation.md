@@ -46,11 +46,34 @@ Results of a build use the built directory as `source`. When a
 resource comes from a file, `origin` holds its path, joined with the built
 directory. Remote files use the form `<repo>//<path>?ref=<ref>`.
 
+## Variable substitution
+
+With `--envsubst-file`, every document is substituted before validation, like
+kustomize-controller's `spec.postBuild.substitute`:
+
+```shell
+flux schema validate ./clusters/production --envsubst-file .env
+```
+
+- Variables come only from the dotenv file, not the process environment.
+  Values are used as written, the same way Flux uses `postBuild.substitute` values:
+  quotes are kept, `$` references are not expanded, and `export` is not supported.
+  Blank lines and `#` comments are skipped; any other invalid line is an error.
+  An empty file still enables substitution.
+- Undefined variables become empty strings; `${VAR:=default}` sets a default.
+  With `--envsubst-strict`, an undefined variable without a default is an error.
+- Each resource is re-serialized before substitution, so comments are not substituted
+  and a quoted `"${VAR}"` takes the type of its value, e.g. `replicas: "${REPLICAS}"` becomes an integer.
+- Resources labeled or annotated with `kustomize.toolkit.fluxcd.io/substitute: disabled` are not substituted.
+- A malformed expression produces an invalid result with the reason `envsubst-error`.
+
 ## Flags
 
 | Flag                         | Description                                                                                                                                     |
 |------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------|
 | `-s, --schema-location`      | URL or file path for schemas (repeatable, tried in order); `default` points at the built-in catalog, `ecosystem` at the CNCF ecosystem catalog. |
+| `--envsubst-file`            | Path to a dotenv file supplying Flux post-build substitution variables.                                                                         |
+| `--envsubst-strict`          | Fail on undefined substitution variables that have no default; requires `--envsubst-file`.                                                      |
 | `--skip-missing-schemas`     | Skip documents for which no schema can be found.                                                                                                |
 | `--skip-kind`                | Skip documents matching `kind` or `apiVersion/kind` (repeatable).                                                                               |
 | `--skip-json-path`           | Strip a JSON Pointer field before validation, optionally scoped: `[apiVersion/kind:]/path` (repeatable).                                        |
@@ -205,9 +228,9 @@ Example JSON output:
     "reporter": "flux-schema/v0.1.0",
     "timestamp": "2026-05-20T12:00:00Z",
     "summary": {
-      "total": 3,
+      "total": 4,
       "valid": 1,
-      "invalid": 2,
+      "invalid": 3,
       "skipped": 0
     },
     "results": [
@@ -261,6 +284,24 @@ Example JSON output:
           {
             "path": "/spec/interval",
             "message": "got number, want string"
+          }
+        ]
+      },
+      {
+        "resource": {
+          "apiVersion": "apps/v1",
+          "kind": "Deployment",
+          "name": "web",
+          "namespace": "apps"
+        },
+        "source": "apps/staging",
+        "origin": "apps/base/deployment.yaml",
+        "idx": 4,
+        "status": "invalid",
+        "reason": "envsubst-error",
+        "violations": [
+          {
+            "message": "variable substitution failed: missing closing brace"
           }
         ]
       }
@@ -323,6 +364,9 @@ for validation defaults. The shape is documented by the
 apiVersion: schema.plugin.fluxcd.io/v1beta1
 kind: Config
 validate:
+  envsubst:
+    file: .env
+    strict: true
   schemaLocation:
     - default
     - ecosystem
@@ -348,6 +392,9 @@ Rules:
 
 - CLI flags override config values. Setting `--verbose=false` wins over
   `verbose: true` in the file.
+- A relative `envsubst.file` path is resolved from the config file's directory.
+  A CLI `--envsubst-file` path is relative to the working directory;
+  `--envsubst-file=""` disables a config-provided value.
 - Setting `--config` overrides `FLUX_SCHEMA_CONFIG`. When both are set, the
   flag wins and the env var is ignored.
 - Manifest paths stay positional. The config file configures how to validate;

@@ -15,6 +15,8 @@ documented by the JSON Schema in [`config-v1beta1.json`](config-v1beta1.json).
 apiVersion: schema.plugin.fluxcd.io/v1beta1
 kind: Config
 validate:
+  envsubst:
+    file: .env
   schemaLocation:
     - ecosystem
   skipKind:
@@ -70,6 +72,8 @@ The `validate` section configures defaults for the `flux schema validate` flags.
 | Field                    | Description                                                                                                                                                                  |
 |--------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `schemaLocation[]`       | Schema URLs, file paths, or templates tried in order. Aliases: `default` (built-in catalog), `ecosystem` ([schemas.fluxoperator.dev](https://schemas.fluxoperator.dev/)).    |
+| `envsubst.file`          | Path to a dotenv file supplying Flux post-build substitution variables. Relative paths are resolved from the config file's directory.                                        |
+| `envsubst.strict`        | Fail on undefined substitution variables that have no default.                                                                                                               |
 | `skipMissingSchemas`     | Skip documents for which no schema can be found.                                                                                                                             |
 | `skipKind[]`             | Kind or apiVersion/kind patterns excluded from validation.                                                                                                                   |
 | `skipJSONPath[]`         | JSON Pointers stripped before validation.                                                                                                                                    |

@@ -26,6 +26,10 @@ const (
 	// The build error text is in Errors[0].Msg.
 	ReasonKustomizeBuildError Reason = "kustomize-build-error"
 
+	// ReasonEnvsubstError indicates variable substitution failed.
+	// The substitution error text is in Errors[0].Msg.
+	ReasonEnvsubstError Reason = "envsubst-error"
+
 	// ReasonYAMLParseError indicates strict YAML decoding failed — malformed
 	// document, duplicate keys, or other structural issues. Per-violation
 	// detail is in Errors.

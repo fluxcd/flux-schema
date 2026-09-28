@@ -17,6 +17,13 @@
 // so user-visible indices align with real resources. YAML is decoded in
 // strict mode (duplicate keys fail); a lenient re-parse on failure
 // recovers apiVersion/kind/namespace/name for the Result identifier.
+// When Options.Envsubst is non-nil, a decoded document is re-serialized,
+// substituted and decoded again, like kustomize-controller post-build
+// substitution. Documents labeled or annotated with
+// kustomize.toolkit.fluxcd.io/substitute: disabled, or matching a skipped
+// kind, are not substituted. Only the supplied map is consulted; undefined
+// variables expand to empty strings unless defaulted or EnvsubstStrict is set.
+// Substitution failures are reported as ReasonEnvsubstError.
 //
 // # Per-document pipeline
 //
