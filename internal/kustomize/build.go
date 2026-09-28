@@ -5,7 +5,6 @@ package kustomize
 
 import (
 	"fmt"
-	"net/url"
 	"path/filepath"
 	"sync"
 
@@ -152,7 +151,7 @@ func originPath(dir string, origin *resource.Origin) string {
 	if origin.Repo != "" {
 		path := origin.Repo + "//" + origin.Path
 		if origin.Ref != "" {
-			path += "?ref=" + url.QueryEscape(origin.Ref)
+			path += "?ref=" + origin.Ref
 		}
 		return path
 	}

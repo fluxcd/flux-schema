@@ -214,7 +214,7 @@ func TestOriginPath(t *testing.T) {
 		{
 			name:   "remote",
 			origin: &resource.Origin{Path: "base/app.yaml", Repo: "https://example.com/org/repo", Ref: "release/v1"},
-			want:   "https://example.com/org/repo//base/app.yaml?ref=release%2Fv1",
+			want:   "https://example.com/org/repo//base/app.yaml?ref=release/v1",
 		},
 		{
 			name:   "remote default ref",
