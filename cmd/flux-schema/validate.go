@@ -203,6 +203,18 @@ func (c *resultCollector) add(r validator.Result) {
 	}
 }
 
+// nSources counts the sources that reported, including those with no
+// resources such as an empty build.
+func (c *resultCollector) nSources() int {
+	n := 0
+	for _, src := range c.sourceOrder {
+		if src != "" {
+			n++
+		}
+	}
+	return n
+}
+
 func (c *resultCollector) flushContiguous(src string) {
 	buf := c.bufs[src]
 	if buf == nil {
@@ -357,7 +369,7 @@ func validateCmdRun(cmd *cobra.Command, args []string) error {
 		Invalid: collector.nInvalid,
 		Skipped: collector.nSkipped,
 	}
-	err = writer.WriteSummary(summary, len(collector.bufs), stdinOnly)
+	err = writer.WriteSummary(summary, collector.nSources(), stdinOnly)
 	if err != nil {
 		return err
 	}

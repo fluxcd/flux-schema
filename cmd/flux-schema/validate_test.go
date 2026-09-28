@@ -1849,6 +1849,15 @@ func TestValidateCmd_KustomizeBuildErrorText(t *testing.T) {
 	g.Expect(out).To(ContainSubstring("missing.yaml"))
 }
 
+func TestValidateCmd_KustomizeEmptyBuildCountsSource(t *testing.T) {
+	g := NewWithT(t)
+	out, err := executeCommand([]string{
+		"validate", "testdata/validate/kustomize/empty", "--schema-location", "../../catalog/latest",
+	})
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("Summary: 0 resources found in 1 file - Valid: 0, Invalid: 0, Skipped: 0"))
+}
+
 func TestValidateCmd_KustomizeBuildError(t *testing.T) {
 	g := NewWithT(t)
 	const source = "testdata/validate/kustomize/broken"
