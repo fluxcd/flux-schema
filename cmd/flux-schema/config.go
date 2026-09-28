@@ -6,6 +6,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
@@ -95,6 +96,9 @@ func loadConfigFile(path string) (*apiv1.Config, error) {
 		return nil, fmt.Errorf("config %s: unsupported kind %q (want %q)",
 			path, cfg.Kind, apiv1.ConfigKind)
 	}
+	if cfg.Validate.Envsubst != "" && !filepath.IsAbs(cfg.Validate.Envsubst) {
+		cfg.Validate.Envsubst = filepath.Join(filepath.Dir(path), cfg.Validate.Envsubst)
+	}
 	return &cfg, nil
 }
 
@@ -110,6 +114,12 @@ func applyValidateConfig(cmd *cobra.Command, cfg *apiv1.ValidateConfig, args *va
 	}
 	flags := cmd.Flags()
 
+	if !flags.Changed("envsubst") {
+		args.envsubst = cfg.Envsubst
+	}
+	if !flags.Changed("envsubst-strict") {
+		args.envsubstStrict = cfg.EnvsubstStrict
+	}
 	if cfg.SchemaLocations != nil && !flags.Changed("schema-location") {
 		args.schemaLocations = cfg.SchemaLocations
 	}

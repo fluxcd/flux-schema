@@ -28,6 +28,15 @@ type Config struct {
 
 // ValidateConfig defines defaults for validation options.
 type ValidateConfig struct {
+	// Envsubst is a dotenv file supplying post-build variables.
+	// Relative paths are resolved from the config file's directory.
+	// +optional
+	Envsubst string `json:"envsubst,omitempty"`
+
+	// EnvsubstStrict fails substitution on undefined variables without a default.
+	// +optional
+	EnvsubstStrict bool `json:"envsubstStrict,omitempty"`
+
 	// SchemaLocations contains schema URLs, file paths, or templates to try in order.
 	// +optional
 	SchemaLocations []string `json:"schemaLocation,omitempty"`

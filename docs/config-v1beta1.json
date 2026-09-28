@@ -54,6 +54,14 @@
           "minimum": 1,
           "type": "integer"
         },
+        "envsubst": {
+          "description": "Envsubst is a dotenv file supplying post-build variables.\nRelative paths are resolved from the config file's directory.",
+          "type": "string"
+        },
+        "envsubstStrict": {
+          "description": "EnvsubstStrict fails substitution on undefined variables without a default.",
+          "type": "boolean"
+        },
         "failFast": {
           "description": "FailFast exits after the first invalid document.",
           "type": "boolean"

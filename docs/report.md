@@ -54,6 +54,7 @@ Every report is wrapped in a top-level envelope:
 |-------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `source-load-error`     | Source-level open/read failure.                                                                                                                        |
 | `kustomize-build-error` | Kustomize build failure. One result per kustomization with `resource: null`, `idx: 0`, and the build error as its violation.                           |
+| `envsubst-error`        | Variable substitution failure. The error is a violation message; resource identity is recovered from the original document when possible.             |
 | `yaml-parse-error`      | Strict YAML decode fails (duplicate keys, malformed doc).                                                                                              |
 | `schema-load-error`     | Schema loader failure (HTTP fetch, file read, or JSON Schema compile).                                                                                 |
 | `schema-not-found`      | No schema applicable — either no schema file matches the GVK, or the document has no GVK to look up.                                                   |
@@ -72,9 +73,9 @@ Every report is wrapped in a top-level envelope:
     "reporter": "flux-schema/v0.1.0",
     "timestamp": "2026-06-01T12:00:00Z",
     "summary": {
-      "total": 8,
+      "total": 9,
       "valid": 1,
-      "invalid": 6,
+      "invalid": 7,
       "skipped": 1
     },
     "results": [
@@ -200,6 +201,23 @@ Every report is wrapped in a top-level envelope:
         "violations": [
           {
             "message": "accumulating resources: missing.yaml: no such file or directory"
+          }
+        ]
+      },
+      {
+        "resource": {
+          "apiVersion": "apps/v1",
+          "kind": "Deployment",
+          "namespace": "apps",
+          "name": "web"
+        },
+        "source": "manifests/deployment.yaml",
+        "idx": 1,
+        "status": "invalid",
+        "reason": "envsubst-error",
+        "violations": [
+          {
+            "message": "variable substitution failed: missing closing brace"
           }
         ]
       }
