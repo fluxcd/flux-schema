@@ -77,7 +77,7 @@ var validateCmd = &cobra.Command{
 var validateOutputs = []string{"text", "yaml", "json", "junit"}
 
 type validateFlags struct {
-	envsubst              string
+	envsubstFile          string
 	envsubstStrict        bool
 	schemaLocations       []string
 	skipMissingSchemas    bool
@@ -103,9 +103,9 @@ var validateArgs = validateFlags{
 func init() {
 	outputValue := flag.NewOutputValue(&validateArgs.output, validateOutputs...)
 
-	validateCmd.Flags().StringVar(&validateArgs.envsubst, "envsubst", "",
+	validateCmd.Flags().StringVar(&validateArgs.envsubstFile, "envsubst-file", "",
 		"path to a dotenv file supplying Flux post-build substitution variables")
-	_ = validateCmd.MarkFlagFilename("envsubst")
+	_ = validateCmd.MarkFlagFilename("envsubst-file")
 	validateCmd.Flags().BoolVar(&validateArgs.envsubstStrict, "envsubst-strict", false,
 		"fail on undefined substitution variables that have no default")
 	validateCmd.Flags().StringArrayVarP(&validateArgs.schemaLocations, "schema-location", "s", nil,
@@ -511,10 +511,10 @@ func buildValidatorOptions(inputs []string) (validator.Options, error) {
 		Workers:               validateArgs.concurrent,
 		InsecureSkipTLSVerify: validateArgs.insecureSkipTLSVerify,
 	}
-	if validateArgs.envsubst != "" {
-		vars, err := dotenv.Read(validateArgs.envsubst)
+	if validateArgs.envsubstFile != "" {
+		vars, err := dotenv.Read(validateArgs.envsubstFile)
 		if err != nil {
-			return validator.Options{}, fmt.Errorf("envsubst: read dotenv file %s: %w", validateArgs.envsubst, err)
+			return validator.Options{}, fmt.Errorf("envsubst: read dotenv file %s: %w", validateArgs.envsubstFile, err)
 		}
 		opts.Envsubst = vars
 		opts.EnvsubstStrict = validateArgs.envsubstStrict

@@ -96,8 +96,8 @@ func loadConfigFile(path string) (*apiv1.Config, error) {
 		return nil, fmt.Errorf("config %s: unsupported kind %q (want %q)",
 			path, cfg.Kind, apiv1.ConfigKind)
 	}
-	if cfg.Validate.Envsubst != "" && !filepath.IsAbs(cfg.Validate.Envsubst) {
-		cfg.Validate.Envsubst = filepath.Join(filepath.Dir(path), cfg.Validate.Envsubst)
+	if e := cfg.Validate.Envsubst; e != nil && e.File != "" && !filepath.IsAbs(e.File) {
+		e.File = filepath.Join(filepath.Dir(path), e.File)
 	}
 	return &cfg, nil
 }
@@ -114,11 +114,13 @@ func applyValidateConfig(cmd *cobra.Command, cfg *apiv1.ValidateConfig, args *va
 	}
 	flags := cmd.Flags()
 
-	if !flags.Changed("envsubst") {
-		args.envsubst = cfg.Envsubst
-	}
-	if !flags.Changed("envsubst-strict") {
-		args.envsubstStrict = cfg.EnvsubstStrict
+	if cfg.Envsubst != nil {
+		if !flags.Changed("envsubst-file") {
+			args.envsubstFile = cfg.Envsubst.File
+		}
+		if !flags.Changed("envsubst-strict") {
+			args.envsubstStrict = cfg.Envsubst.Strict
+		}
 	}
 	if cfg.SchemaLocations != nil && !flags.Changed("schema-location") {
 		args.schemaLocations = cfg.SchemaLocations

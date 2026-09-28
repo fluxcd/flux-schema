@@ -55,12 +55,22 @@
           "type": "integer"
         },
         "envsubst": {
-          "description": "Envsubst is a dotenv file supplying post-build variables.\nRelative paths are resolved from the config file's directory.",
-          "type": "string"
-        },
-        "envsubstStrict": {
-          "description": "EnvsubstStrict fails substitution on undefined variables without a default.",
-          "type": "boolean"
+          "additionalProperties": false,
+          "description": "Envsubst configures Flux post-build variable substitution.",
+          "properties": {
+            "file": {
+              "description": "File is the path to a dotenv file supplying the substitution variables.\nRelative paths are resolved from the config file's directory.",
+              "type": "string"
+            },
+            "strict": {
+              "description": "Strict fails substitution on undefined variables without a default.",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "file"
+          ],
+          "type": "object"
         },
         "failFast": {
           "description": "FailFast exits after the first invalid document.",

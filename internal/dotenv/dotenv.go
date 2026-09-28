@@ -1,7 +1,7 @@
 // Copyright 2026 The Flux Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package dotenv reads files of NAME=value lines as literal variables.
+// Package dotenv reads dotenv files as literal variables.
 // Values are taken exactly as written, the same way Flux uses
 // postBuild.substitute values: quotes are kept, $ references are not
 // expanded, and nothing is executed or read from the process environment.
@@ -30,7 +30,7 @@ func Read(path string) (map[string]string, error) {
 	return Parse(f)
 }
 
-// Parse reads NAME=value lines from r. Blank lines and lines starting with
+// Parse reads a dotenv file from r. Blank lines and lines starting with
 // '#' are skipped, leading spaces and tabs are ignored, and the value is
 // everything after the first '=' up to the line ending (LF or CRLF). Any
 // other line is an error reported with its line number. A later definition
@@ -56,7 +56,7 @@ func Parse(r io.Reader) (map[string]string, error) {
 		if text != "" && !strings.HasPrefix(text, "#") {
 			name, value, ok := strings.Cut(text, "=")
 			if !ok {
-				return nil, fmt.Errorf("line %d: expected NAME=value", n)
+				return nil, fmt.Errorf("line %d: expected a variable assignment", n)
 			}
 			if !namePattern.MatchString(name) {
 				return nil, fmt.Errorf("line %d: invalid variable name %q, must match %q", n, name, namePattern)

@@ -48,18 +48,17 @@ directory. Remote files use the form `<repo>//<path>?ref=<ref>`.
 
 ## Variable substitution
 
-With `--envsubst`, every document is substituted before validation, like
+With `--envsubst-file`, every document is substituted before validation, like
 kustomize-controller's `spec.postBuild.substitute`:
 
 ```shell
-flux schema validate ./clusters/production --envsubst .env
+flux schema validate ./clusters/production --envsubst-file .env
 ```
 
 - Variables come only from the dotenv file, not the process environment.
-  Each line is `NAME=value` and the value is used as written: quotes are kept
-  and `$` references are not expanded, the same way Flux uses `postBuild.substitute` values.
-  Blank lines and `#` comments are skipped, leading spaces and tabs are ignored;
-  any other line is an error.
+  Values are used as written, the same way Flux uses `postBuild.substitute` values:
+  quotes are kept, `$` references are not expanded, and `export` is not supported.
+  Blank lines and `#` comments are skipped; any other invalid line is an error.
   An empty file still enables substitution.
 - Undefined variables become empty strings; `${VAR:=default}` sets a default.
   With `--envsubst-strict`, an undefined variable without a default is an error.
@@ -73,8 +72,8 @@ flux schema validate ./clusters/production --envsubst .env
 | Flag                         | Description                                                                                                                                     |
 |------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------|
 | `-s, --schema-location`      | URL or file path for schemas (repeatable, tried in order); `default` points at the built-in catalog, `ecosystem` at the CNCF ecosystem catalog. |
-| `--envsubst`                 | Dotenv file with Flux post-build substitution variables.                                                                                        |
-| `--envsubst-strict`          | Fail on undefined substitution variables that have no default; requires `--envsubst`.                                                           |
+| `--envsubst-file`            | Path to a dotenv file supplying Flux post-build substitution variables.                                                                         |
+| `--envsubst-strict`          | Fail on undefined substitution variables that have no default; requires `--envsubst-file`.                                                      |
 | `--skip-missing-schemas`     | Skip documents for which no schema can be found.                                                                                                |
 | `--skip-kind`                | Skip documents matching `kind` or `apiVersion/kind` (repeatable).                                                                               |
 | `--skip-json-path`           | Strip a JSON Pointer field before validation, optionally scoped: `[apiVersion/kind:]/path` (repeatable).                                        |
@@ -365,8 +364,9 @@ for validation defaults. The shape is documented by the
 apiVersion: schema.plugin.fluxcd.io/v1beta1
 kind: Config
 validate:
-  envsubst: .env
-  envsubstStrict: true
+  envsubst:
+    file: .env
+    strict: true
   schemaLocation:
     - default
     - ecosystem
@@ -392,9 +392,9 @@ Rules:
 
 - CLI flags override config values. Setting `--verbose=false` wins over
   `verbose: true` in the file.
-- A relative `envsubst` path is resolved from the config file's directory.
-  A CLI `--envsubst` path is relative to the working directory;
-  `--envsubst=""` disables a config-provided value.
+- A relative `envsubst.file` path is resolved from the config file's directory.
+  A CLI `--envsubst-file` path is relative to the working directory;
+  `--envsubst-file=""` disables a config-provided value.
 - Setting `--config` overrides `FLUX_SCHEMA_CONFIG`. When both are set, the
   flag wins and the env var is ignored.
 - Manifest paths stay positional. The config file configures how to validate;

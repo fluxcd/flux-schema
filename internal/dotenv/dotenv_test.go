@@ -41,7 +41,7 @@ func TestParse(t *testing.T) {
 		{name: "long value", input: "A=" + strings.Repeat("x", 2<<20) + "\n", want: map[string]string{"A": strings.Repeat("x", 2<<20)}},
 		{name: "non-ASCII whitespace is not skipped", input: "\u00a0A=1\n", wantErr: `line 1: invalid variable name "\u00a0A"`},
 		{name: "last definition wins", input: "A=1\nA=2\n", want: map[string]string{"A": "2"}},
-		{name: "missing equals", input: "A=1\nB\n", wantErr: "line 2: expected NAME=value"},
+		{name: "missing equals", input: "A=1\nB\n", wantErr: "line 2: expected a variable assignment"},
 		{name: "export prefix", input: "export A=1\n", wantErr: `line 1: invalid variable name "export A"`},
 		{name: "space before equals", input: "A =1\n", wantErr: `line 1: invalid variable name "A "`},
 		{name: "invalid name", input: "# c\nA.B=1\n", wantErr: `line 2: invalid variable name "A.B"`},

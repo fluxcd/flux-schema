@@ -47,12 +47,12 @@ func TestValidateCmd_Envsubst(t *testing.T) {
 				path = "-"
 			}
 			out, err := executeCommand([]string{
-				"validate", path, "-s", "../../catalog/latest", "--envsubst", dotenv, "-v",
+				"validate", path, "-s", "../../catalog/latest", "--envsubst-file", dotenv, "-v",
 			})
 			g.Expect(err).NotTo(HaveOccurred())
 			g.Expect(out).To(ContainSubstring("apps/v1/Deployment/apps/web is valid"))
 			g.Expect(out).To(ContainSubstring("Valid: 1, Invalid: 0, Skipped: 0"))
-			g.Expect(validateArgs.envsubst).To(BeEmpty())
+			g.Expect(validateArgs.envsubstFile).To(BeEmpty())
 		})
 	}
 }
@@ -88,7 +88,8 @@ func TestValidateCmd_EnvsubstConfig(t *testing.T) {
 			cfg := writeManifest(t, configDir, ".fluxschema.yml", fmt.Sprintf(`apiVersion: schema.plugin.fluxcd.io/v1beta1
 kind: Config
 validate:
-  envsubst: %q
+  envsubst:
+    file: %q
 `, dotenv))
 			workingDir := t.TempDir()
 			writeManifest(t, workingDir, "deployment.yaml", string(raw))
@@ -102,9 +103,9 @@ validate:
 			}
 			switch tt.override {
 			case "disable":
-				args = append(args, "--envsubst=")
+				args = append(args, "--envsubst-file=")
 			case ".env":
-				args = append(args, "--envsubst", tt.override)
+				args = append(args, "--envsubst-file", tt.override)
 			}
 			out, err := executeCommand(args)
 			if tt.valid {
@@ -137,7 +138,7 @@ func TestValidateCmd_EnvsubstStartupErrors(t *testing.T) {
 				writeManifest(t, dir, ".env", tt.content)
 			}
 			out, err := executeCommand([]string{
-				"validate", "not-read.yaml", "--envsubst", dotenv, "-o", "json",
+				"validate", "not-read.yaml", "--envsubst-file", dotenv, "-o", "json",
 			})
 			g.Expect(err).To(MatchError(ContainSubstring(tt.want)))
 			g.Expect(out).To(BeEmpty())
@@ -154,7 +155,7 @@ func TestValidateCmd_EnvsubstReports(t *testing.T) {
 			raw := strings.Replace(validWidget, "name: hello", "name: '${'", 1)
 			path := writeManifest(t, dir, "widget.yaml", raw)
 			out, err := executeCommand([]string{
-				"validate", path, "--envsubst", dotenv, "-o", output,
+				"validate", path, "--envsubst-file", dotenv, "-o", output,
 			})
 			g.Expect(err).To(MatchError(errSilent))
 			switch output {
@@ -199,11 +200,13 @@ func TestValidateCmd_EnvsubstStrict(t *testing.T) {
 		name   string
 		config string
 		args   []string
+		file   bool
 		strict bool
 	}{
 		{name: "flag", args: []string{"--envsubst-strict"}, strict: true},
-		{name: "config", config: "  envsubstStrict: true\n", strict: true},
-		{name: "flag overrides config", config: "  envsubstStrict: true\n", args: []string{"--envsubst-strict=false"}},
+		{name: "config", config: "    strict: true\n", strict: true},
+		{name: "flag overrides config", config: "    strict: true\n", args: []string{"--envsubst-strict=false"}},
+		{name: "file flag keeps config strict", config: "    strict: true\n", file: true, strict: true},
 		{name: "default"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -213,12 +216,16 @@ func TestValidateCmd_EnvsubstStrict(t *testing.T) {
 			cfg := writeManifest(t, dir, ".fluxschema.yml", `apiVersion: schema.plugin.fluxcd.io/v1beta1
 kind: Config
 validate:
-  envsubst: .env
+  envsubst:
+    file: .env
 `+tt.config)
 			args := append([]string{
 				"validate", "../../internal/validator/testdata/envsubst/deployment.yaml",
 				"-s", "../../catalog/latest", "--config", cfg,
 			}, tt.args...)
+			if tt.file {
+				args = append(args, "--envsubst-file", writeManifest(t, dir, "other.env", "OTHER=1\n"))
+			}
 			out, _ := executeCommand(args)
 			if tt.strict {
 				g.Expect(out).To(ContainSubstring("apps/v1/Deployment/apps/web is invalid: envsubst error"))
