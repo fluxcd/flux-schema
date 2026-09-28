@@ -55,7 +55,7 @@ directory. Remote files use the form `<repo>//<path>?ref=<ref>`.
 | `--skip-kind`                | Skip documents matching `kind` or `apiVersion/kind` (repeatable).                                                                               |
 | `--skip-json-path`           | Strip a JSON Pointer field before validation, optionally scoped: `[apiVersion/kind:]/path` (repeatable).                                        |
 | `--skip-json-path-if-absent` | Skip missing required-field errors for a JSON Pointer field, optionally scoped: `[apiVersion/kind:]/path` (repeatable).                         |
-| `--skip-file`                | Basename glob for files and dirs in the walk; skipping a kustomization file restores per-file validation (repeatable, default: `.*`).           |
+| `--skip-file`                | Basename glob for files and dirs; skipping a kustomization file, even as an argument, restores per-file validation (repeatable, default: `.*`). |
 | `--skip-cel-rules`           | Skip evaluation of `x-kubernetes-validations` CEL rules.                                                                                        |
 | `--fail-fast`                | Exit after the first invalid document.                                                                                                          |
 | `--concurrent`               | Number of concurrent workers (default 8).                                                                                                       |

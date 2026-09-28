@@ -656,7 +656,7 @@ func (v *Validator) produceFromPath(ctx context.Context, path string, jobs chan<
 			return err
 		})
 	}
-	if slices.Contains(konfig.RecognizedKustomizationFileNames(), filepath.Base(path)) {
+	if base := filepath.Base(path); slices.Contains(konfig.RecognizedKustomizationFileNames(), base) && !v.matchSkipFile(base) {
 		return v.streamBuild(ctx, filepath.Dir(path), jobs, newSource, spawnWaiter)
 	}
 	wg := newSource()

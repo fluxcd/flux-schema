@@ -79,6 +79,15 @@ func TestValidateSourcesKustomize(t *testing.T) {
 			finals: 3,
 		},
 		{
+			name:      "skip explicit kustomization file validates it as YAML",
+			path:      overlay + "kustomization.yaml",
+			skipFiles: []string{"kustomization.yaml"},
+			want: []Result{
+				{Source: overlay + "kustomization.yaml", DocIndex: 1, Name: "#1", Status: StatusInvalid},
+			},
+			finals: 1,
+		},
+		{
 			name:      "skip directory prevents build",
 			path:      root + "mixed",
 			skipFiles: []string{"overlay"},
