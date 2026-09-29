@@ -8,14 +8,14 @@ import (
 	"io"
 	"os"
 
-	"github.com/fluxcd/flux-schema/internal/validator"
+	"github.com/fluxcd/flux-schema/internal/source"
 )
 
-const stdinLabel = validator.StdinSource
+const stdinLabel = source.StdinSource
 
 // stdinReader is the single source of truth for the stdin stream across
 // every subcommand: readSource buffers from it for extract commands, and
-// validate passes it as Options.Stdin so the validator streams from the
+// build and validate pass it as Options.Stdin so they stream from the
 // same reader. A package variable so tests swap one thing rather than
 // swapping os.Stdin and chasing every read site.
 var stdinReader io.Reader = os.Stdin

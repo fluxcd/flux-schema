@@ -29,6 +29,8 @@ refreshed automatically from upstream stable releases.
   checked against API server rules (DNS-1123, qualified names).
 - **Kustomize builds** — automatically build kustomize directories and validate
   rendered resources, with original file paths in validation reports.
+- **Manifest rendering** — write the resources `validate` sees, after kustomize builds
+  and variable substitution, as one YAML stream with source comments.
 - **Built-in catalog** — JSON Schemas with CEL rules for Kubernetes, OpenShift,
   Gateway API, Flux, Flagger, and Flux Operator CRDs, refreshed automatically against upstream.
 - **Ecosystem catalog** — the `ecosystem` schema location resolves to
@@ -167,6 +169,7 @@ validation guide for details on running the CLI in CI using the container image.
 | Command                                   | Description                                                   |
 |-------------------------------------------|---------------------------------------------------------------|
 | `flux schema validate [paths...]`         | Validate Kubernetes YAML against JSON Schema and CEL rules.   |
+| `flux schema build [paths...]`            | Render manifests as a YAML stream with source comments.       |
 | `flux schema explain TYPE`                | Print kubectl-style field documentation from schema catalogs. |
 | `flux schema discover [path]`             | Catalog Flux and Kubernetes resources in a GitOps repository. |
 | `flux schema extract crd [files...]`      | Extract JSON Schemas from CRD YAMLs.                          |
@@ -181,6 +184,8 @@ Run `flux schema <command> --help` for the full flag list.
 - [Manifest validation guide](docs/manifests-validation.md) — flag
   reference, schema resolution, CEL rules, skipping documents and fields,
   and config files.
+- [Manifest build guide](docs/manifests-build.md) — output format and
+  variable substitution.
 - [Custom catalog guide](docs/custom-schema-catalog.md) — populate,
   layout, host, and refresh your own catalog with the `extract` commands.
 - [Explain guide](docs/explain.md) — print kubectl-style field

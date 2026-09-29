@@ -46,6 +46,8 @@ Results of a build use the built directory as `source`. When a
 resource comes from a file, `origin` holds its path, joined with the built
 directory. Remote files use the form `<repo>//<path>?ref=<ref>`.
 
+To print the rendered resources, use [`flux schema build`](manifests-build.md).
+
 ## Variable substitution
 
 With `--envsubst-file`, every document is substituted before validation, like

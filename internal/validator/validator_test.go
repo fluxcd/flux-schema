@@ -1851,26 +1851,6 @@ func TestSplitYAMLError(t *testing.T) {
 	}
 }
 
-func TestIsContentFree(t *testing.T) {
-	cases := map[string]bool{
-		"":                                    true,
-		"   \n\t\n":                           true,
-		"# a comment":                         true,
-		"# line 1\n# line 2\n":                true,
-		"  # indented comment\n\n# another\n": true,
-		"apiVersion: v1":                      false,
-		"# comment\napiVersion: v1":           false,
-		"---":                                 false, // leading dash isn't a comment marker
-		`value: "# not a comment"`:            false,
-	}
-	for in, want := range cases {
-		t.Run(in, func(t *testing.T) {
-			g := NewWithT(t)
-			g.Expect(isContentFree([]byte(in))).To(Equal(want))
-		})
-	}
-}
-
 func TestParseSkipKind(t *testing.T) {
 	cases := map[string]struct {
 		in         string

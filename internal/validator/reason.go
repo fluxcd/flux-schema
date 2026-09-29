@@ -3,7 +3,12 @@
 
 package validator
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/fluxcd/flux-schema/internal/source"
+	"github.com/fluxcd/flux-schema/internal/substitute"
+)
 
 // Reason is a stable, machine-readable code describing why a Result has
 // its Status. It is treated as API surface: adding a new Reason is
@@ -20,20 +25,20 @@ const (
 	// ReasonSourceLoadError indicates the input source itself could not be
 	// read (file open/stat failure, stdin read error, etc.). The raw error
 	// text lands in Errors[0].Msg.
-	ReasonSourceLoadError Reason = "source-load-error"
+	ReasonSourceLoadError Reason = source.ReasonSourceLoadError
 
 	// ReasonKustomizeBuildError indicates a kustomization could not be built.
 	// The build error text is in Errors[0].Msg.
-	ReasonKustomizeBuildError Reason = "kustomize-build-error"
+	ReasonKustomizeBuildError Reason = source.ReasonKustomizeBuildError
 
 	// ReasonEnvsubstError indicates variable substitution failed.
 	// The substitution error text is in Errors[0].Msg.
-	ReasonEnvsubstError Reason = "envsubst-error"
+	ReasonEnvsubstError Reason = substitute.ReasonEnvsubstError
 
 	// ReasonYAMLParseError indicates strict YAML decoding failed — malformed
 	// document, duplicate keys, or other structural issues. Per-violation
 	// detail is in Errors.
-	ReasonYAMLParseError Reason = "yaml-parse-error"
+	ReasonYAMLParseError Reason = substitute.ReasonYAMLParseError
 
 	// ReasonKindSkipped indicates the document was skipped because its
 	// apiVersion/Kind matched a --skip-kind pattern.
