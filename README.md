@@ -119,7 +119,7 @@ Two composite actions cover GitOps validation pipelines:
 
 - **[`fluxcd/flux2/action`]([actions/setup](https://github.com/fluxcd/flux2/tree/main/action))** — install the Flux CLI and plugins on GitHub runners.
 - **[`fluxcd/flux-schema/actions/validate`](actions/validate)** —
-  auto-detect kustomize overlays, render them with `kubectl kustomize`, and
+  auto-detect kustomize overlays, build them natively, and
   validate every YAML document against the catalog (including CEL rules).
   Configurable via `.fluxschema.yml`.
 

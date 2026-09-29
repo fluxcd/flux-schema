@@ -37,9 +37,8 @@ inputs:
     description: |
       Path to a dotenv file with Flux post-build substitution variables
       (relative to the repository root). When set, standalone manifests and
-      rendered kustomize overlays are piped through 'flux envsubst' before
-      validation. Requires the Flux CLI on PATH. When empty, no substitution
-      is performed.
+      rendered kustomize overlays are substituted before validation.
+      When empty, no substitution is performed.
     required: false
     default: ""
 runs:
