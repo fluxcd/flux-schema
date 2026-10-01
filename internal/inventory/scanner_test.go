@@ -281,6 +281,56 @@ func TestScanKustomizeBases(t *testing.T) {
 			},
 		},
 		{
+			name: "unused components do not mark bases",
+			files: map[string]string{
+				"apps/unused/kustomization.yaml": "apiVersion: kustomize.config.k8s.io/v1alpha1\nkind: Component\nresources:\n  - ../base\ncomponents:\n  - ../nested\n",
+				"apps/nested/kustomization.yaml": "apiVersion: kustomize.config.k8s.io/v1alpha1\nkind: Component\nresources:\n  - ../other\n",
+				"apps/base/kustomization.yaml":   kustomization,
+				"apps/other/kustomization.yaml":  kustomization,
+			},
+			want: map[string]apiv1.InventoryDirectoryType{
+				"apps/unused": apiv1.InventoryDirectoryKustomizeComponent,
+				"apps/nested": apiv1.InventoryDirectoryKustomizeComponent,
+				"apps/base":   apiv1.InventoryDirectoryKustomizeOverlay,
+				"apps/other":  apiv1.InventoryDirectoryKustomizeOverlay,
+			},
+		},
+		{
+			name: "components used by an overlay propagate to their references",
+			files: map[string]string{
+				"apps/prod/kustomization.yaml":       kustomization + "components:\n  - ../monitoring\n",
+				"apps/monitoring/kustomization.yaml": "apiVersion: kustomize.config.k8s.io/v1alpha1\nkind: Component\nresources:\n  - ../base\n",
+				"apps/base/kustomization.yaml":       kustomization,
+			},
+			want: map[string]apiv1.InventoryDirectoryType{
+				"apps/prod":       apiv1.InventoryDirectoryKustomizeOverlay,
+				"apps/monitoring": apiv1.InventoryDirectoryKustomizeComponent,
+				"apps/base":       apiv1.InventoryDirectoryKustomizeBase,
+			},
+		},
+		{
+			name: "only the first document of a kustomization file is read",
+			files: map[string]string{
+				"apps/prod/kustomization.yaml": kustomization + "---\n" + kustomization + "resources:\n  - ../base\n---\napiVersion: kustomize.config.k8s.io/v1alpha1\nkind: Component\n",
+				"apps/base/kustomization.yaml": kustomization,
+			},
+			want: map[string]apiv1.InventoryDirectoryType{
+				"apps/prod": apiv1.InventoryDirectoryKustomizeOverlay,
+				"apps/base": apiv1.InventoryDirectoryKustomizeOverlay,
+			},
+		},
+		{
+			name: "kustomize documents outside kustomization files do not mark bases",
+			files: map[string]string{
+				"apps/prod/backup.yaml":        kustomization + "resources:\n  - ../base\n",
+				"apps/base/kustomization.yaml": kustomization,
+			},
+			want: map[string]apiv1.InventoryDirectoryType{
+				"apps/prod": apiv1.InventoryDirectoryKustomizeOverlay,
+				"apps/base": apiv1.InventoryDirectoryKustomizeOverlay,
+			},
+		},
+		{
 			name: "kustomization file without apiVersion",
 			files: map[string]string{
 				"apps/base/kustomization.yaml": "resources:\n  - deployment.yaml\n",
@@ -320,6 +370,15 @@ func TestScanKustomizeBases(t *testing.T) {
 			want: map[string]apiv1.InventoryDirectoryType{
 				"apps/prod":                            apiv1.InventoryDirectoryKustomizeOverlay,
 				"apps/prod/https:/github.com/org/repo": apiv1.InventoryDirectoryKustomizeOverlay,
+			},
+		},
+		{
+			name: "bare remote references without a local directory are ignored",
+			files: map[string]string{
+				"apps/prod/kustomization.yaml": kustomization + "resources:\n  - github.com/org/repo//deploy?ref=v1\n",
+			},
+			want: map[string]apiv1.InventoryDirectoryType{
+				"apps/prod": apiv1.InventoryDirectoryKustomizeOverlay,
 			},
 		},
 		{

@@ -126,8 +126,15 @@ declare -a helm_chart_dirs=()
 declare -a kustomize_dirs=()
 
 # root-relative kustomize bases and components, classified by
-# 'flux-schema discover'
-declare -a kustomize_base_dirs=()
+# 'flux-schema discover', with their classification at the same index
+declare -a kustomize_ref_dirs=()
+declare -a kustomize_ref_types=()
+
+# classification of the last directory matched by is_kustomize_ref_dir
+kustomize_ref_type=""
+
+# minimum flux-schema version that classifies kustomize bases and components
+min_flux_schema_minor=16
 
 usage() {
   echo "Usage: $0 [-d <dir>] [-c <file>] [-e <dir>]... [-b <file>] [-H] [-E <file>] [-h] [-- <flux-schema flags>]"
@@ -245,6 +252,24 @@ resolve_flux_schema() {
     echo "ERROR - flux-schema is not installed (tried 'flux schema' plugin and 'flux-schema')" >&2
     exit 1
   fi
+  check_flux_schema_version
+}
+
+# Fail when the resolved flux-schema predates the kustomize base and
+# component classification; without it bases are validated standalone.
+# Dev builds (0.0.0-*) and unparsable versions are let through.
+check_flux_schema_version() {
+  local version
+  version="$("${flux_schema_cmd[@]}" version 2>/dev/null || true)"
+  if [[ -z "$version" ]]; then
+    echo "ERROR - ${flux_schema_cmd[*]} version failed, the action requires >= 0.${min_flux_schema_minor}.0" >&2
+    exit 1
+  fi
+  if [[ "$version" =~ ^v?0\.([0-9]+)\. ]] && [[ "$version" != 0.0.0* && "$version" != v0.0.0* ]] &&
+    (( BASH_REMATCH[1] < min_flux_schema_minor )); then
+    echo "ERROR - ${flux_schema_cmd[*]} $version is too old, the action requires >= 0.${min_flux_schema_minor}.0" >&2
+    exit 1
+  fi
 }
 
 # Pick the flags to pass to flux-schema. Flags given after '--' win; when
@@ -275,8 +300,15 @@ resolve_envsubst() {
 
 # Normalize a path by stripping leading "./" for consistent comparisons
 normalize_path() {
-  local p="${1#./}"
-  echo "${p%/}"
+  local p="$1"
+  while [[ "$p" == ./* ]]; do
+    p="${p#./}"
+  done
+  p="${p%/}"
+  if [[ "$p" == "" ]]; then
+    p="."
+  fi
+  echo "$p"
 }
 
 # Create the parent directory and truncate the bundle file when
@@ -410,27 +442,35 @@ detect_excluded_dirs() {
 }
 
 # Collect the kustomize bases and components found by 'flux-schema discover'
-# from its text output ("  <dir>: <type>" lines under "Directories:").
-detect_kustomize_bases() {
-  local output line
-  if ! output="$("${flux_schema_cmd[@]}" discover "$root_dir" 2>&1)"; then
-    printf '%s\n' "$output" >&2
+# from its text output. The regex is coupled to the "  <dir>: <type>" lines
+# that discoverCmdRun (cmd/flux-schema/discover.go) prints under
+# "Directories:"; stderr is kept out of the parsed stream.
+detect_kustomize_refs() {
+  local output errfile line
+  errfile="$(mktemp)"
+  if ! output="$("${flux_schema_cmd[@]}" discover "$root_dir" 2>"$errfile")"; then
+    cat "$errfile" >&2
+    rm -f "$errfile"
     echo "ERROR - discover failed for $root_dir" >&2
     exit 1
   fi
+  rm -f "$errfile"
   while IFS= read -r line; do
     if [[ "$line" =~ ^\ \ (.+):\ kustomize-(base|component)$ ]]; then
-      kustomize_base_dirs+=("${BASH_REMATCH[1]}")
+      kustomize_ref_dirs+=("${BASH_REMATCH[1]}")
+      kustomize_ref_types+=("${BASH_REMATCH[2]}")
     fi
   done <<< "$output"
 }
 
-# Check if a kustomize directory is a base or component
-is_kustomize_base_dir() {
-  local path
+# Check if a kustomize directory is a base or component referenced by
+# another kustomization; sets kustomize_ref_type on a match
+is_kustomize_ref_dir() {
+  local path i
   path="$(rel_path "$1")"
-  for dir in "${kustomize_base_dirs[@]}"; do
-    if [[ "$path" == "$dir" ]]; then
+  for i in "${!kustomize_ref_dirs[@]}"; do
+    if [[ "$path" == "${kustomize_ref_dirs[$i]}" ]]; then
+      kustomize_ref_type="${kustomize_ref_types[$i]}"
       return 0
     fi
   done
@@ -496,8 +536,8 @@ validate_kustomize_overlays() {
       continue
     fi
     overlay="$dir"
-    if is_kustomize_base_dir "$overlay"; then
-      echo "INFO - Skipping kustomize base $overlay"
+    if is_kustomize_ref_dir "$overlay"; then
+      echo "INFO - Skipping kustomize $kustomize_ref_type $overlay"
       continue
     fi
     echo "INFO - Validating kustomize overlay $overlay"
@@ -577,7 +617,7 @@ resolve_config
 resolve_envsubst
 init_bundle
 detect_excluded_dirs
-detect_kustomize_bases
+detect_kustomize_refs
 validate_kubernetes_manifests
 validate_kustomize_overlays
 validate_helm_charts

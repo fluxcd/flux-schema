@@ -13,11 +13,19 @@
 //
 // # Classification
 //
-// Per YAML document, both apiVersion and kind must be present, otherwise
-// the document is ignored. Documents in the kustomize.config.k8s.io group
-// mark their directory as a kustomize overlay and are not counted as
-// resources. Documents whose API group contains "fluxcd" are Flux
-// resources; everything else is a plain Kubernetes resource.
+// The first document of a recognized kustomization file
+// (kustomization.yaml, kustomization.yml, Kustomization), with or without
+// apiVersion and kind, and documents in the kustomize.config.k8s.io group
+// mark their directory as a kustomize overlay, or as a kustomize component
+// for kind Component, and are not counted as resources. Later documents of
+// a kustomization file are ignored, as kustomize only reads the first.
+// Overlays reachable through resources, components or bases from the
+// kustomization file of an unreferenced overlay are reclassified as
+// kustomize bases. Remote and out-of-root references are ignored.
+//
+// Any other YAML document needs both apiVersion and kind, otherwise it is
+// ignored. Documents whose API group contains "fluxcd" are Flux resources;
+// everything else is a plain Kubernetes resource.
 //
 // Directories containing a Chart.yaml are classified as Helm charts and
 // directories containing Terraform files as Terraform modules; both are

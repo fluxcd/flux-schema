@@ -42,7 +42,7 @@ func NewInventory(reporter string, timestamp time.Time, res *Result) apiv1.Inven
 		}
 	}
 
-	// Typed directories (overlays, charts, terraform) override the
+	// Typed directories (kustomize, charts, terraform) override the
 	// manifests default and add entries for pruned or resource-free dirs.
 	maps.Copy(body.Directories, res.DirTypes)
 

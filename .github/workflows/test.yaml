@@ -114,7 +114,9 @@ jobs:
             exit 1
           fi
           ./actions/validate/validate.sh -d "${RUNNER_TEMP}/bases-test" -- \
-            --schema-location ./catalog/latest
+            --schema-location ./catalog/latest | tee "${RUNNER_TEMP}/bases-test.log"
+          grep -Fqx "INFO - Validating kustomize overlay ${RUNNER_TEMP}/bases-test/overlay" "${RUNNER_TEMP}/bases-test.log"
+          grep -Fqx "INFO - Skipping kustomize base ${RUNNER_TEMP}/bases-test/base" "${RUNNER_TEMP}/bases-test.log"
       - name: Build Docker image
         run: make docker-build
       - name: Run Docker smoke test

@@ -71,12 +71,15 @@ directory classification is path-based and meaningless for a stream.
 
 ## Classification rules
 
-Both `.yaml` and `.yml` files are scanned. Per YAML document:
+Both `.yaml` and `.yml` files are scanned, plus files named `Kustomization`.
+Per YAML document:
 
-- Documents without both `apiVersion` and `kind` are ignored.
-- Documents in the `kustomize.config.k8s.io` group, and files named
-  `kustomization.yaml`, `kustomization.yml` or `Kustomization`, mark their
-  directory as a kustomize overlay and are not counted as resources.
+- Files named `kustomization.yaml`, `kustomization.yml` or `Kustomization`
+  mark their directory as a kustomize overlay, even without `apiVersion`
+  and `kind`. Only their first document is read, as kustomize does.
+- Documents in the `kustomize.config.k8s.io` group mark their directory
+  as a kustomize overlay. Neither is counted as a resource.
+- Other documents without both `apiVersion` and `kind` are ignored.
 - Every resource is counted per `apiVersion/Kind` in the `resources`
   census.
 - Documents whose API group contains `fluxcd` are Flux resources,
@@ -97,8 +100,10 @@ When a directory holds both a `Chart.yaml` and `.tf` files, the Helm chart class
 
 ### Kustomize bases
 
-An overlay listed under `resources`, `components` or `bases` of another
-kustomization in the scanned root is classified as `kustomize-base`.
+An overlay reachable through `resources`, `components` or `bases` from a
+kustomization file of an overlay in the scanned root is classified as
+`kustomize-base`. References from unused components, or from kustomize
+documents outside a kustomization file, do not mark bases.
 Remote, absolute and file references are ignored, and overlays referenced
 only from within a reference cycle stay `kustomize-overlay`.
 

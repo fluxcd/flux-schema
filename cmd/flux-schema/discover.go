@@ -25,8 +25,9 @@ var discoverCmd = &cobra.Command{
 	Short: "Discover Flux and Kubernetes resources in a GitOps repository",
 	Example: `  # Inventory the current directory as JSON
   # Flux resources are listed per file, Kubernetes resources are counted
-  # by kind, and every directory is classified as manifests,
-  # kustomize-overlay, helm-chart or terraform
+  # by kind, and every directory is classified as kubernetes-manifests,
+  # kustomize-overlay, kustomize-base, kustomize-component, helm-chart
+  # or terraform-module
   flux-schema discover -o json
 
   # Inventory a specific directory

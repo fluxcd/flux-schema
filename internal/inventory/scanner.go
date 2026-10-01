@@ -276,9 +276,10 @@ func (s *scanner) probeDirType(dir string) (apiv1.InventoryDirectoryType, bool, 
 
 // scanFile splits the root-relative file rel into YAML documents and
 // records every identifiable Kubernetes resource. Kustomize configuration
-// documents, and every document of a recognized kustomization file even
-// without apiVersion and kind, mark the directory as an overlay and
-// contribute their references instead.
+// documents, and the first document of a recognized kustomization file
+// even without apiVersion and kind, mark the directory as an overlay and
+// contribute their references instead. Later documents of a kustomization
+// file are ignored, as kustomize only reads the first.
 func (s *scanner) scanFile(rel string) error {
 	f, err := s.root.Open(rel)
 	if err != nil {
@@ -289,6 +290,7 @@ func (s *scanner) scanFile(rel string) error {
 	s.fileOrder = append(s.fileOrder, rel)
 	dir := path.Dir(rel)
 	kustomization := isKustomizationFile(rel)
+	kustomizationRead := false
 
 	lc := &lineCounter{r: f}
 	sc := yamldoc.NewScanner(lc)
@@ -301,8 +303,15 @@ func (s *scanner) scanFile(rel string) error {
 		if err := yaml.Unmarshal(raw, &hdr); err != nil {
 			continue
 		}
-		if kustomization || isKustomizeConfig(hdr.APIVersion) {
-			s.addKustomizeConfig(dir, raw)
+		if kustomization {
+			if !kustomizationRead {
+				s.addKustomizeConfig(dir, raw, true)
+				kustomizationRead = true
+			}
+			continue
+		}
+		if isKustomizeConfig(hdr.APIVersion) {
+			s.addKustomizeConfig(dir, raw, false)
 			continue
 		}
 		if hdr.APIVersion == "" || hdr.Kind == "" {
@@ -349,11 +358,12 @@ func (lc *lineCounter) count() int {
 // addKustomizeConfig classifies dir from a kustomize configuration
 // document and collects its references, resolved against dir. A
 // Component marks dir as a kustomize component, anything else as an
-// overlay. File-based patch references feed the patch exclusion;
-// resources, components and bases feed the base classification. Inline
-// patches (multi-line strategic-merge entries) and references escaping
-// the scanned root are ignored.
-func (s *scanner) addKustomizeConfig(dir string, raw []byte) {
+// overlay. File-based patch references feed the patch exclusion. When
+// the document comes from a recognized kustomization file, the one
+// kustomize builds, its resources, components and bases feed the base
+// classification. Inline patches (multi-line strategic-merge entries)
+// and references escaping the scanned root are ignored.
+func (s *scanner) addKustomizeConfig(dir string, raw []byte, buildable bool) {
 	var kc kustomizeConfig
 	if err := yaml.Unmarshal(raw, &kc); err != nil {
 		if _, ok := s.dirTypes[dir]; !ok {
@@ -389,6 +399,9 @@ func (s *scanner) addKustomizeConfig(dir string, raw []byte) {
 		}
 	}
 
+	if !buildable {
+		return
+	}
 	for _, ref := range slices.Concat(kc.Resources, kc.Components, kc.Bases) {
 		if rel, ok := resolveRef(dir, ref); ok && rel != dir {
 			s.kustomRefs[dir] = append(s.kustomRefs[dir], rel)
@@ -432,8 +445,9 @@ func (s *scanner) result() *Result {
 	return res
 }
 
-// markKustomizeBases reclassifies as bases the overlays reachable from a
-// kustomization that no other kustomization references. Overlays only
+// markKustomizeBases reclassifies as bases the overlays reachable from an
+// overlay that no other kustomization references. Components are not
+// built on their own, so they only propagate when reached. Overlays only
 // reachable through a reference cycle keep their classification, so
 // building them surfaces the kustomize cycle error instead of every
 // member being skipped as a base.
@@ -446,7 +460,7 @@ func (s *scanner) markKustomizeBases() {
 	}
 	var queue []string
 	for dir := range s.kustomRefs {
-		if !referenced[dir] {
+		if !referenced[dir] && s.dirTypes[dir] != apiv1.InventoryDirectoryKustomizeComponent {
 			queue = append(queue, dir)
 		}
 	}
