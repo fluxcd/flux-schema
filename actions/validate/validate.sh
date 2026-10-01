@@ -12,6 +12,9 @@
 # set validation options inline without writing a config file to disk.
 # The script auto-detects and excludes non-Kubernetes directories such as
 # dotfiles, Terraform modules and Helm charts.
+# Kustomize bases and components are validated through the overlays that
+# reference them, not on their own. A base referenced only by excluded
+# overlays is skipped.
 # With --helm-charts, Helm charts are rendered with 'helm template' using
 # their default values and the output is validated as well.
 # With --envsubst, flux-schema substitutes variables in standalone manifests
@@ -29,7 +32,7 @@
 # are merged on the main branch that's synced by Flux.
 
 # Prerequisites
-# - flux-schema >= 0.15 (standalone binary, or the 'flux schema' plugin)
+# - flux-schema >= 0.16 (standalone binary, or the 'flux schema' plugin)
 # - helm >= 4.0 (only with --helm-charts)
 
 # Usage examples:
@@ -64,7 +67,8 @@ invalid_count=0
 skipped_count=0
 summaries_parsed=0
 
-kustomize_config="kustomization.yaml"
+# file names kustomize recognizes as a kustomization, as find arguments
+kustomize_config=("(" "-name" "kustomization.yaml" "-o" "-name" "kustomization.yml" "-o" "-name" "Kustomization" ")")
 
 # mirror helm-controller install options (CRDs are installed by default)
 helm_flags=("--include-crds")
@@ -121,6 +125,10 @@ declare -a helm_chart_dirs=()
 # directories that are kustomize overlays
 declare -a kustomize_dirs=()
 
+# root-relative kustomize bases and components, classified by
+# 'flux-schema discover'
+declare -a kustomize_base_dirs=()
+
 usage() {
   echo "Usage: $0 [-d <dir>] [-c <file>] [-e <dir>]... [-b <file>] [-H] [-E <file>] [-h] [-- <flux-schema flags>]"
   echo ""
@@ -151,6 +159,7 @@ parse_args() {
           exit 1
         fi
         root_dir="${2%/}"
+        root_dir="${root_dir:-/}"
         shift 2
         ;;
       -c|--config)
@@ -289,7 +298,9 @@ rel_path() {
   local p r
   p="$(normalize_path "$1")"
   r="$(normalize_path "$root_dir")"
-  if [[ "$r" != "." && "$p" == "$r"/* ]]; then
+  if [[ "$p" == "$r" ]]; then
+    p="."
+  elif [[ "$r" != "." && "$p" == "$r"/* ]]; then
     p="${p#"$r"/}"
   fi
   echo "$p"
@@ -395,7 +406,35 @@ detect_excluded_dirs() {
 
   while IFS= read -r -d $'\0' file; do
     kustomize_dirs+=("$(dirname "$file")")
-  done < <(find "$root_dir" -mindepth 1 -name '.*' -prune -o -type f -name "$kustomize_config" -print0)
+  done < <(find "$root_dir" -mindepth 1 -name '.*' -prune -o -type f "${kustomize_config[@]}" -print0)
+}
+
+# Collect the kustomize bases and components found by 'flux-schema discover'
+# from its text output ("  <dir>: <type>" lines under "Directories:").
+detect_kustomize_bases() {
+  local output line
+  if ! output="$("${flux_schema_cmd[@]}" discover "$root_dir" 2>&1)"; then
+    printf '%s\n' "$output" >&2
+    echo "ERROR - discover failed for $root_dir" >&2
+    exit 1
+  fi
+  while IFS= read -r line; do
+    if [[ "$line" =~ ^\ \ (.+):\ kustomize-(base|component)$ ]]; then
+      kustomize_base_dirs+=("${BASH_REMATCH[1]}")
+    fi
+  done <<< "$output"
+}
+
+# Check if a kustomize directory is a base or component
+is_kustomize_base_dir() {
+  local path
+  path="$(rel_path "$1")"
+  for dir in "${kustomize_base_dirs[@]}"; do
+    if [[ "$path" == "$dir" ]]; then
+      return 0
+    fi
+  done
+  return 1
 }
 
 # Add a captured flux-schema run's "Summary:" counts to the running tally.
@@ -457,6 +496,10 @@ validate_kustomize_overlays() {
       continue
     fi
     overlay="$dir"
+    if is_kustomize_base_dir "$overlay"; then
+      echo "INFO - Skipping kustomize base $overlay"
+      continue
+    fi
     echo "INFO - Validating kustomize overlay $overlay"
     if ! output="$("${flux_schema_cmd[@]}" validate "${flux_schema_flags[@]}" "${envsubst_flags[@]}" "$overlay" 2>&1)"; then
       errors=$((errors + 1))
@@ -472,7 +515,7 @@ validate_kustomize_overlays() {
         sed '1d' <<< "$build_output" | bundle_append "kustomize-overlay: $(rel_path "$overlay")"
       fi
     fi
-  done < <(find "$root_dir" -mindepth 1 -name '.*' -prune -o -type f -name "$kustomize_config" -print0)
+  done < <(find "$root_dir" -mindepth 1 -name '.*' -prune -o -type f "${kustomize_config[@]}" -print0)
 }
 
 validate_helm_charts() {
@@ -534,6 +577,7 @@ resolve_config
 resolve_envsubst
 init_bundle
 detect_excluded_dirs
+detect_kustomize_bases
 validate_kubernetes_manifests
 validate_kustomize_overlays
 validate_helm_charts
