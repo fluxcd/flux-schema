@@ -77,7 +77,7 @@ type InventorySummary struct {
 
 // InventoryDirectoryType classifies a directory in the repository.
 //
-// +kubebuilder:validation:Enum=kubernetes-manifests;kustomize-overlay;helm-chart;terraform-module
+// +kubebuilder:validation:Enum=kubernetes-manifests;kustomize-overlay;kustomize-base;kustomize-component;helm-chart;terraform-module
 // +k8s:enum
 type InventoryDirectoryType string
 
@@ -89,6 +89,15 @@ const (
 	// InventoryDirectoryKustomizeOverlay means the directory contains a
 	// kustomize configuration file.
 	InventoryDirectoryKustomizeOverlay InventoryDirectoryType = "kustomize-overlay"
+
+	// InventoryDirectoryKustomizeBase means the directory contains a
+	// kustomize configuration file and is referenced by another
+	// kustomization under resources, components or bases.
+	InventoryDirectoryKustomizeBase InventoryDirectoryType = "kustomize-base"
+
+	// InventoryDirectoryKustomizeComponent means the directory contains a
+	// kustomize configuration file of kind Component.
+	InventoryDirectoryKustomizeComponent InventoryDirectoryType = "kustomize-component"
 
 	// InventoryDirectoryHelmChart means the directory contains a Helm
 	// chart; its contents are not scanned.

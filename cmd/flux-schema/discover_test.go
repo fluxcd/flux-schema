@@ -30,7 +30,7 @@ func TestDiscoverCmd(t *testing.T) {
 	g.Expect(output).To(ContainSubstring("  HelmRelease:\n    apps/base/podinfo.yaml: podinfo/podinfo"))
 	g.Expect(output).To(ContainSubstring("  Kustomization:\n    clusters/prod/flux-system.yaml: flux-system/apps"))
 	g.Expect(output).To(ContainSubstring("Directories:"))
-	g.Expect(output).To(ContainSubstring("  apps/base: kustomize-overlay"))
+	g.Expect(output).To(ContainSubstring("  apps/base: kustomize-base"))
 	g.Expect(output).To(ContainSubstring("  charts/podinfo: helm-chart"))
 	g.Expect(output).To(ContainSubstring("  infra/tf: terraform-module"))
 	g.Expect(output).To(ContainSubstring("  legacy: kubernetes-manifests"))
@@ -82,7 +82,7 @@ func TestDiscoverCmdJSON(t *testing.T) {
 	}))
 
 	g.Expect(inv.Inventory.Directories).To(Equal(map[string]apiv1.InventoryDirectoryType{
-		"apps/base":          apiv1.InventoryDirectoryKustomizeOverlay,
+		"apps/base":          apiv1.InventoryDirectoryKustomizeBase,
 		"apps/overlays/prod": apiv1.InventoryDirectoryKustomizeOverlay,
 		"charts/podinfo":     apiv1.InventoryDirectoryHelmChart,
 		"clusters/prod":      apiv1.InventoryDirectoryKubernetesManifests,

@@ -70,6 +70,53 @@ jobs:
             -E "${RUNNER_TEMP}/flux.env" -b "${RUNNER_TEMP}/bundle.yaml" -- \
             --schema-location ./catalog/latest
           [[ "$(grep -Fc 'host: app.example.com' "${RUNNER_TEMP}/bundle.yaml")" -ge 2 ]]
+      - name: Test validate action skips kustomize bases
+        run: |
+          mkdir -p "${RUNNER_TEMP}/bases-test/base" "${RUNNER_TEMP}/bases-test/overlay"
+          cat << 'EOF' > "${RUNNER_TEMP}/bases-test/base/deployment.yaml"
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: app
+          spec:
+            template:
+              metadata:
+                labels:
+                  app: app
+              spec:
+                containers:
+                  - name: app
+                    image: app
+          EOF
+          cat << 'EOF' > "${RUNNER_TEMP}/bases-test/base/kustomization.yaml"
+          apiVersion: kustomize.config.k8s.io/v1beta1
+          kind: Kustomization
+          resources:
+            - deployment.yaml
+          EOF
+          cat << 'EOF' > "${RUNNER_TEMP}/bases-test/overlay/kustomization.yaml"
+          apiVersion: kustomize.config.k8s.io/v1beta1
+          kind: Kustomization
+          resources:
+            - ../base
+          patches:
+            - target:
+                kind: Deployment
+              patch: |
+                - op: add
+                  path: /spec/selector
+                  value:
+                    matchLabels:
+                      app: app
+          EOF
+          if flux-schema validate --schema-location ./catalog/latest "${RUNNER_TEMP}/bases-test/base"; then
+            echo "expected the base to fail validation on its own"
+            exit 1
+          fi
+          ./actions/validate/validate.sh -d "${RUNNER_TEMP}/bases-test" -- \
+            --schema-location ./catalog/latest | tee "${RUNNER_TEMP}/bases-test.log"
+          grep -Fqx "INFO - Validating kustomize overlay ${RUNNER_TEMP}/bases-test/overlay" "${RUNNER_TEMP}/bases-test.log"
+          grep -Fqx "INFO - Skipping kustomize base ${RUNNER_TEMP}/bases-test/base" "${RUNNER_TEMP}/bases-test.log"
       - name: Build Docker image
         run: make docker-build
       - name: Run Docker smoke test

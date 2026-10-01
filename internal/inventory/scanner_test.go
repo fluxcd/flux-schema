@@ -241,6 +241,193 @@ patchesJson6902:
 		"apps/overlays/prod", apiv1.InventoryDirectoryKustomizeOverlay))
 }
 
+func TestScanKustomizeBases(t *testing.T) {
+	const kustomization = "apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\n"
+	tests := []struct {
+		name  string
+		files map[string]string
+		want  map[string]apiv1.InventoryDirectoryType
+	}{
+		{
+			name: "referenced overlays are bases",
+			files: map[string]string{
+				"apps/base/kustomization.yaml":    kustomization + "resources:\n  - deployment.yaml\n",
+				"apps/base/deployment.yaml":       deploymentYAML,
+				"apps/staging/kustomization.yaml": kustomization + "resources:\n  - ../base\n  - extra.yaml\n",
+				"apps/staging/extra.yaml":         deploymentYAML,
+				"apps/prod/kustomization.yaml":    kustomization + "resources:\n  - ../staging/\n",
+				"apps/legacy/kustomization.yaml":  kustomization + "bases:\n  - ../shared\n",
+				"apps/shared/kustomization.yaml":  kustomization,
+			},
+			want: map[string]apiv1.InventoryDirectoryType{
+				"apps/base":    apiv1.InventoryDirectoryKustomizeBase,
+				"apps/staging": apiv1.InventoryDirectoryKustomizeBase,
+				"apps/prod":    apiv1.InventoryDirectoryKustomizeOverlay,
+				"apps/legacy":  apiv1.InventoryDirectoryKustomizeOverlay,
+				"apps/shared":  apiv1.InventoryDirectoryKustomizeBase,
+			},
+		},
+		{
+			name: "components",
+			files: map[string]string{
+				"apps/prod/kustomization.yaml":       kustomization + "components:\n  - ../monitoring\n",
+				"apps/monitoring/kustomization.yaml": "apiVersion: kustomize.config.k8s.io/v1alpha1\nkind: Component\n",
+				"apps/unused/kustomization.yaml":     "apiVersion: kustomize.config.k8s.io/v1alpha1\nkind: Component\n",
+			},
+			want: map[string]apiv1.InventoryDirectoryType{
+				"apps/prod":       apiv1.InventoryDirectoryKustomizeOverlay,
+				"apps/monitoring": apiv1.InventoryDirectoryKustomizeComponent,
+				"apps/unused":     apiv1.InventoryDirectoryKustomizeComponent,
+			},
+		},
+		{
+			name: "unused components do not mark bases",
+			files: map[string]string{
+				"apps/unused/kustomization.yaml": "apiVersion: kustomize.config.k8s.io/v1alpha1\nkind: Component\nresources:\n  - ../base\ncomponents:\n  - ../nested\n",
+				"apps/nested/kustomization.yaml": "apiVersion: kustomize.config.k8s.io/v1alpha1\nkind: Component\nresources:\n  - ../other\n",
+				"apps/base/kustomization.yaml":   kustomization,
+				"apps/other/kustomization.yaml":  kustomization,
+			},
+			want: map[string]apiv1.InventoryDirectoryType{
+				"apps/unused": apiv1.InventoryDirectoryKustomizeComponent,
+				"apps/nested": apiv1.InventoryDirectoryKustomizeComponent,
+				"apps/base":   apiv1.InventoryDirectoryKustomizeOverlay,
+				"apps/other":  apiv1.InventoryDirectoryKustomizeOverlay,
+			},
+		},
+		{
+			name: "components used by an overlay propagate to their references",
+			files: map[string]string{
+				"apps/prod/kustomization.yaml":       kustomization + "components:\n  - ../monitoring\n",
+				"apps/monitoring/kustomization.yaml": "apiVersion: kustomize.config.k8s.io/v1alpha1\nkind: Component\nresources:\n  - ../base\n",
+				"apps/base/kustomization.yaml":       kustomization,
+			},
+			want: map[string]apiv1.InventoryDirectoryType{
+				"apps/prod":       apiv1.InventoryDirectoryKustomizeOverlay,
+				"apps/monitoring": apiv1.InventoryDirectoryKustomizeComponent,
+				"apps/base":       apiv1.InventoryDirectoryKustomizeBase,
+			},
+		},
+		{
+			name: "only the first document of a kustomization file is read",
+			files: map[string]string{
+				"apps/prod/kustomization.yaml": kustomization + "---\n" + kustomization + "resources:\n  - ../base\n---\napiVersion: kustomize.config.k8s.io/v1alpha1\nkind: Component\n",
+				"apps/base/kustomization.yaml": kustomization,
+			},
+			want: map[string]apiv1.InventoryDirectoryType{
+				"apps/prod": apiv1.InventoryDirectoryKustomizeOverlay,
+				"apps/base": apiv1.InventoryDirectoryKustomizeOverlay,
+			},
+		},
+		{
+			name: "kustomize documents outside kustomization files do not mark bases",
+			files: map[string]string{
+				"apps/prod/backup.yaml":        kustomization + "resources:\n  - ../base\n",
+				"apps/base/kustomization.yaml": kustomization,
+			},
+			want: map[string]apiv1.InventoryDirectoryType{
+				"apps/prod": apiv1.InventoryDirectoryKustomizeOverlay,
+				"apps/base": apiv1.InventoryDirectoryKustomizeOverlay,
+			},
+		},
+		{
+			name: "kustomization file without apiVersion",
+			files: map[string]string{
+				"apps/base/kustomization.yaml": "resources:\n  - deployment.yaml\n",
+				"apps/base/deployment.yaml":    deploymentYAML,
+				"apps/prod/Kustomization":      "resources:\n  - ../base\n",
+			},
+			want: map[string]apiv1.InventoryDirectoryType{
+				"apps/base": apiv1.InventoryDirectoryKustomizeBase,
+				"apps/prod": apiv1.InventoryDirectoryKustomizeOverlay,
+			},
+		},
+		{
+			name: "remote, file, escaping and self references are ignored",
+			files: map[string]string{
+				"apps/prod/kustomization.yaml": kustomization + `resources:
+  - https://github.com/org/repo//deploy?ref=v1.0.0
+  - github.com/org/repo/deploy?ref=v1.0.0
+  - ../../outside
+  - /apps/base
+  - .
+  - ../base/deployment.yaml
+`,
+				"apps/base/kustomization.yaml": kustomization + "resources:\n  - deployment.yaml\n",
+				"apps/base/deployment.yaml":    deploymentYAML,
+			},
+			want: map[string]apiv1.InventoryDirectoryType{
+				"apps/base": apiv1.InventoryDirectoryKustomizeOverlay,
+				"apps/prod": apiv1.InventoryDirectoryKustomizeOverlay,
+			},
+		},
+		{
+			name: "remote references do not match local directories",
+			files: map[string]string{
+				"apps/prod/kustomization.yaml":                            kustomization + "resources:\n  - https://github.com/org/repo\n",
+				"apps/prod/https:/github.com/org/repo/kustomization.yaml": kustomization,
+			},
+			want: map[string]apiv1.InventoryDirectoryType{
+				"apps/prod":                            apiv1.InventoryDirectoryKustomizeOverlay,
+				"apps/prod/https:/github.com/org/repo": apiv1.InventoryDirectoryKustomizeOverlay,
+			},
+		},
+		{
+			name: "bare remote references without a local directory are ignored",
+			files: map[string]string{
+				"apps/prod/kustomization.yaml": kustomization + "resources:\n  - github.com/org/repo//deploy?ref=v1\n",
+			},
+			want: map[string]apiv1.InventoryDirectoryType{
+				"apps/prod": apiv1.InventoryDirectoryKustomizeOverlay,
+			},
+		},
+		{
+			name: "reference cycles stay overlays",
+			files: map[string]string{
+				"apps/a/kustomization.yaml": kustomization + "resources:\n  - ../b\n",
+				"apps/b/kustomization.yaml": kustomization + "resources:\n  - ../a\n",
+			},
+			want: map[string]apiv1.InventoryDirectoryType{
+				"apps/a": apiv1.InventoryDirectoryKustomizeOverlay,
+				"apps/b": apiv1.InventoryDirectoryKustomizeOverlay,
+			},
+		},
+		{
+			name: "cycles reachable from an overlay are bases",
+			files: map[string]string{
+				"apps/prod/kustomization.yaml": kustomization + "resources:\n  - ../a\n",
+				"apps/a/kustomization.yaml":    kustomization + "resources:\n  - ../b\n",
+				"apps/b/kustomization.yaml":    kustomization + "resources:\n  - ../a\n",
+			},
+			want: map[string]apiv1.InventoryDirectoryType{
+				"apps/prod": apiv1.InventoryDirectoryKustomizeOverlay,
+				"apps/a":    apiv1.InventoryDirectoryKustomizeBase,
+				"apps/b":    apiv1.InventoryDirectoryKustomizeBase,
+			},
+		},
+		{
+			name: "references into pruned directories are ignored",
+			files: map[string]string{
+				"apps/prod/kustomization.yaml":  kustomization + "resources:\n  - ../chart\n",
+				"apps/chart/Chart.yaml":         "name: chart\n",
+				"apps/chart/kustomization.yaml": kustomization,
+			},
+			want: map[string]apiv1.InventoryDirectoryType{
+				"apps/prod":  apiv1.InventoryDirectoryKustomizeOverlay,
+				"apps/chart": apiv1.InventoryDirectoryHelmChart,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			res, err := Scan(writeTree(t, tt.files), Options{})
+			g.Expect(err).ToNot(HaveOccurred())
+			g.Expect(res.DirTypes).To(Equal(tt.want))
+		})
+	}
+}
+
 func TestScanIgnoresSymlinks(t *testing.T) {
 	g := NewWithT(t)
 	base := t.TempDir()

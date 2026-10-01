@@ -6,12 +6,14 @@ to run in CI before changes are merged to a branch synced by Flux.
 
 The action wraps [`validate.sh`](validate.sh), which auto-detects kustomize
 overlays and skips YAML files included in Helm chart and Terraform modules.
+Kustomize bases and components are validated through the overlays that
+reference them, not on their own.
 Helm charts can be opted into validation with the `helm-charts` input, which
 renders them with `helm template` using their default values.
 
 ## Prerequisites
 
-The action expects `flux` to be on `PATH` along with the schema plugin (>= 0.15).
+The action expects `flux` to be on `PATH` along with the schema plugin (>= 0.16).
 Also `helm` when `helm-charts` is enabled (pre-installed on GitHub-hosted runners).
 
 ## Usage

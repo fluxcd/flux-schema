@@ -40,13 +40,15 @@ diff-friendly.
 ## Directories
 
 `directories` maps every directory containing scanned manifests, plus
-Helm chart and Terraform directories, to one of four classifications:
-`kubernetes-manifests`, `kustomize-overlay`, `helm-chart`, or `terraform-module`. Paths are
-relative to the scanned root and `/`-separated; the root itself is `.`.
+Helm chart and Terraform directories, to one of six classifications:
+`kubernetes-manifests`, `kustomize-overlay`, `kustomize-base`, `kustomize-component`,
+`helm-chart`, or `terraform-module`. Paths are relative to the scanned root and
+`/`-separated; the root itself is `.`.
 
 ```json
 "directories": {
-  "apps/base": "kustomize-overlay",
+  "apps/base": "kustomize-base",
+  "apps/overlays/prod": "kustomize-overlay",
   "charts/podinfo": "helm-chart"
 }
 ```
@@ -113,7 +115,7 @@ mid-migration — its files merge under the kind key, while
       "lines-of-yaml": 99
     },
     "directories": {
-      "apps/base": "kustomize-overlay",
+      "apps/base": "kustomize-base",
       "apps/overlays/prod": "kustomize-overlay",
       "charts/podinfo": "helm-chart",
       "clusters/prod": "kubernetes-manifests",
