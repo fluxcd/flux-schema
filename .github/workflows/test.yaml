@@ -67,7 +67,9 @@ jobs:
             exit 1
           fi
           ./actions/validate/validate.sh -d "${RUNNER_TEMP}/envsubst-test" \
-            -E "${RUNNER_TEMP}/flux.env" -- --schema-location ./catalog/latest
+            -E "${RUNNER_TEMP}/flux.env" -b "${RUNNER_TEMP}/bundle.yaml" -- \
+            --schema-location ./catalog/latest
+          [[ "$(grep -Fc 'host: app.example.com' "${RUNNER_TEMP}/bundle.yaml")" -ge 2 ]]
       - name: Build Docker image
         run: make docker-build
       - name: Run Docker smoke test
