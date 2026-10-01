@@ -66,6 +66,9 @@ linters:
           - errcheck
         source: "^\\s*defer\\s+"
       - linters:
+          - lll
+        source: "^// \\+kubebuilder:"
+      - linters:
           - dupl
           - lll
           - goconst

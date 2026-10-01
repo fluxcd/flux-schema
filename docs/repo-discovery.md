@@ -74,23 +74,33 @@ directory classification is path-based and meaningless for a stream.
 Both `.yaml` and `.yml` files are scanned. Per YAML document:
 
 - Documents without both `apiVersion` and `kind` are ignored.
-- Documents in the `kustomize.config.k8s.io` group mark their directory as
-  a kustomize overlay and are not counted as resources.
+- Documents in the `kustomize.config.k8s.io` group, and files named
+  `kustomization.yaml`, `kustomization.yml` or `Kustomization`, mark their
+  directory as a kustomize overlay and are not counted as resources.
 - Every resource is counted per `apiVersion/Kind` in the `resources`
   census.
 - Documents whose API group contains `fluxcd` are Flux resources,
   additionally listed under `flux` with their defining file.
 
-Every directory in the inventory carries one of four types:
+Every directory in the inventory carries one of six types:
 
 | Type                   | Meaning                                                        |
 |------------------------|----------------------------------------------------------------|
 | `kubernetes-manifests` | Plain Kubernetes YAML manifests.                               |
 | `kustomize-overlay`    | Contains a kustomize configuration file.                       |
+| `kustomize-base`       | A kustomize overlay referenced by another kustomization.       |
+| `kustomize-component`  | Contains a kustomize configuration of kind `Component`.        |
 | `helm-chart`           | Contains a `Chart.yaml`; the directory subtree is not scanned. |
 | `terraform-module`     | Contains `.tf` files; the directory subtree is not scanned.    |
 
 When a directory holds both a `Chart.yaml` and `.tf` files, the Helm chart classification wins.
+
+### Kustomize bases
+
+An overlay listed under `resources`, `components` or `bases` of another
+kustomization in the scanned root is classified as `kustomize-base`.
+Remote, absolute and file references are ignored, and overlays referenced
+only from within a reference cycle stay `kustomize-overlay`.
 
 ### Kustomize patch files
 
@@ -125,7 +135,7 @@ defining file, and summary line:
 
 ```text
 Directories:
-  apps/base: kustomize-overlay
+  apps/base: kustomize-base
   apps/overlays/prod: kustomize-overlay
   charts/podinfo: helm-chart
   clusters/prod: kubernetes-manifests
@@ -171,7 +181,7 @@ they declare (the API version is already in the census):
       "lines-of-yaml": 92
     },
     "directories": {
-      "apps/base": "kustomize-overlay",
+      "apps/base": "kustomize-base",
       "apps/overlays/prod": "kustomize-overlay",
       "charts/podinfo": "helm-chart",
       "clusters/prod": "kubernetes-manifests",
@@ -222,3 +232,5 @@ The inventory answers an auditing agent's first questions without any grepping:
 - **Scope boundaries** — `helm-chart` and `terraform-module` directories exist in
   the map but contribute no resources, signaling that their contents are
   not Kubernetes manifests to lint.
+- **Build entrypoints** — `kustomize-overlay` directories are the ones to
+  build; bases and components are built through them.

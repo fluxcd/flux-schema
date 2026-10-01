@@ -21,6 +21,8 @@
             "enum": [
               "helm-chart",
               "kubernetes-manifests",
+              "kustomize-base",
+              "kustomize-component",
               "kustomize-overlay",
               "terraform-module"
             ],

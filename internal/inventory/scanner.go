@@ -15,6 +15,7 @@ import (
 	"slices"
 	"strings"
 
+	"sigs.k8s.io/kustomize/api/konfig"
 	"sigs.k8s.io/yaml"
 
 	apiv1 "github.com/fluxcd/flux-schema/api/v1beta1"
@@ -60,7 +61,8 @@ type Result struct {
 	Resources []Resource
 
 	// DirTypes maps root-relative directory paths to their non-default
-	// classification (kustomize-overlay, helm-chart, terraform-module).
+	// classification (kustomize-overlay, kustomize-base,
+	// kustomize-component, helm-chart, terraform-module).
 	// Directories absent from the map hold plain Kubernetes manifests.
 	DirTypes map[string]apiv1.InventoryDirectoryType
 
@@ -84,8 +86,13 @@ type docHeader struct {
 }
 
 // kustomizeConfig is the subset of a kustomize configuration document
-// needed to resolve file-based patch references.
+// needed to resolve file-based patch and directory references.
 type kustomizeConfig struct {
+	Kind       string   `json:"kind"`
+	Resources  []string `json:"resources"`
+	Components []string `json:"components"`
+	Bases      []string `json:"bases"`
+
 	Patches []struct {
 		Path string `json:"path"`
 	} `json:"patches"`
@@ -106,6 +113,12 @@ func IsFluxResource(apiVersion string) bool {
 	return strings.Contains(group, "fluxcd")
 }
 
+// isKustomizationFile reports whether the base name of p is one of the
+// file names kustomize recognizes as a kustomization.
+func isKustomizationFile(p string) bool {
+	return slices.Contains(konfig.RecognizedKustomizationFileNames(), path.Base(p))
+}
+
 // isKustomizeConfig reports whether apiVersion is a kustomize
 // configuration document rather than a Kubernetes resource.
 func isKustomizeConfig(apiVersion string) bool {
@@ -123,6 +136,7 @@ type scanner struct {
 
 	dirTypes    map[string]apiv1.InventoryDirectoryType
 	patchRefs   map[string]struct{}
+	kustomRefs  map[string][]string
 	byFile      map[string][]Resource
 	linesByFile map[string]int
 	fileOrder   []string
@@ -158,6 +172,7 @@ func Scan(p string, opts Options) (*Result, error) {
 		skipFiles:   skipFiles,
 		dirTypes:    map[string]apiv1.InventoryDirectoryType{},
 		patchRefs:   map[string]struct{}{},
+		kustomRefs:  map[string][]string{},
 		byFile:      map[string][]Resource{},
 		linesByFile: map[string]int{},
 	}
@@ -210,7 +225,7 @@ func Scan(p string, opts Options) (*Result, error) {
 		if s.matchSkipFile(d.Name()) {
 			return nil
 		}
-		if ext := strings.ToLower(path.Ext(entry)); ext != extYAML && ext != extYML {
+		if ext := strings.ToLower(path.Ext(entry)); ext != extYAML && ext != extYML && !isKustomizationFile(entry) {
 			return nil
 		}
 		return s.scanFile(entry)
@@ -261,8 +276,9 @@ func (s *scanner) probeDirType(dir string) (apiv1.InventoryDirectoryType, bool, 
 
 // scanFile splits the root-relative file rel into YAML documents and
 // records every identifiable Kubernetes resource. Kustomize configuration
-// documents mark the directory as an overlay and contribute their patch
-// file references instead.
+// documents, and every document of a recognized kustomization file even
+// without apiVersion and kind, mark the directory as an overlay and
+// contribute their references instead.
 func (s *scanner) scanFile(rel string) error {
 	f, err := s.root.Open(rel)
 	if err != nil {
@@ -272,6 +288,7 @@ func (s *scanner) scanFile(rel string) error {
 
 	s.fileOrder = append(s.fileOrder, rel)
 	dir := path.Dir(rel)
+	kustomization := isKustomizationFile(rel)
 
 	lc := &lineCounter{r: f}
 	sc := yamldoc.NewScanner(lc)
@@ -284,14 +301,11 @@ func (s *scanner) scanFile(rel string) error {
 		if err := yaml.Unmarshal(raw, &hdr); err != nil {
 			continue
 		}
-		if hdr.APIVersion == "" || hdr.Kind == "" {
+		if kustomization || isKustomizeConfig(hdr.APIVersion) {
+			s.addKustomizeConfig(dir, raw)
 			continue
 		}
-		if isKustomizeConfig(hdr.APIVersion) {
-			if _, ok := s.dirTypes[dir]; !ok {
-				s.dirTypes[dir] = apiv1.InventoryDirectoryKustomizeOverlay
-			}
-			s.addPatchRefs(dir, raw)
+		if hdr.APIVersion == "" || hdr.Kind == "" {
 			continue
 		}
 		s.byFile[rel] = append(s.byFile[rel], Resource{
@@ -332,45 +346,77 @@ func (lc *lineCounter) count() int {
 	return lc.newlines
 }
 
-// addPatchRefs collects the file-based patch references of a kustomize
-// configuration document, resolved against the document's root-relative
-// directory. Inline patches (multi-line strategic-merge entries) and
-// references escaping the scanned root are ignored.
-func (s *scanner) addPatchRefs(dir string, raw []byte) {
+// addKustomizeConfig classifies dir from a kustomize configuration
+// document and collects its references, resolved against dir. A
+// Component marks dir as a kustomize component, anything else as an
+// overlay. File-based patch references feed the patch exclusion;
+// resources, components and bases feed the base classification. Inline
+// patches (multi-line strategic-merge entries) and references escaping
+// the scanned root are ignored.
+func (s *scanner) addKustomizeConfig(dir string, raw []byte) {
 	var kc kustomizeConfig
 	if err := yaml.Unmarshal(raw, &kc); err != nil {
+		if _, ok := s.dirTypes[dir]; !ok {
+			s.dirTypes[dir] = apiv1.InventoryDirectoryKustomizeOverlay
+		}
 		return
 	}
-	var refs []string
+	if kc.Kind == "Component" {
+		s.dirTypes[dir] = apiv1.InventoryDirectoryKustomizeComponent
+	} else if _, ok := s.dirTypes[dir]; !ok {
+		s.dirTypes[dir] = apiv1.InventoryDirectoryKustomizeOverlay
+	}
+
+	var patches []string
 	for _, p := range kc.Patches {
 		if p.Path != "" {
-			refs = append(refs, p.Path)
+			patches = append(patches, p.Path)
 		}
 	}
 	for _, p := range kc.PatchesStrategicMerge {
 		if p != "" && !strings.Contains(p, "\n") {
-			refs = append(refs, p)
+			patches = append(patches, p)
 		}
 	}
 	for _, p := range kc.PatchesJSON6902 {
 		if p.Path != "" {
-			refs = append(refs, p.Path)
+			patches = append(patches, p.Path)
 		}
 	}
-	for _, ref := range refs {
-		rel := path.Clean(path.Join(dir, filepath.ToSlash(ref)))
-		if rel == ".." || strings.HasPrefix(rel, "../") {
-			continue
+	for _, ref := range patches {
+		if rel, ok := resolveRef(dir, ref); ok {
+			s.patchRefs[rel] = struct{}{}
 		}
-		s.patchRefs[rel] = struct{}{}
+	}
+
+	for _, ref := range slices.Concat(kc.Resources, kc.Components, kc.Bases) {
+		if rel, ok := resolveRef(dir, ref); ok && rel != dir {
+			s.kustomRefs[dir] = append(s.kustomRefs[dir], rel)
+		}
 	}
 }
 
+// resolveRef joins the kustomize reference ref onto the root-relative
+// dir. It reports false for empty, remote and absolute references and
+// for references escaping the scanned root.
+func resolveRef(dir, ref string) (string, bool) {
+	if ref == "" || strings.Contains(ref, "://") || path.IsAbs(filepath.ToSlash(ref)) || filepath.IsAbs(ref) {
+		return "", false
+	}
+	rel := path.Clean(path.Join(dir, filepath.ToSlash(ref)))
+	if rel == ".." || strings.HasPrefix(rel, "../") {
+		return "", false
+	}
+	return rel, true
+}
+
 // result assembles the Result, dropping files referenced as kustomize
-// patches. Filtering after the walk avoids ordering dependencies: a
-// kustomization may reference patch files in directories the walk has not
+// patches and reclassifying overlays referenced by another kustomization
+// as bases. Resolving after the walk avoids ordering dependencies: a
+// kustomization may reference files and directories the walk has not
 // visited yet.
 func (s *scanner) result() *Result {
+	s.markKustomizeBases()
 	res := &Result{
 		Resources: []Resource{},
 		DirTypes:  s.dirTypes,
@@ -384,6 +430,41 @@ func (s *scanner) result() *Result {
 		res.Resources = append(res.Resources, s.byFile[f]...)
 	}
 	return res
+}
+
+// markKustomizeBases reclassifies as bases the overlays reachable from a
+// kustomization that no other kustomization references. Overlays only
+// reachable through a reference cycle keep their classification, so
+// building them surfaces the kustomize cycle error instead of every
+// member being skipped as a base.
+func (s *scanner) markKustomizeBases() {
+	referenced := map[string]bool{}
+	for _, refs := range s.kustomRefs {
+		for _, ref := range refs {
+			referenced[ref] = true
+		}
+	}
+	var queue []string
+	for dir := range s.kustomRefs {
+		if !referenced[dir] {
+			queue = append(queue, dir)
+		}
+	}
+	visited := map[string]bool{}
+	for len(queue) > 0 {
+		dir := queue[0]
+		queue = queue[1:]
+		for _, ref := range s.kustomRefs[dir] {
+			if visited[ref] {
+				continue
+			}
+			visited[ref] = true
+			if s.dirTypes[ref] == apiv1.InventoryDirectoryKustomizeOverlay {
+				s.dirTypes[ref] = apiv1.InventoryDirectoryKustomizeBase
+			}
+			queue = append(queue, ref)
+		}
+	}
 }
 
 // isContentFree reports whether raw is empty or contains only YAML
