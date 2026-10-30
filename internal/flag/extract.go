@@ -37,7 +37,7 @@ func (e *ExtractOutput) Register(cmd *cobra.Command) {
 		"directory where JSON Schema files are written (created if missing)")
 	cmd.Flags().StringVarP(&e.Format, "output-format", "f", e.Format,
 		"Go template for the output file path, relative to --output-dir; "+
-			"variables: .Group, .GroupPrefix, .Kind, .Version")
+			"variables: .Group, .GroupPrefix, .Kind, .Version, .Restriction")
 	cmd.Flags().BoolVar(&e.StripDescription, "strip-description", e.StripDescription,
 		"strip description fields from the extracted schemas to reduce their size")
 	cmd.Flags().BoolVar(&e.WithFieldIndex, "with-field-index", e.WithFieldIndex,

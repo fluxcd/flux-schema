@@ -1962,3 +1962,176 @@ func TestResultCollectorSourceOrder(t *testing.T) {
 	g.Expect(writer.collected).To(Equal([]validator.Result{first, later, buildError}))
 	g.Expect(collector.nInvalid).To(Equal(1))
 }
+
+func TestValidateCmd_Restriction(t *testing.T) {
+	g := NewWithT(t)
+
+	schemaDir := t.TempDir()
+	manifestDir := t.TempDir()
+
+	restrYAML := `
+apiVersion: my.group.io/v1alpha1
+kind: MyKind
+restriction: my-restr
+
+spec:
+  size: $enum[Small, Large]
+  legacy: $forbid
+`
+	restrFile := filepath.Join(t.TempDir(), "restr.yaml")
+	g.Expect(os.WriteFile(restrFile, []byte(restrYAML), 0o644)).To(Succeed())
+
+	// Extract restriction schema
+	_, err := executeCommand([]string{
+		"extract", "restriction", restrFile,
+		"-d", schemaDir,
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	// Base schema for MyKind
+	baseSchema := `{
+		"type": "object",
+		"required": ["apiVersion", "kind", "metadata", "spec"],
+		"properties": {
+			"apiVersion": { "type": "string" },
+			"kind": { "type": "string" },
+			"metadata": {
+				"type": "object",
+				"required": ["name"],
+				"properties": { "name": { "type": "string" } }
+			},
+			"spec": {
+				"type": "object",
+				"properties": {
+					"size": { "type": "string" },
+					"legacy": { "type": "string" }
+				}
+			}
+		}
+	}`
+	err = os.MkdirAll(filepath.Join(schemaDir, "my.group.io"), 0o755)
+	g.Expect(err).ToNot(HaveOccurred())
+	err = os.WriteFile(filepath.Join(schemaDir, "my.group.io", "mykind_v1alpha1.json"), []byte(baseSchema), 0o644)
+	g.Expect(err).ToNot(HaveOccurred())
+
+	validManifest := filepath.Join(manifestDir, "valid.yaml")
+	g.Expect(os.WriteFile(validManifest, []byte(`
+apiVersion: my.group.io/v1alpha1
+kind: MyKind
+metadata:
+  name: valid
+spec:
+  size: Small
+`), 0o644)).To(Succeed())
+
+	invalidManifest := filepath.Join(manifestDir, "invalid.yaml")
+	g.Expect(os.WriteFile(invalidManifest, []byte(`
+apiVersion: my.group.io/v1alpha1
+kind: MyKind
+metadata:
+  name: invalid
+spec:
+  size: Medium
+`), 0o644)).To(Succeed())
+
+	schemaLocBase := filepath.Join(schemaDir, "{{.Group}}/{{.Kind}}_{{.Version}}.json")
+	schemaLocRestr := filepath.Join(schemaDir, "{{.Group}}/{{.Kind}}_{{.Version}}_{{.Restriction}}.json")
+
+	// Valid manifest passes
+	out, err := executeCommand([]string{
+		"validate", validManifest,
+		"--restriction", "my.group.io/v1alpha1/MyKind=my-restr",
+		"-s", schemaLocBase,
+		"-s", schemaLocRestr,
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("Summary: 1 resource found in 1 file - Valid: 1, Invalid: 0, Skipped: 0"))
+
+	// Invalid manifest fails
+	out, err = executeCommand([]string{
+		"validate", invalidManifest,
+		"--restriction", "my.group.io/v1alpha1/MyKind=my-restr",
+		"-s", schemaLocBase,
+		"-s", schemaLocRestr,
+	})
+	g.Expect(err).To(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("is invalid: schema violation"))
+	g.Expect(out).To(ContainSubstring("Summary: 1 resource found in 1 file - Valid: 0, Invalid: 1, Skipped: 0"))
+}
+
+func TestValidateCmd_Config_Restrictions(t *testing.T) {
+	g := NewWithT(t)
+
+	workDir := t.TempDir()
+	schemaDir := filepath.Join(workDir, "schemas")
+	g.Expect(os.MkdirAll(filepath.Join(schemaDir, "my.group.io"), 0o755)).To(Succeed())
+
+	// Base schema
+	baseSchema := `{
+		"type": "object",
+		"required": ["apiVersion", "kind", "metadata", "spec"],
+		"properties": {
+			"apiVersion": { "type": "string" },
+			"kind": { "type": "string" },
+			"metadata": {
+				"type": "object",
+				"required": ["name"],
+				"properties": { "name": { "type": "string" } }
+			},
+			"spec": {
+				"type": "object",
+				"properties": { "size": { "type": "string" } }
+			}
+		}
+	}`
+	g.Expect(os.WriteFile(filepath.Join(schemaDir, "my.group.io", "mykind_v1alpha1.json"), []byte(baseSchema), 0o644)).To(Succeed())
+
+	// Restriction schema
+	restrSchema := `{
+		"type": "object",
+		"properties": {
+			"apiVersion": { "type": "string", "const": "my.group.io/v1alpha1" },
+			"kind": { "type": "string", "const": "MyKind" },
+			"spec": {
+				"type": "object",
+				"properties": {
+					"size": { "type": "string", "enum": ["Small"] }
+				}
+			}
+		},
+		"required": ["apiVersion", "kind"]
+	}`
+	g.Expect(os.WriteFile(filepath.Join(schemaDir, "my.group.io", "mykind_v1alpha1_strict.json"), []byte(restrSchema), 0o644)).To(Succeed())
+
+	configFile := filepath.Join(workDir, ".fluxschema.yml")
+	configYAML := fmt.Sprintf(`
+apiVersion: schema.plugin.fluxcd.io/v1beta1
+kind: Config
+validate:
+  restrictions:
+    - apiVersion: my.group.io/v1alpha1
+      kind: MyKind
+      restriction: strict
+  schemaLocation:
+    - '%s/{{.Group}}/{{.Kind}}_{{.Version}}.json'
+    - '%s/{{.Group}}/{{.Kind}}_{{.Version}}_{{.Restriction}}.json'
+`, schemaDir, schemaDir)
+	g.Expect(os.WriteFile(configFile, []byte(configYAML), 0o644)).To(Succeed())
+
+	manifest := filepath.Join(workDir, "test.yaml")
+	g.Expect(os.WriteFile(manifest, []byte(`
+apiVersion: my.group.io/v1alpha1
+kind: MyKind
+metadata:
+  name: test
+spec:
+  size: Large
+`), 0o644)).To(Succeed())
+
+	out, err := executeCommand([]string{
+		"validate", manifest,
+		"--config", configFile,
+	})
+	g.Expect(err).To(HaveOccurred())
+	g.Expect(out).To(ContainSubstring("is invalid: schema violation"))
+}

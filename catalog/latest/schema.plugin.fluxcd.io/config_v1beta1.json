@@ -94,6 +94,34 @@
           "description": "OutputDirectory selects the directory where structured report files are written (created if missing).",
           "type": "string"
         },
+        "restrictions": {
+          "description": "Restrictions binds restriction schemas to GVKs.",
+          "items": {
+            "additionalProperties": false,
+            "description": "Restriction defines a restriction schema binding for a GVK.",
+            "properties": {
+              "apiVersion": {
+                "description": "APIVersion is the Group/Version or Version of the target resource.",
+                "type": "string"
+              },
+              "kind": {
+                "description": "Kind is the Kubernetes kind of the target resource.",
+                "type": "string"
+              },
+              "restriction": {
+                "description": "Restriction is the name of the restriction schema.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "apiVersion",
+              "kind",
+              "restriction"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
         "schemaLocation": {
           "description": "SchemaLocations contains schema URLs, file paths, or templates to try in order.",
           "items": {

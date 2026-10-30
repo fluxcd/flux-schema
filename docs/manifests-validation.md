@@ -74,6 +74,7 @@ flux schema validate ./clusters/production --envsubst-file .env
 | Flag                         | Description                                                                                                                                     |
 |------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------|
 | `-s, --schema-location`      | URL or file path for schemas (repeatable, tried in order); `default` points at the built-in catalog, `ecosystem` at the CNCF ecosystem catalog. |
+| `--restriction`              | Bind a restriction schema to a resource type in `G/V/K=name` format (repeatable).                                                              |
 | `--envsubst-file`            | Path to a dotenv file supplying Flux post-build substitution variables.                                                                         |
 | `--envsubst-strict`          | Fail on undefined substitution variables that have no default; requires `--envsubst-file`.                                                      |
 | `--skip-missing-schemas`     | Skip documents for which no schema can be found.                                                                                                |
@@ -348,6 +349,21 @@ no prior state, matching the Kubernetes API behavior on `CREATE`.
 
 The CEL validation can be disabled with the `--skip-cel-rules` flag.
 
+## Restriction validation
+
+With `--restriction`, manifests are validated against their base schema AND one or more specialized restriction schemas extracted by `flux schema extract restriction`:
+
+```shell
+flux schema validate ./tenants \
+  --restriction my.group.io/v1alpha1/MyKind=my-restriction \
+  --restriction my.group.io/v1alpha1/MyKind=my-strict-restriction \
+  --schema-location default \
+  --schema-location './schemas/{{.Group}}/{{.Kind}}_{{.Version}}.json' \
+  --schema-location './schemas/{{.Group}}/{{.Kind}}_{{.Version}}_{{.Restriction}}.json'
+```
+
+Each `MyKind` manifest is validated against the base schema (located without `.Restriction`) and every configured restriction for its GVK. Resources with no configured restriction skip `.Restriction` templates.
+
 ## Config file
 
 Flag values can be pre-set in a YAML config file and referenced with`--config`
@@ -372,6 +388,10 @@ validate:
   schemaLocation:
     - default
     - ecosystem
+  restrictions:
+    - apiVersion: my.group.io/v1alpha1
+      kind: MyKind
+      restriction: my-restriction
   skipKind:
     - source.toolkit.fluxcd.io/v1/ExternalArtifact
   skipJSONPath:

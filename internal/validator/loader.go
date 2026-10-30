@@ -100,6 +100,42 @@ func NewSchemaLoader(templates []*template.Template, httpClient *retryablehttp.C
 // callers decide whether that is an error or a skip.
 func (l *SchemaLoader) Resolve(ctx context.Context, vars tmpl.SchemaVars) (resolved *ResolvedSchema, found bool, err error) {
 	for _, tpl := range l.templates {
+		if tmpl.UsesRestriction(tpl) {
+			continue
+		}
+		rendered, rerr := tmpl.Execute(tpl, vars)
+		if rerr != nil {
+			return nil, false, rerr
+		}
+		entry := l.cacheEntry(rendered)
+		entry.once.Do(func() {
+			entry.loadResult, entry.err = l.loadAndCompile(ctx, rendered)
+		})
+		if entry.err != nil {
+			return nil, false, fmt.Errorf("%s: %w", rendered, entry.err)
+		}
+		if entry.found {
+			return &ResolvedSchema{
+				JSON:              entry.schema,
+				Admission:         entry.admission,
+				AdmissionBuildErr: entry.admissionBuildErr,
+				CEL:               entry.cel,
+				CELBuildErr:       entry.celBuildErr,
+				Location:          rendered,
+			}, true, nil
+		}
+	}
+	return nil, false, nil
+}
+
+// ResolveRestriction renders templates containing .Restriction with vars and restrictionName
+// and returns the first schema that exists.
+func (l *SchemaLoader) ResolveRestriction(ctx context.Context, vars tmpl.SchemaVars, restrictionName string) (resolved *ResolvedSchema, found bool, err error) {
+	vars.Restriction = restrictionName
+	for _, tpl := range l.templates {
+		if !tmpl.UsesRestriction(tpl) {
+			continue
+		}
 		rendered, rerr := tmpl.Execute(tpl, vars)
 		if rerr != nil {
 			return nil, false, rerr

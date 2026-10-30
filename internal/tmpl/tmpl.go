@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"strings"
 	"text/template"
+	"text/template/parse"
 )
 
 // SchemaVars carries the variables exposed to output-path templates.
@@ -21,6 +22,7 @@ type SchemaVars struct {
 	GroupPrefix string
 	Kind        string
 	Version     string
+	Restriction string
 }
 
 // Parse compiles format into a reusable *template.Template. Unknown
@@ -46,6 +48,7 @@ func Execute(tpl *template.Template, vars SchemaVars) (string, error) {
 		GroupPrefix: strings.ToLower(vars.GroupPrefix),
 		Kind:        strings.ToLower(vars.Kind),
 		Version:     strings.ToLower(vars.Version),
+		Restriction: strings.ToLower(vars.Restriction),
 	}
 	if normalised.Group == "" {
 		normalised.Group = "core"
@@ -60,6 +63,49 @@ func Execute(tpl *template.Template, vars SchemaVars) (string, error) {
 		return "", fmt.Errorf("render template: %w", err)
 	}
 	return buf.String(), nil
+}
+
+// UsesRestriction reports whether tpl references the Restriction field.
+func UsesRestriction(tpl *template.Template) bool {
+	if tpl == nil || tpl.Tree == nil || tpl.Tree.Root == nil {
+		return false
+	}
+	var hasRestriction bool
+	var walk func(parse.Node)
+	walk = func(node parse.Node) {
+		if node == nil || hasRestriction {
+			return
+		}
+		switch n := node.(type) {
+		case *parse.FieldNode:
+			for _, ident := range n.Ident {
+				if strings.EqualFold(ident, "Restriction") {
+					hasRestriction = true
+					return
+				}
+			}
+		case *parse.ListNode:
+			if n != nil {
+				for _, child := range n.Nodes {
+					walk(child)
+				}
+			}
+		case *parse.ActionNode:
+			if n != nil {
+				walk(n.Pipe)
+			}
+		case *parse.PipeNode:
+			if n != nil {
+				for _, cmd := range n.Cmds {
+					for _, arg := range cmd.Args {
+						walk(arg)
+					}
+				}
+			}
+		}
+	}
+	walk(tpl.Tree.Root)
+	return hasRestriction
 }
 
 // Render is a convenience that parses format and executes it in one call.

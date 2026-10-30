@@ -2602,3 +2602,128 @@ func TestNew_RequiresAtLeastOneLocation(t *testing.T) {
 	_, err := New(Options{})
 	g.Expect(err).To(HaveOccurred())
 }
+
+func TestValidateBytes_Restrictions(t *testing.T) {
+	g := NewWithT(t)
+	dir := t.TempDir()
+
+	// Base schema for MyKind
+	baseSchema := `{
+		"type": "object",
+		"required": ["apiVersion", "kind", "metadata", "spec"],
+		"properties": {
+			"apiVersion": { "type": "string" },
+			"kind": { "type": "string" },
+			"metadata": {
+				"type": "object",
+				"required": ["name"],
+				"properties": { "name": { "type": "string" } }
+			},
+			"spec": {
+				"type": "object",
+				"properties": {
+					"size": { "type": "string" },
+					"legacy": { "type": "string" }
+				}
+			}
+		}
+	}`
+	err := os.WriteFile(filepath.Join(dir, "mykind_v1alpha1.json"), []byte(baseSchema), 0o644)
+	g.Expect(err).ToNot(HaveOccurred())
+
+	// Restriction schema: restricts size to enum [Small, Medium, Large] and forbids legacy
+	restrSchema := `{
+		"type": "object",
+		"properties": {
+			"apiVersion": { "type": "string", "const": "my.group.io/v1alpha1" },
+			"kind": { "type": "string", "const": "MyKind" },
+			"spec": {
+				"type": "object",
+				"properties": {
+					"size": { "type": "string", "enum": ["Small", "Medium", "Large"] },
+					"legacy": false
+				},
+				"required": ["size"]
+			}
+		},
+		"required": ["apiVersion", "kind"]
+	}`
+	err = os.WriteFile(filepath.Join(dir, "mykind_v1alpha1_my-restriction.json"), []byte(restrSchema), 0o644)
+	g.Expect(err).ToNot(HaveOccurred())
+
+	locs := []string{
+		filepath.Join(dir, "{{.Kind}}_{{.Version}}.json"),
+		filepath.Join(dir, "{{.Kind}}_{{.Version}}_{{.Restriction}}.json"),
+	}
+
+	v, err := New(Options{
+		SchemaLocations: locs,
+		Restrictions: []Restriction{
+			{
+				APIVersion:  "my.group.io/v1alpha1",
+				Kind:        "MyKind",
+				Restriction: "my-restriction",
+			},
+		},
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	// Case 1: Valid manifest matching restriction
+	validManifest := `
+apiVersion: my.group.io/v1alpha1
+kind: MyKind
+metadata:
+  name: valid
+spec:
+  size: Medium
+`
+	res := v.ValidateBytes(context.Background(), "test.yaml", []byte(validManifest))
+	g.Expect(res).To(HaveLen(1))
+	g.Expect(res[0].Status).To(Equal(StatusValid))
+
+	// Case 2: Invalid manifest violating restriction (size not in enum)
+	invalidSizeManifest := `
+apiVersion: my.group.io/v1alpha1
+kind: MyKind
+metadata:
+  name: invalid-size
+spec:
+  size: Huge
+`
+	res = v.ValidateBytes(context.Background(), "test.yaml", []byte(invalidSizeManifest))
+	g.Expect(res).To(HaveLen(1))
+	g.Expect(res[0].Status).To(Equal(StatusInvalid))
+	g.Expect(res[0].Reason).To(Equal(ReasonSchemaViolation))
+
+	// Case 3: Invalid manifest setting forbidden field
+	forbiddenManifest := `
+apiVersion: my.group.io/v1alpha1
+kind: MyKind
+metadata:
+  name: forbidden
+spec:
+  size: Small
+  legacy: present
+`
+	res = v.ValidateBytes(context.Background(), "test.yaml", []byte(forbiddenManifest))
+	g.Expect(res).To(HaveLen(1))
+	g.Expect(res[0].Status).To(Equal(StatusInvalid))
+	g.Expect(res[0].Reason).To(Equal(ReasonSchemaViolation))
+
+	// Case 4: Resource without configured restriction skips restriction template
+	otherManifest := `
+apiVersion: my.group.io/v1alpha1
+kind: MyKind
+metadata:
+  name: no-restriction
+spec:
+  size: CustomValue
+`
+	vNoRestr, err := New(Options{
+		SchemaLocations: locs,
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+	res = vNoRestr.ValidateBytes(context.Background(), "test.yaml", []byte(otherManifest))
+	g.Expect(res).To(HaveLen(1))
+	g.Expect(res[0].Status).To(Equal(StatusValid))
+}
