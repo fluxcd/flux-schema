@@ -125,6 +125,12 @@ func applyValidateConfig(cmd *cobra.Command, cfg *apiv1.ValidateConfig, args *va
 	if cfg.SchemaLocations != nil && !flags.Changed("schema-location") {
 		args.schemaLocations = cfg.SchemaLocations
 	}
+	if cfg.Restrictions != nil && !flags.Changed("restriction") {
+		args.restrictions = make([]string, 0, len(cfg.Restrictions))
+		for _, r := range cfg.Restrictions {
+			args.restrictions = append(args.restrictions, fmt.Sprintf("%s/%s=%s", r.APIVersion, r.Kind, r.Restriction))
+		}
+	}
 	if !flags.Changed("skip-missing-schemas") {
 		args.skipMissingSchemas = cfg.SkipMissingSchemas
 	}

@@ -402,9 +402,10 @@ func writeExplainAliases(schema extractor.Schema, destDir, format, canonicalRelP
 	var written []string
 	for _, alias := range aliases {
 		rendered, err := tmpl.Render(format, tmpl.SchemaVars{
-			Group:   schema.Group,
-			Kind:    alias,
-			Version: schema.Version,
+			Group:       schema.Group,
+			Kind:        alias,
+			Version:     schema.Version,
+			Restriction: schema.Restriction,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("%s/%s %s alias %s: %w", schema.Group, schema.Kind, schema.Version, alias, err)
@@ -437,12 +438,13 @@ func writeExplainAliases(schema extractor.Schema, destDir, format, canonicalRelP
 
 // writeSwaggerSchema renders the output template, writes the schema as
 // pretty-printed JSON under destDir, and returns the path relative to
-// destDir. Shared by `extract k8s`, `extract openshift`, and `extract crd`.
+// destDir. Shared by `extract k8s`, `extract openshift`, `extract crd`, and `extract restriction`.
 func writeSwaggerSchema(schema extractor.Schema, destDir, format string) (string, error) {
 	rendered, err := tmpl.Render(format, tmpl.SchemaVars{
-		Group:   schema.Group,
-		Kind:    schema.Kind,
-		Version: schema.Version,
+		Group:       schema.Group,
+		Kind:        schema.Kind,
+		Version:     schema.Version,
+		Restriction: schema.Restriction,
 	})
 	if err != nil {
 		return "", fmt.Errorf("%s/%s %s: %w", schema.Group, schema.Kind, schema.Version, err)

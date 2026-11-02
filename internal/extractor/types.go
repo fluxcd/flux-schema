@@ -22,6 +22,9 @@ type Schema struct {
 	// Kind is the Kubernetes kind name (e.g. "GitRepository", "Pod").
 	Kind string
 
+	// Restriction is the optional restriction name (e.g. "my-restriction").
+	Restriction string
+
 	// Scope is the Kubernetes resource scope: "Namespaced", "Cluster", or empty
 	// when unknown.
 	Scope string

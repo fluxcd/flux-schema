@@ -113,3 +113,31 @@ func TestParse_InvalidSyntaxErrors(t *testing.T) {
 	_, err := Parse("{{ .Kind")
 	g.Expect(err).To(HaveOccurred())
 }
+
+func TestRender_Restriction(t *testing.T) {
+	g := NewWithT(t)
+	got, err := Render("{{ .Group }}/{{ .Kind }}_{{ .Version }}_{{ .Restriction }}.json", SchemaVars{
+		Group:       "my.group.io",
+		Kind:        "MyKind",
+		Version:     "v1alpha1",
+		Restriction: "my-restriction",
+	})
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(got).To(Equal("my.group.io/mykind_v1alpha1_my-restriction.json"))
+}
+
+func TestUsesRestriction(t *testing.T) {
+	g := NewWithT(t)
+
+	tpl1, err := Parse("{{ .Group }}/{{ .Kind }}_{{ .Version }}.json")
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(UsesRestriction(tpl1)).To(BeFalse())
+
+	tpl2, err := Parse("{{ .Group }}/{{ .Kind }}_{{ .Version }}_{{ .Restriction }}.json")
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(UsesRestriction(tpl2)).To(BeTrue())
+
+	tpl3, err := Parse("default")
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(UsesRestriction(tpl3)).To(BeFalse())
+}

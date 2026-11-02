@@ -138,6 +138,19 @@ type Options struct {
 	// EnvsubstStrict fails substitution on undefined variables that
 	// have no default.
 	EnvsubstStrict bool
+	// Restrictions binds restriction schemas to resource types.
+	Restrictions []Restriction
+}
+
+// Restriction binds a restriction schema to a resource type.
+type Restriction struct {
+	APIVersion  string
+	Kind        string
+	Restriction string
+}
+
+func (r Restriction) matches(apiVersion, kind string) bool {
+	return r.APIVersion == apiVersion && r.Kind == kind
 }
 
 // DefaultSkipFiles is applied when Options.SkipFiles is nil. It hides
@@ -153,6 +166,7 @@ type Validator struct {
 	skipKinds       []skipKindMatcher
 	skipPaths       []skipPathMatcher
 	skipAbsentPaths []skipPathMatcher
+	restrictions    []Restriction
 	sources         *source.Reader
 	substituter     *substitute.Substituter
 }
@@ -345,7 +359,7 @@ func New(opts Options) (*Validator, error) {
 		return nil, errors.New("no schema location defined")
 	}
 	templates := make([]*template.Template, len(opts.SchemaLocations))
-	probe := tmpl.SchemaVars{Group: "x", Kind: "x", Version: "x"}
+	probe := tmpl.SchemaVars{Group: "x", Kind: "x", Version: "x", Restriction: "x"}
 	for i, loc := range opts.SchemaLocations {
 		tpl, err := tmpl.Parse(loc)
 		if err != nil {
@@ -415,6 +429,7 @@ func New(opts Options) (*Validator, error) {
 		skipKinds:       skipKinds,
 		skipPaths:       skipPaths,
 		skipAbsentPaths: skipAbsentPaths,
+		restrictions:    slices.Clone(opts.Restrictions),
 		sources:         sources,
 		substituter:     substituter,
 	}, nil
@@ -659,39 +674,11 @@ func (v *Validator) validateDoc(ctx context.Context, label string, idx int, raw 
 		return settle(StatusSkipped, ReasonKindSkipped)
 	}
 
-	if r.APIVersion == "" || r.Kind == "" {
-		// With --skip-missing-schemas we can't do anything useful for a doc
-		// with no GVK to look up; treat it as "schema not found" and let the
-		// user's skip policy decide. Otherwise surface path-based errors so
-		// consumers know exactly which top-level fields the doc is missing.
-		if v.opts.SkipMissingSchemas {
-			r.Errors = []ValidationError{{
-				Msg: "no schema: document is missing apiVersion/kind",
-			}}
-			return settle(StatusSkipped, ReasonSchemaNotFound)
+	if reason, skipped := v.validateGVKAndIdentity(&r, hasIdentity); reason != ReasonNone {
+		if skipped {
+			return settle(StatusSkipped, reason)
 		}
-		if r.APIVersion == "" {
-			r.Errors = append(r.Errors, ValidationError{
-				Path: "/apiVersion",
-				Msg:  "missing required property",
-			})
-		}
-		if r.Kind == "" {
-			r.Errors = append(r.Errors, ValidationError{
-				Path: "/kind",
-				Msg:  "missing required property",
-			})
-		}
-		return settle(StatusInvalid, ReasonSchemaViolation)
-	}
-
-	skipMetadata := isPluginAPI(r.APIVersion)
-	if !hasIdentity && !skipMetadata {
-		r.Errors = []ValidationError{{
-			Path: "/metadata",
-			Msg:  "missing property 'name' or 'generateName'",
-		}}
-		return settle(StatusInvalid, ReasonSchemaViolation)
+		return settle(StatusInvalid, reason)
 	}
 
 	group, version, ok := strings.Cut(r.APIVersion, "/")
@@ -713,6 +700,12 @@ func (v *Validator) validateDoc(ctx context.Context, label string, idx int, raw 
 		return settle(missingSchemaStatus(), ReasonSchemaNotFound)
 	}
 
+	restrictionSchemas, restrErr, restrReason := v.resolveRestrictions(ctx, vars, r.APIVersion, r.Kind)
+	if restrErr != nil {
+		r.Errors = []ValidationError{*restrErr}
+		return settle(StatusInvalid, restrReason)
+	}
+
 	for _, m := range v.skipPaths {
 		if m.matches(r.APIVersion, r.Kind) {
 			m.stripPath(doc)
@@ -723,11 +716,12 @@ func (v *Validator) validateDoc(ctx context.Context, label string, idx int, raw 
 	if err := resolved.JSON.Validate(doc); err != nil {
 		errs = flattenErrors(err, v.skipAbsentPaths, r.APIVersion, r.Kind)
 	}
+	errs = append(errs, v.validateRestrictions(restrictionSchemas, doc, r.APIVersion, r.Kind)...)
 	hasAbsentSkippedPath := hasSkippedAbsentPath(v.skipAbsentPaths, r.APIVersion, r.Kind, doc)
 	if len(errs) == 0 && hasAbsentSkippedPath {
 		errs = append(errs, skippedAbsentOneOfErrors(resolved.JSON, doc, nil, v.skipAbsentPaths, r.APIVersion, r.Kind)...)
 	}
-	if !skipMetadata {
+	if !isPluginAPI(r.APIVersion) {
 		errs = append(errs, validateMetadata(doc)...)
 	}
 	if len(errs) > 0 {
@@ -783,6 +777,72 @@ func (v *Validator) kindSkipped(apiVersion, kind string) bool {
 		}
 	}
 	return false
+}
+
+func (v *Validator) resolveRestrictions(ctx context.Context, vars tmpl.SchemaVars, apiVersion, kind string) ([]*ResolvedSchema, *ValidationError, Reason) {
+	var restrictionSchemas []*ResolvedSchema
+	for _, restr := range v.restrictions {
+		if !restr.matches(apiVersion, kind) {
+			continue
+		}
+		restrResolved, restrFound, restrErr := v.loader.ResolveRestriction(ctx, vars, restr.Restriction)
+		if restrErr != nil {
+			return nil, &ValidationError{Msg: restrErr.Error()}, ReasonSchemaLoadError
+		}
+		if !restrFound {
+			if v.opts.SkipMissingSchemas {
+				continue
+			}
+			return nil, &ValidationError{
+				Msg: fmt.Sprintf("no schema for restriction %q for kind %q in version %q", restr.Restriction, kind, apiVersion),
+			}, ReasonSchemaNotFound
+		}
+		restrictionSchemas = append(restrictionSchemas, restrResolved)
+	}
+	return restrictionSchemas, nil, ReasonNone
+}
+
+func (v *Validator) validateRestrictions(schemas []*ResolvedSchema, doc map[string]any, apiVersion, kind string) []ValidationError {
+	var errs []ValidationError
+	for _, s := range schemas {
+		if err := s.JSON.Validate(doc); err != nil {
+			errs = append(errs, flattenErrors(err, v.skipAbsentPaths, apiVersion, kind)...)
+		}
+	}
+	return errs
+}
+
+func (v *Validator) validateGVKAndIdentity(r *Result, hasIdentity bool) (Reason, bool) {
+	if r.APIVersion == "" || r.Kind == "" {
+		if v.opts.SkipMissingSchemas {
+			r.Errors = []ValidationError{{
+				Msg: "no schema: document is missing apiVersion/kind",
+			}}
+			return ReasonSchemaNotFound, true
+		}
+		if r.APIVersion == "" {
+			r.Errors = append(r.Errors, ValidationError{
+				Path: "/apiVersion",
+				Msg:  "missing required property",
+			})
+		}
+		if r.Kind == "" {
+			r.Errors = append(r.Errors, ValidationError{
+				Path: "/kind",
+				Msg:  "missing required property",
+			})
+		}
+		return ReasonSchemaViolation, false
+	}
+
+	if !hasIdentity && !isPluginAPI(r.APIVersion) {
+		r.Errors = []ValidationError{{
+			Path: "/metadata",
+			Msg:  "missing property 'name' or 'generateName'",
+		}}
+		return ReasonSchemaViolation, false
+	}
+	return ReasonNone, false
 }
 
 // decodeDoc preserves the int/float distinction required by CEL evaluation.

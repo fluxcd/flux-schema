@@ -114,7 +114,7 @@ func injectExplainMetadata(schema map[string]any, definitionName string, gvk GVK
 	schema[keyFluxSchemaGVK] = map[string]any{
 		"group":   gvk.Group,
 		"version": gvk.Version,
-		"kind":    gvk.Kind,
+		keyKind:   gvk.Kind,
 	}
 	resourceMeta := map[string]any{}
 	if resource.Singular != "" {
@@ -265,8 +265,8 @@ func replaceIntOrString(node any) any {
 		if isIntOrString(n) {
 			out := map[string]any{
 				"oneOf": []any{
-					map[string]any{"type": "string"},
-					map[string]any{"type": "integer"},
+					map[string]any{keyType: typeString},
+					map[string]any{keyType: typeInteger},
 				},
 			}
 			for k, v := range n {
@@ -457,7 +457,7 @@ func isCombinatorKey(k string) bool {
 // isValueKeyword reports whether k carries arbitrary JSON values, not schemas.
 func isValueKeyword(k string) bool {
 	switch k {
-	case "default", "example", "enum", "const":
+	case keyDefault, "example", "enum", keyConst:
 		return true
 	default:
 		return false
@@ -648,7 +648,7 @@ func isSchemaNameMap(k string) bool {
 // int-or-string node into a oneOf.
 func isStructuralKey(k string) bool {
 	switch k {
-	case "type", keyProperties, "items", "required",
+	case keyType, keyProperties, keyItems, keyRequired,
 		"oneOf", "allOf", "anyOf", "not",
 		"additionalProperties",
 		"enum", "format", "pattern",

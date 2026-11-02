@@ -44,6 +44,7 @@ Supported template variables:
 | `.GroupPrefix` | `source`                   |
 | `.Kind`        | `gitrepository`            |
 | `.Version`     | `v1`                       |
+| `.Restriction` | `my-restriction`           |
 
 An empty `.Group` (Kubernetes core API, e.g. `apiVersion: v1`) is normalized
 to `core`, and `.GroupPrefix` is derived from `.Group` when unset. So a core
@@ -97,6 +98,37 @@ kustomize build ./config/crd | flux schema extract crd -d ./my-catalog
 > `extract crd` a drop-in replacement for kubeconform's
 > [openapi2jsonschema.py](https://github.com/yannh/kubeconform/blob/master/scripts/openapi2jsonschema.py)
 > script.
+
+### Restriction sample manifests
+
+```shell
+flux schema extract restriction [files...]
+```
+
+Reads restriction sample manifests expressing additional constraints for CRDs and extracts a standalone JSON Schema.
+`apiVersion`, `kind`, and `restriction` are the only mandatory fields. Properties annotated with type
+placeholders such as `$string`, `$integer`, `$number`, or `$boolean` become required fields with the corresponding
+schema type; appending `?` (e.g. `$string?`) makes them optional. Literal values become optional properties with
+`const` constraints. Shape directives such as `$forbid`, `$closed: true`, `$required: [fields]`, `$enum[...]`,
+and type parameter arguments (e.g. `$string(pattern=...)`, `$integer(min=..., max=...)`) allow defining fine-grained
+restrictions.
+
+| Flag                   | Description                                                                                  |
+|------------------------|----------------------------------------------------------------------------------------------|
+| `-d, --output-dir`     | Directory to write JSON Schema files to (mutually exclusive with `--output-archive`).        |
+| `-a, --output-archive` | Path to write a gzipped tar archive of JSON Schema files to.                                 |
+| `-f, --output-format`  | Go template for output file paths (default: `{{ .Group }}/{{ .Kind }}_{{ .Version }}_{{ .Restriction }}.json`). |
+| `--index-source`       | Source name and version recorded in field index headers, overriding auto-detection.          |
+| `--strip-description`  | Drop `description` fields from the generated schemas to reduce their size.                   |
+| `--with-field-index`   | Also write a `.fields.txt` field index next to each schema.                                  |
+| `--with-explain-type-metadata` | Keep JSON-only explain type hints, without writing explain lookup files.             |
+| `--with-explain-metadata` | Include JSON type hints, alias redirects, and `.explain/` lookup shards.                    |
+
+Extract restriction schemas for tenant manifests:
+
+```shell
+flux schema extract restriction my-restriction.yaml -d ./my-catalog
+```
 
 ### Kubernetes APIs
 
