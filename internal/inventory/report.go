@@ -8,8 +8,6 @@ import (
 	"path"
 	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	apiv1 "github.com/fluxcd/flux-schema/api/v1beta1"
 )
 
@@ -51,12 +49,10 @@ func NewInventory(reporter string, timestamp time.Time, res *Result) apiv1.Inven
 	body.Summary.LinesOfYAML = res.Lines
 
 	return apiv1.Inventory{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: apiv1.GroupVersion.String(),
-			Kind:       apiv1.InventoryKind,
-		},
-		Schema:    apiv1.InventorySchema,
-		Inventory: body,
+		APIVersion: apiv1.GroupVersion.String(),
+		Kind:       apiv1.InventoryKind,
+		Schema:     apiv1.InventorySchema,
+		Inventory:  body,
 	}
 }
 

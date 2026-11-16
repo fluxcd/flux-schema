@@ -46,8 +46,8 @@ func Parse(r io.Reader) (map[string]string, error) {
 		if line == "" && err == io.EOF {
 			return vars, nil
 		}
-		if strings.HasSuffix(line, "\n") {
-			line = strings.TrimSuffix(strings.TrimSuffix(line, "\n"), "\r")
+		if before, ok := strings.CutSuffix(line, "\n"); ok {
+			line = strings.TrimSuffix(before, "\r")
 		}
 		if n == 1 {
 			line = strings.TrimPrefix(line, "\ufeff")

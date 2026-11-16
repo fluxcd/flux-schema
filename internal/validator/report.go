@@ -6,8 +6,6 @@ package validator
 import (
 	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	apiv1 "github.com/fluxcd/flux-schema/api/v1beta1"
 )
 
@@ -53,11 +51,9 @@ func NewReport(reporter string, timestamp time.Time, results []Result, summary a
 		body.Results[i] = NewReportResult(r)
 	}
 	return apiv1.Report{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: apiv1.GroupVersion.String(),
-			Kind:       apiv1.ReportKind,
-		},
-		Schema: apiv1.ReportSchema,
-		Report: body,
+		APIVersion: apiv1.GroupVersion.String(),
+		Kind:       apiv1.ReportKind,
+		Schema:     apiv1.ReportSchema,
+		Report:     body,
 	}
 }

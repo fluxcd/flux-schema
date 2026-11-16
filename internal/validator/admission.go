@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -78,10 +79,8 @@ func hasAdmissionValidation(node any) bool {
 			}
 		}
 	case []any:
-		for _, v := range n {
-			if hasAdmissionValidation(v) {
-				return true
-			}
+		if slices.ContainsFunc(n, hasAdmissionValidation) {
+			return true
 		}
 	}
 	return false

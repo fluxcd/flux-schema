@@ -441,10 +441,8 @@ func parseResourceOnlyExpression(expr string, apiVersionSet bool) ([]requestCand
 		return nil, nil
 	}
 	parts := strings.Split(expr, ".")
-	for _, part := range parts {
-		if part == "" {
-			return nil, fmt.Errorf("invalid jsonpath syntax, all nodes must be field nodes")
-		}
+	if slices.Contains(parts, "") {
+		return nil, fmt.Errorf("invalid jsonpath syntax, all nodes must be field nodes")
 	}
 	if apiVersionSet || len(parts) == 1 {
 		return []requestCandidate{{resource: parts[0]}}, nil
@@ -560,10 +558,8 @@ func parseResourceExpression(expr string, apiVersionSet bool) ([]requestCandidat
 		return nil, errors.New("resource type must not be empty")
 	}
 	parts := strings.Split(expr, ".")
-	for _, part := range parts {
-		if part == "" {
-			return nil, fmt.Errorf("invalid jsonpath syntax, all nodes must be field nodes")
-		}
+	if slices.Contains(parts, "") {
+		return nil, fmt.Errorf("invalid jsonpath syntax, all nodes must be field nodes")
 	}
 	if apiVersionSet || len(parts) == 1 {
 		return []requestCandidate{{resource: parts[0], fields: parts[1:]}}, nil
@@ -788,12 +784,7 @@ func (r indexResource) canonicalName() string {
 }
 
 func (r indexResource) matchesReferenceKey(key string) bool {
-	for _, alias := range r.aliases() {
-		if key == alias {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(r.aliases(), key)
 }
 
 func (r indexResource) matchesCompletionPrefix(prefix string) bool {
@@ -1106,15 +1097,15 @@ func (e *Explainer) loadFieldIndexMetadata(ctx context.Context, schemaLocation s
 
 func parseFieldIndexMetadata(data string) fieldIndexMetadata {
 	var out fieldIndexMetadata
-	for _, line := range strings.Split(data, "\n") {
-		if strings.HasPrefix(line, "apiVersion <string> enum=") {
-			out.APIVersion = strings.TrimSpace(strings.TrimPrefix(line, "apiVersion <string> enum="))
+	for line := range strings.SplitSeq(data, "\n") {
+		if after, ok := strings.CutPrefix(line, "apiVersion <string> enum="); ok {
+			out.APIVersion = strings.TrimSpace(after)
 			if i := strings.IndexAny(out.APIVersion, " \t"); i >= 0 {
 				out.APIVersion = out.APIVersion[:i]
 			}
 		}
-		if strings.HasPrefix(line, "kind <string> enum=") {
-			out.Kind = strings.TrimSpace(strings.TrimPrefix(line, "kind <string> enum="))
+		if after, ok := strings.CutPrefix(line, "kind <string> enum="); ok {
+			out.Kind = strings.TrimSpace(after)
 			if i := strings.IndexAny(out.Kind, " \t"); i >= 0 {
 				out.Kind = out.Kind[:i]
 			}
@@ -1889,7 +1880,7 @@ func wrapString(str string, wrap int) []string {
 			l = line{wrap: wrap}
 		}
 	}
-	for _, s := range strings.Split(str, "\n") {
+	for s := range strings.SplitSeq(str, "\n") {
 		if strings.HasPrefix(s, "    ") {
 			flush()
 			wrapped = append(wrapped, s)
@@ -1903,7 +1894,7 @@ func wrapString(str string, wrap int) []string {
 		if shouldStartNewLine(lastWord, s) {
 			flush()
 		}
-		for _, word := range strings.Fields(s) {
+		for word := range strings.FieldsSeq(s) {
 			lastWord = word
 			if !l.Add(word) {
 				flush()
