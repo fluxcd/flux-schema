@@ -154,8 +154,8 @@ func flattenSchema(schemaDoc extractor.Schema, indexSource string) (string, erro
 }
 
 func fieldIndexRelPath(relPath string) string {
-	if strings.HasSuffix(relPath, ".json") {
-		return strings.TrimSuffix(relPath, ".json") + ".fields.txt"
+	if before, ok := strings.CutSuffix(relPath, ".json"); ok {
+		return before + ".fields.txt"
 	}
 	return relPath + ".fields.txt"
 }

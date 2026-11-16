@@ -5,6 +5,7 @@ package main
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -145,11 +146,9 @@ func buildExplainSchemaLocations() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	for _, location := range locations {
-		if isDefaultSchemaLocation(location) {
-			return nil, fmt.Errorf(
-				"the default catalog does not support flux-schema explain; use the ecosystem catalog with '-s ecosystem'; see https://fluxcd.io/flux/cli-plugins/flux-schema/explain/#ecosystem-catalog")
-		}
+	if slices.ContainsFunc(locations, isDefaultSchemaLocation) {
+		return nil, fmt.Errorf(
+			"the default catalog does not support flux-schema explain; use the ecosystem catalog with '-s ecosystem'; see https://fluxcd.io/flux/cli-plugins/flux-schema/explain/#ecosystem-catalog")
 	}
 	return locations, nil
 }
@@ -203,11 +202,11 @@ func isDefaultSchemaLocation(location string) bool {
 
 func explainMetadataLocation(location string) (string, bool) {
 	base, tail := splitLocationTail(location)
-	idx := strings.Index(base, "{{")
-	if idx < 0 {
+	before, _, ok := strings.Cut(base, "{{")
+	if !ok {
 		return "", false
 	}
-	root := strings.TrimRight(base[:idx], `/\`)
+	root := strings.TrimRight(before, `/\`)
 	if root == "" {
 		return "", false
 	}
@@ -222,10 +221,5 @@ func splitLocationTail(location string) (string, string) {
 }
 
 func containsString(items []string, item string) bool {
-	for _, existing := range items {
-		if existing == item {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(items, item)
 }

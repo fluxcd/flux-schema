@@ -6,6 +6,7 @@ package validator
 import (
 	"context"
 	"math"
+	"slices"
 	"strings"
 
 	apiextschema "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
@@ -147,10 +148,8 @@ func hasJSONNull(node any) bool {
 			}
 		}
 	case []any:
-		for _, v := range n {
-			if hasJSONNull(v) {
-				return true
-			}
+		if slices.ContainsFunc(n, hasJSONNull) {
+			return true
 		}
 	}
 	return false
@@ -232,10 +231,8 @@ func hasCELRules(node any) bool {
 			}
 		}
 	case []any:
-		for _, v := range n {
-			if hasCELRules(v) {
-				return true
-			}
+		if slices.ContainsFunc(n, hasCELRules) {
+			return true
 		}
 	}
 	return false

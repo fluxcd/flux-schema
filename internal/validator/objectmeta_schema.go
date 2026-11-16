@@ -90,7 +90,7 @@ func resolveLocalRef(root map[string]any, ref string) (map[string]any, bool) {
 		return nil, false
 	}
 	var node any = root
-	for _, segment := range strings.Split(pointer, "/") {
+	for segment := range strings.SplitSeq(pointer, "/") {
 		m, ok := node.(map[string]any)
 		if !ok {
 			return nil, false
@@ -111,7 +111,7 @@ func unescapeJSONPointer(s string) string {
 }
 
 func objectMetaPropertySchemas() map[string]map[string]any {
-	props, _ := objectSchemaForGoType(reflect.TypeOf(metav1.ObjectMeta{}), nil)[jsonSchemaProperties].(map[string]any)
+	props, _ := objectSchemaForGoType(reflect.TypeFor[metav1.ObjectMeta](), nil)[jsonSchemaProperties].(map[string]any)
 	out := make(map[string]map[string]any, len(props))
 	for name, prop := range props {
 		if propMap, ok := prop.(map[string]any); ok {
@@ -137,7 +137,7 @@ func schemaForGoType(t reflect.Type, seen map[reflect.Type]bool) map[string]any 
 
 func objectSchemaForGoType(t reflect.Type, seen map[reflect.Type]bool) map[string]any {
 	t = derefGoType(t)
-	if t == reflect.TypeOf(metav1.Time{}) || t == reflect.TypeOf(metav1.MicroTime{}) {
+	if t == reflect.TypeFor[metav1.Time]() || t == reflect.TypeFor[metav1.MicroTime]() {
 		return map[string]any{"type": []any{"string", jsonNullType}, "format": "date-time"}
 	}
 
@@ -191,8 +191,7 @@ func objectSchemaForGoStruct(t reflect.Type, seen map[reflect.Type]bool) map[str
 
 	props := map[string]any{}
 	var required []any
-	for i := range t.NumField() {
-		field := t.Field(i)
+	for field := range t.Fields() {
 		if field.PkgPath != "" && !field.Anonymous {
 			continue
 		}
@@ -201,9 +200,7 @@ func objectSchemaForGoStruct(t reflect.Type, seen map[reflect.Type]bool) map[str
 			continue
 		}
 		if slices.Contains(opts, "inline") {
-			for nestedName, nestedSchema := range schemaPropertiesForGoType(field.Type, nextSeen) {
-				props[nestedName] = nestedSchema
-			}
+			maps.Copy(props, schemaPropertiesForGoType(field.Type, nextSeen))
 			continue
 		}
 		fieldSchema := schemaForGoType(field.Type, nextSeen)

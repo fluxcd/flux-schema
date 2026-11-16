@@ -112,14 +112,14 @@ func TestRendererOpenAPIV2DescriptionSpacing(t *testing.T) {
 func TestEcosystemIndexResolveAndComplete(t *testing.T) {
 	g := NewWithT(t)
 
-	var helmReleaseRequests int32
+	var helmReleaseRequests atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		g.Expect(r.Header.Get("User-Agent")).To(Equal("flux-schema/internal-explain"))
 		switch r.URL.Path {
 		case "/index.json":
 			_, _ = fmt.Fprint(w, `{"v":3,"projects":[{"groups":[{"g":"helm.toolkit.fluxcd.io","kinds":[["helmrelease",["v2"],1,"HelmRelease",{"n":["hr"]}]]},{"g":"source.extensions.fluxcd.io","kinds":[["artifactgenerator",["v1beta1"],1,"ArtifactGenerator",{"n":["ag"]}]]}]}]}`)
 		case "/catalog/helm.toolkit.fluxcd.io/helmrelease_v2.json":
-			atomic.AddInt32(&helmReleaseRequests, 1)
+			helmReleaseRequests.Add(1)
 			_, _ = fmt.Fprint(w, `{
 				"description":"HelmRelease is the Schema for the helmreleases API",
 				"properties":{
@@ -193,7 +193,7 @@ func TestEcosystemIndexResolveAndComplete(t *testing.T) {
 	g.Expect(ex.Explain(context.Background(), "helmreleases.helm.toolkit.fluxcd.io.spec", &out)).To(Succeed())
 	g.Expect(out.String()).To(ContainSubstring("KIND:       HelmRelease\n"))
 	g.Expect(out.String()).To(ContainSubstring("FIELD: spec <Object>\n"))
-	g.Expect(atomic.LoadInt32(&helmReleaseRequests)).To(Equal(int32(1)))
+	g.Expect(helmReleaseRequests.Load()).To(Equal(int32(1)))
 
 	out.Reset()
 	g.Expect(ex.Explain(context.Background(), "ag.spec.pathPattern", &out)).To(Succeed())
