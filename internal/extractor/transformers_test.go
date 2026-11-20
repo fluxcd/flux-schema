@@ -584,3 +584,103 @@ func TestStripDescriptions_ItemsWithNestedProperties(t *testing.T) {
 	g.Expect(itemsProps["description"]).ToNot(HaveKey("description"))
 	g.Expect(itemsProps["description"]).To(HaveKeyWithValue("type", "string"))
 }
+
+func TestCloseCRDAdditionalProperties_ClosesRootAndAddsWrapper(t *testing.T) {
+	g := NewWithT(t)
+	schema := map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"spec": map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"name": map[string]any{"type": "string"},
+				},
+			},
+		},
+	}
+	closeCRDAdditionalProperties(schema)
+
+	g.Expect(schema["additionalProperties"]).To(BeFalse(), "root must be closed")
+	g.Expect(schema).ToNot(HaveKey("required"), "wrapper fields must not become required")
+
+	props := schema["properties"].(map[string]any)
+	g.Expect(props["apiVersion"]).To(HaveKeyWithValue("type", "string"))
+	g.Expect(props["kind"]).To(HaveKeyWithValue("type", "string"))
+	g.Expect(props["metadata"]).To(Equal(map[string]any{"type": "object"}))
+
+	spec := props["spec"].(map[string]any)
+	g.Expect(spec["additionalProperties"]).To(BeFalse())
+}
+
+func TestCloseCRDAdditionalProperties_KeepsDeclaredWrapper(t *testing.T) {
+	g := NewWithT(t)
+	apiVersion := map[string]any{"type": "string", "description": "custom"}
+	metadata := map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"name": map[string]any{"type": "string", "maxLength": float64(63)},
+		},
+	}
+	schema := map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"apiVersion": apiVersion,
+			"metadata":   metadata,
+			"spec":       map[string]any{"type": "object"},
+		},
+	}
+	closeCRDAdditionalProperties(schema)
+
+	g.Expect(schema["additionalProperties"]).To(BeFalse())
+	props := schema["properties"].(map[string]any)
+	g.Expect(props["apiVersion"]).To(Equal(map[string]any{"type": "string", "description": "custom"}))
+	g.Expect(props["kind"]).To(HaveKeyWithValue("type", "string"))
+	g.Expect(props["metadata"].(map[string]any)["properties"]).To(HaveKey("name"))
+}
+
+func TestCloseCRDAdditionalProperties_LeavesOpenRootsAlone(t *testing.T) {
+	tests := []struct {
+		name     string
+		schema   map[string]any
+		wantOpen bool
+	}{
+		{
+			name:     "no properties",
+			schema:   map[string]any{"type": "object"},
+			wantOpen: true,
+		},
+		{
+			name: "preserve unknown fields",
+			schema: map[string]any{
+				"type":                                 "object",
+				"x-kubernetes-preserve-unknown-fields": true,
+				"properties": map[string]any{
+					"spec": map[string]any{"type": "object"},
+				},
+			},
+			wantOpen: true,
+		},
+		{
+			name: "explicit additionalProperties",
+			schema: map[string]any{
+				"type":                 "object",
+				"additionalProperties": true,
+				"properties": map[string]any{
+					"spec": map[string]any{"type": "object"},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			closeCRDAdditionalProperties(tt.schema)
+			if tt.wantOpen {
+				g.Expect(tt.schema).ToNot(HaveKey("additionalProperties"))
+			} else {
+				g.Expect(tt.schema["additionalProperties"]).To(BeTrue(), "explicit value must be kept")
+			}
+		})
+	}
+}
