@@ -488,7 +488,19 @@ spec:
 `
 
 const minimalCRDGolden = `{
+  "additionalProperties": false,
   "properties": {
+    "apiVersion": {
+      "description": "APIVersion defines the versioned schema of this representation of an object.",
+      "type": "string"
+    },
+    "kind": {
+      "description": "Kind is a string value representing the REST resource this object represents.",
+      "type": "string"
+    },
+    "metadata": {
+      "type": "object"
+    },
     "spec": {
       "additionalProperties": false,
       "properties": {

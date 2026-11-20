@@ -464,13 +464,53 @@ func isValueKeyword(k string) bool {
 	}
 }
 
+// closeCRDAdditionalProperties closes a CRD openAPIV3Schema, including its
+// root, so stray top-level keys (e.g. syncPolicy next to spec instead of
+// inside it) are rejected, matching the API server, which prunes or rejects
+// unknown root fields of custom resources.
+//
+// Many CRDs omit the apiVersion/kind/metadata properties from their root
+// because the API server implicitly allows them. Those are added (without
+// marking them required) before the root is closed so the standard object
+// wrapper stays valid; the validator later expands metadata into the full
+// ObjectMeta schema. A root that declares no properties or sets
+// x-kubernetes-preserve-unknown-fields is left open: there is no structural
+// schema to close it against.
+func closeCRDAdditionalProperties(schema map[string]any) {
+	closeAdditionalPropertiesChildren(schema)
+
+	if preserve, _ := schema["x-kubernetes-preserve-unknown-fields"].(bool); preserve {
+		return
+	}
+	props, _ := schema[keyProperties].(map[string]any)
+	if len(props) == 0 {
+		return
+	}
+	if _, ok := props["apiVersion"]; !ok {
+		props["apiVersion"] = map[string]any{
+			"type":        "string",
+			"description": "APIVersion defines the versioned schema of this representation of an object.",
+		}
+	}
+	if _, ok := props["kind"]; !ok {
+		props["kind"] = map[string]any{
+			"type":        "string",
+			"description": "Kind is a string value representing the REST resource this object represents.",
+		}
+	}
+	if _, ok := props["metadata"]; !ok {
+		props["metadata"] = map[string]any{"type": "object"}
+	}
+	if _, ok := schema["additionalProperties"]; !ok {
+		schema["additionalProperties"] = false
+	}
+}
+
 // closeAdditionalPropertiesChildren is closeAdditionalProperties but leaves
-// the root object's own additionalProperties untouched. Used by the CRD
-// pipeline, where the openAPIV3Schema describes a custom resource whose root
-// often omits the apiVersion/kind/metadata wrapper added by the API server;
-// closing the root would reject that wrapper. Combinators at the root are
-// skipped for the same reason as everywhere else: their branches are partial
-// value-validation constraints, not standalone objects.
+// the root object's own additionalProperties untouched; the CRD pipeline
+// closes the root separately in closeCRDAdditionalProperties. Combinators at
+// the root are skipped for the same reason as everywhere else: their branches
+// are partial value-validation constraints, not standalone objects.
 func closeAdditionalPropertiesChildren(node any) {
 	m, ok := node.(map[string]any)
 	if !ok {

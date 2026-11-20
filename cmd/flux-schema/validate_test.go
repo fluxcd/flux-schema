@@ -191,6 +191,96 @@ spec:
 	g.Expect(out).To(ContainSubstring("Summary: 3 resources found in 3 files - Valid: 1, Invalid: 2, Skipped: 0"))
 }
 
+// TestValidateCmd_CRDRootClosed pins that a CRD whose openAPIV3Schema declares
+// only spec still accepts the full apiVersion/kind/metadata wrapper (every
+// ObjectMeta field, as returned by the API server) while rejecting unknown
+// top-level keys and unknown metadata fields, matching kube-apiserver.
+func TestValidateCmd_CRDRootClosed(t *testing.T) {
+	g := NewWithT(t)
+	schemaDir := extractWidgetSchema(t)
+	manifestDir := t.TempDir()
+
+	writeManifest(t, manifestDir, "full-meta.yaml", `apiVersion: example.com/v1
+kind: Widget
+metadata:
+  name: full-meta
+  generateName: full-meta-
+  namespace: default
+  selfLink: /apis/example.com/v1/namespaces/default/widgets/full-meta
+  uid: 3b2f7c1e-8a4d-4b8e-9c3f-1d2e3f4a5b6c
+  resourceVersion: "123456"
+  generation: 3
+  creationTimestamp: "2026-11-20T10:00:00Z"
+  deletionTimestamp: "2026-11-20T11:00:00Z"
+  deletionGracePeriodSeconds: 30
+  labels:
+    app: widget
+  annotations:
+    example.com/note: hello
+  ownerReferences:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: owner
+      uid: 1a2b3c4d-0000-0000-0000-000000000000
+      controller: true
+      blockOwnerDeletion: true
+  finalizers:
+    - example.com/cleanup
+  managedFields:
+    - manager: kubectl-client-side-apply
+      operation: Update
+      apiVersion: example.com/v1
+      time: "2026-11-20T10:00:00Z"
+      fieldsType: FieldsV1
+      fieldsV1:
+        f:spec:
+          f:name: {}
+spec:
+  name: hello
+`)
+	writeManifest(t, manifestDir, "null-meta.yaml", `apiVersion: example.com/v1
+kind: Widget
+metadata:
+  name: null-meta
+  namespace: default
+  creationTimestamp: null
+  labels: null
+spec:
+  name: hello
+`)
+	strayRootPath := writeManifest(t, manifestDir, "stray-root.yaml", `apiVersion: example.com/v1
+kind: Widget
+metadata:
+  name: stray-root
+  namespace: default
+spec:
+  name: hello
+values:
+  misplaced: true
+`)
+	metaTypoPath := writeManifest(t, manifestDir, "meta-typo.yaml", `apiVersion: example.com/v1
+kind: Widget
+metadata:
+  name: meta-typo
+  namespace: default
+  lables:
+    app: widget
+spec:
+  name: hello
+`)
+
+	out, err := executeCommand([]string{
+		"validate", manifestDir,
+		"--schema-location", filepath.Join(schemaDir, "{{.Kind}}-{{.GroupPrefix}}-{{.Version}}.json"),
+	})
+	g.Expect(err).To(HaveOccurred())
+	g.Expect(out).To(ContainSubstring(strayRootPath + " - example.com/v1/Widget/default/stray-root is invalid: schema violation"))
+	g.Expect(out).To(MatchRegexp(`(?m)^  - additional properties 'values' not allowed$`))
+	g.Expect(out).To(ContainSubstring(metaTypoPath + " - example.com/v1/Widget/default/meta-typo is invalid: schema violation"))
+	g.Expect(out).To(ContainSubstring("/metadata: additional properties 'lables' not allowed"))
+	g.Expect(out).To(ContainSubstring("Summary: 4 resources found in 4 files - Valid: 2, Invalid: 2, Skipped: 0"))
+}
+
 func TestValidateCmd_InvalidManifest_PrintsViolationAndFails(t *testing.T) {
 	g := NewWithT(t)
 	schemaDir := extractWidgetSchema(t)

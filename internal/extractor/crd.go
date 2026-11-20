@@ -128,7 +128,7 @@ func versionsFromCRD(crd map[string]any) ([]Schema, []error) {
 
 		deprecated, _ := vm["deprecated"].(bool)
 		deprecationWarning, _ := vm["deprecationWarning"].(string)
-		closeAdditionalPropertiesChildren(schema)
+		closeCRDAdditionalProperties(schema)
 		transformed, _ := replaceIntOrString(schema).(map[string]any)
 		injectExplainMetadata(transformed, kind, GVK{Group: group, Version: versionName, Kind: kind}, resource)
 
