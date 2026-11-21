@@ -19,6 +19,10 @@ validate:
     file: .env
   schemaLocation:
     - ecosystem
+  restrictions:
+    - apiVersion: my.group.io/v1alpha1
+      kind: MyKind
+      restriction: my-restriction
   skipKind:
     - source.toolkit.fluxcd.io/v1/ExternalArtifact
   skipJSONPath:
@@ -72,6 +76,7 @@ The `validate` section configures defaults for the `flux schema validate` flags.
 | Field                    | Description                                                                                                                                                                  |
 |--------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `schemaLocation[]`       | Schema URLs, file paths, or templates tried in order. Aliases: `default` (built-in catalog), `ecosystem` ([schemas.fluxoperator.dev](https://schemas.fluxoperator.dev/)).    |
+| `restrictions[]`         | List of restriction schema bindings: `apiVersion`, `kind`, and `restriction`.                                                                                              |
 | `envsubst.file`          | Path to a dotenv file supplying Flux post-build substitution variables. Relative paths are resolved from the config file's directory.                                        |
 | `envsubst.strict`        | Fail on undefined substitution variables that have no default.                                                                                                               |
 | `skipMissingSchemas`     | Skip documents for which no schema can be found.                                                                                                                             |

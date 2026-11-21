@@ -159,7 +159,7 @@ func hasGitOpsShape(def map[string]any) bool {
 	if !ok {
 		return false
 	}
-	for _, key := range []string{"apiVersion", "kind", "metadata"} {
+	for _, key := range []string{keyAPIVersion, keyKind, "metadata"} {
 		if _, has := props[key]; !has {
 			return false
 		}
