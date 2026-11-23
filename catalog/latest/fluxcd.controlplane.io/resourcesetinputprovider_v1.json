@@ -1,4 +1,5 @@
 {
+  "additionalProperties": false,
   "properties": {
     "apiVersion": {
       "type": "string"
@@ -149,6 +150,46 @@
               },
               "namespace": {
                 "type": "string"
+              },
+              "namespaceSelector": {
+                "additionalProperties": false,
+                "properties": {
+                  "matchExpressions": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "key": {
+                          "type": "string"
+                        },
+                        "operator": {
+                          "type": "string"
+                        },
+                        "values": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array",
+                          "x-kubernetes-list-type": "atomic"
+                        }
+                      },
+                      "required": [
+                        "key",
+                        "operator"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array",
+                    "x-kubernetes-list-type": "atomic"
+                  },
+                  "matchLabels": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "type": "object"
+                  }
+                },
+                "type": "object",
+                "x-kubernetes-map-type": "atomic"
               }
             },
             "type": "object",
@@ -157,6 +198,10 @@
               {
                 "message": "name is mutually exclusive with matchLabels and matchExpressions",
                 "rule": "!has(self.name) || (!has(self.matchLabels) && !has(self.matchExpressions))"
+              },
+              {
+                "message": "namespace and namespaceSelector are mutually exclusive",
+                "rule": "!(has(self.__namespace__) && has(self.namespaceSelector))"
               }
             ]
           },
