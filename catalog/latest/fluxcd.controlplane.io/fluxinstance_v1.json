@@ -1,4 +1,5 @@
 {
+  "additionalProperties": false,
   "properties": {
     "apiVersion": {
       "type": "string"
@@ -48,6 +49,15 @@
                 "large"
               ],
               "type": "string"
+            },
+            "sourceWatcher": {
+              "additionalProperties": false,
+              "properties": {
+                "namespaceManager": {
+                  "type": "boolean"
+                }
+              },
+              "type": "object"
             },
             "tenantDefaultDecryptionServiceAccount": {
               "type": "string"
@@ -455,6 +465,10 @@
         {
           "message": ".spec.cluster.objectIdentityRBAC or .spec.spiffe.brokerAPI must be set when .spec.cluster.multitenantObjectIdentity is set to true",
           "rule": "!has(self.cluster) || !has(self.cluster.multitenantObjectIdentity) || !self.cluster.multitenantObjectIdentity || (has(self.cluster.objectIdentityRBAC) && self.cluster.objectIdentityRBAC) || (has(self.cluster.objectLevelWorkloadIdentity) && self.cluster.objectLevelWorkloadIdentity) || (has(self.spiffe) && has(self.spiffe.brokerAPI))"
+        },
+        {
+          "message": ".spec.cluster.sourceWatcher requires source-watcher in .spec.components",
+          "rule": "!has(self.cluster) || !has(self.cluster.sourceWatcher) || (has(self.components) && self.components.exists(c, c == 'source-watcher'))"
         }
       ]
     },
