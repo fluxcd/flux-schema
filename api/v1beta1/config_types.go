@@ -36,6 +36,10 @@ type ValidateConfig struct {
 	// +optional
 	SchemaLocations []string `json:"schemaLocation,omitempty"`
 
+	// Restrictions binds restriction schemas to GVKs.
+	// +optional
+	Restrictions []Restriction `json:"restrictions,omitempty"`
+
 	// SkipMissingSchemas skips documents for which no schema can be found.
 	// +optional
 	SkipMissingSchemas bool `json:"skipMissingSchemas,omitempty"`
@@ -153,3 +157,18 @@ const (
 	// ConfigExplainOutputPlaintextOpenAPIV2 emits kubectl OpenAPI v2 style text.
 	ConfigExplainOutputPlaintextOpenAPIV2 ConfigExplainOutput = "plaintext-openapiv2"
 )
+
+// Restriction defines a restriction schema binding for a GVK.
+type Restriction struct {
+	// APIVersion is the Group/Version or Version of the target resource.
+	// +required
+	APIVersion string `json:"apiVersion"`
+
+	// Kind is the Kubernetes kind of the target resource.
+	// +required
+	Kind string `json:"kind"`
+
+	// Restriction is the name of the restriction schema.
+	// +required
+	Restriction string `json:"restriction"`
+}

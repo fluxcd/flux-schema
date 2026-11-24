@@ -50,6 +50,7 @@ func resetCmdArgs() {
 
 	versionArgs = versionFlags{output: "text"}
 	extractCRDArgs = extractCRDFlags{ExtractOutput: flag.NewExtractOutput()}
+	extractRestrictionArgs = newExtractRestrictionFlags()
 	extractK8sArgs = extractK8sFlags{ExtractOutput: flag.NewExtractOutput()}
 	extractOpenShiftArgs = extractOpenShiftFlags{ExtractOutput: flag.NewExtractOutput()}
 	validateArgs = validateFlags{concurrent: validator.DefaultWorkers, output: "text"}

@@ -93,6 +93,7 @@ type validateFlags struct {
 	configFile            string
 	output                flag.Output
 	outputDir             string
+	restrictions          []string
 }
 
 var validateArgs = validateFlags{
@@ -138,6 +139,8 @@ func init() {
 	validateCmd.Flags().VarP(outputValue, "output", "o", outputValue.Description())
 	validateCmd.Flags().StringVarP(&validateArgs.outputDir, "output-dir", "d", "",
 		"directory where structured report files are written (created if missing)")
+	validateCmd.Flags().StringArrayVar(&validateArgs.restrictions, "restriction", nil,
+		"bind a restriction schema to a resource type in G/V/K=name format (repeatable)")
 	rootCmd.AddCommand(validateCmd)
 }
 
@@ -498,8 +501,18 @@ func buildValidatorOptions(inputs []string) (validator.Options, error) {
 	if validateArgs.concurrent < 1 {
 		return validator.Options{}, fmt.Errorf("--concurrent must be >= 1, got %d", validateArgs.concurrent)
 	}
+	var restrictions []validator.Restriction
+	for _, raw := range validateArgs.restrictions {
+		r, err := parseRestrictionFlag(raw)
+		if err != nil {
+			return validator.Options{}, err
+		}
+		restrictions = append(restrictions, r)
+	}
+
 	opts := validator.Options{
 		SchemaLocations:       locations,
+		Restrictions:          restrictions,
 		SkipMissingSchemas:    validateArgs.skipMissingSchemas,
 		SkipKinds:             validateArgs.skipKinds,
 		SkipJSONPaths:         validateArgs.skipJSONPaths,
@@ -523,6 +536,39 @@ func buildValidatorOptions(inputs []string) (validator.Options, error) {
 		opts.Stdin = stdinReader
 	}
 	return opts, nil
+}
+
+func parseRestrictionFlag(s string) (validator.Restriction, error) {
+	s = strings.TrimSpace(s)
+	target, name, ok := strings.Cut(s, "=")
+	if !ok || target == "" || name == "" {
+		return validator.Restriction{}, fmt.Errorf("invalid restriction %q: expected G/V/K=name", s)
+	}
+	parts := strings.Split(target, "/")
+	var apiVersion, kind string
+	switch len(parts) {
+	case 2:
+		apiVersion = parts[0]
+		kind = parts[1]
+	case 3:
+		if parts[0] == "" {
+			apiVersion = parts[1]
+			kind = parts[2]
+		} else {
+			apiVersion = parts[0] + "/" + parts[1]
+			kind = parts[2]
+		}
+	default:
+		return validator.Restriction{}, fmt.Errorf("invalid restriction %q: expected G/V/K=name", s)
+	}
+	if apiVersion == "" || kind == "" {
+		return validator.Restriction{}, fmt.Errorf("invalid restriction %q: expected G/V/K=name", s)
+	}
+	return validator.Restriction{
+		APIVersion:  apiVersion,
+		Kind:        kind,
+		Restriction: name,
+	}, nil
 }
 
 type outputWriter interface {
